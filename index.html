@@ -12,15 +12,16 @@
 <style>
 :root {
   --bg:#0f1117; --bg2:#1a1d27; --bg3:#232736; --bg4:#2d3147;
-  --amber:#f0a500; --amber2:#ffc840; --text:#f0eff4; --text2:#9b9eb5;
-  --green:#2ecc8a; --red:#e85d5d; --blue:#4a9ef8; --purple:#9b7fe8;
-  --orange:#f97316; --border:#2d3147; --r:12px; --r2:8px;
+  --amber:#f0a500; --amber2:#ffc840; --text:#f0eff4; --text2:#9b9eb5; --text3:#6b6e8a;
+  --green:#2ecc8a; --red:#e85d5d; --blue:#4a9ef8; --purple:#9b7fe8; --orange:#f97316;
+  --border:#2d3147; --r:12px; --r2:8px;
 }
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(--text); max-width:430px; margin:0 auto; overflow-x:hidden; }
 
 /* === COMPONENTES === */
 .card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:15px; margin-bottom:15px; }
+.card-plan { background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:15px; margin-bottom:12px; }
 .card-alert { background:var(--bg2); border:1px solid var(--border); border-left:4px solid var(--amber); border-radius:var(--r); padding:15px; margin-bottom:15px; }
 .status-badge { padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:10px; display:inline-block; }
 .badge-rescate { background:rgba(232,93,93,0.2); color:var(--red); border:1px solid var(--red); }
@@ -31,7 +32,7 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
 
 .grid-limits { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
 .limit-card { background:var(--bg2); padding:12px; border-radius:var(--r); border:1px solid var(--border); }
-.limit-label { font-size:11px; color:var(--text2); text-transform:uppercase; margin-bottom:5px; }
+.limit-label { font-size:11px; color:var(--text2); text-transform:uppercase; margin-bottom:5px; display:flex; justify-content:space-between; }
 .limit-val { font-family:'JetBrains Mono',monospace; font-weight:600; font-size:14px; }
 
 .tab-nav { display:flex; background:var(--bg2); position:fixed; bottom:0; width:100%; max-width:430px; border-top:1px solid var(--border); z-index:100; }
@@ -63,22 +64,22 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 .grade-circle {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 32px;
-  font-weight: 800;
-  border: 5px solid;
-  background: var(--bg);
-  flex-shrink: 0;
+  width: 70px; height: 70px; border-radius: 50%;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 32px; font-weight: 800; border: 5px solid;
+  background: var(--bg); flex-shrink: 0;
 }
 .health-info { flex: 1; }
 .health-title { font-size: 12px; color: var(--text2); text-transform: uppercase; margin-bottom: 5px; }
 .health-message { font-size: 14px; font-weight: 500; line-height: 1.4; }
 .health-ratio { font-size: 11px; color: var(--text2); margin-top: 5px; }
+
+/* === HISTORIAL === */
+.history-item {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 0; border-bottom:1px solid var(--border);
+}
+.history-item:last-child { border-bottom:none; }
 
 /* === VISTAS === */
 .view { display:none; padding:20px; padding-bottom:100px; }
@@ -116,6 +117,14 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
     <label class="limit-label">Cuota quincenal de deuda tasa cero</label>
     <input type="number" id="ob-cuota" class="input-field" placeholder="L. 0.00">
 
+    <label class="limit-label">Plan financiero recomendado</label>
+    <select id="ob-plan" class="input-field" onchange="updateObPreview()">
+      <option value="crecimiento">✅ Crecimiento (65/20/15)</option>
+      <option value="estandar">⚖️ Equilibrado (50/20/30)</option>
+      <option value="austeridad">🔒 Austeridad (70/20/10)</option>
+      <option value="rescate">⚠️ Rescate (50/40/10)</option>
+    </select>
+
     <div id="ob-preview" class="preview-card hidden">
       <strong>📊 Tu distribución mensual:</strong>
       <div id="preview-content"></div>
@@ -128,10 +137,7 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
 
 <!-- DASHBOARD -->
 <div id="view-dashboard" class="view active">
-  <div id="dashboard-header"></div>
-  
-  <!-- SCORE DE SALUD FINANCIERA -->
-  <div id="health-score-container"></div>
+  <div id="header-status"></div>
   
   <div class="grid-limits" id="limits-container"></div>
   
@@ -139,7 +145,10 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
   <div id="cards-alerts-container"></div>
   <p id="no-alerts" class="text2 hidden" style="font-size:13px;">✅ Sin alertas próximas</p>
 
-  <button class="btn btn-primary" onclick="openModal('modal-movimiento')">+ Nuevo Movimiento</button>
+  <h3 style="margin:20px 0 10px;">📜 Movimientos recientes</h3>
+  <div id="recent-history"></div>
+
+  <button class="btn btn-primary" onclick="openModal('modal-movimiento')" style="margin-top:20px;">+ Nuevo Movimiento</button>
 </div>
 
 <!-- GASTOS -->
@@ -226,22 +235,12 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
 <div id="modal-movimiento" class="modal" onclick="closeModalIfBg(event, 'modal-movimiento')">
   <div class="modal-content">
     <h3>➕ Nuevo Movimiento</h3>
-    <select id="mv-tipo" class="input-field" onchange="toggleMovimientoForm()">
-      <option value="gasto">Gasto</option>
-      <option value="ingreso">Ingreso</option>
-    </select>
     <input type="number" id="mv-monto" class="input-field" placeholder="Monto L.">
     <input type="text" id="mv-subcat" class="input-field" placeholder="Detalle (Ej. Supermercado)">
     <select id="mv-cat" class="input-field">
-      <option value="op">Operación (65%/50%)</option>
+      <option value="op">Operación (Gastos Fijos)</option>
       <option value="cre">Crecimiento / Deuda</option>
       <option value="ev">Estilo de Vida</option>
-    </select>
-    <select id="mv-pago" class="input-field">
-      <option value="efectivo">Efectivo</option>
-      <option value="debito">Tarjeta débito</option>
-      <option value="credito">Tarjeta crédito</option>
-      <option value="transfer">Transferencia</option>
     </select>
     <button class="btn btn-primary" onclick="saveMovimiento()">Guardar</button>
   </div>
@@ -255,11 +254,6 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
     <select id="gasto-cat" class="input-field">
       <option value="op">Operación</option>
       <option value="ev">Estilo de Vida</option>
-    </select>
-    <select id="gasto-pago" class="input-field">
-      <option value="efectivo">Efectivo</option>
-      <option value="debito">Débito</option>
-      <option value="credito">Crédito</option>
     </select>
     <button class="btn btn-primary" onclick="saveGasto()">Guardar Gasto</button>
   </div>
@@ -319,8 +313,22 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
 </nav>
 
 <script>
-// === ESTADO GLOBAL ===
-const LS_KEY = 'mifinanzashn_pro_v3';
+/**
+ * MOTOR LÓGICO: MIS FINANZAS HN PRO
+ * Versión: 4.5 - Edición "Revolución Financiera"
+ */
+
+// 1. CONFIGURACIÓN DE ESTRATEGIAS (PLANES)
+const FINANCIAL_PLANS = {
+  crecimiento: { name: 'Crecimiento', op: 0.65, cre: 0.20, ev: 0.15, color: '#4a9ef8', desc: 'Prioridad: Construcción de capital y proyectos.' },
+  estandar: { name: 'Equilibrado', op: 0.50, cre: 0.20, ev: 0.30, color: '#2ecc8a', desc: 'Prioridad: Balance entre ahorro y estilo de vida.' },
+  austeridad: { name: 'Austeridad', op: 0.70, cre: 0.20, ev: 0.10, color: '#f97316', desc: 'Prioridad: Optimización bajo costos fijos altos.' },
+  rescate: { name: 'Rescate', op: 0.50, cre: 0.40, ev: 0.10, color: '#e85d5d', desc: 'Prioridad: Eliminación agresiva de deuda tóxica.' }
+};
+
+const LS_KEY = 'mifinanzashn_v4_prod';
+
+// 2. ESTADO INICIAL Y PERSISTENCIA
 let state = JSON.parse(localStorage.getItem(LS_KEY)) || {
   setup: false,
   nombre: '',
@@ -334,215 +342,160 @@ let state = JSON.parse(localStorage.getItem(LS_KEY)) || {
   goals: []
 };
 
-// === PLANES ===
-const PLANS = {
-  rescate: { name: 'Rescate', op: 0.50, cre: 0.30, ev: 0.20, color: 'var(--red)' },
-  crecimiento: { name: 'Crecimiento', op: 0.65, cre: 0.20, ev: 0.15, color: 'var(--green)' }
-};
+// 3. UTILIDADES FORMATEO (MONEDA HONDURAS)
+const fL = n => 'L. ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const save = () => { localStorage.setItem(LS_KEY, JSON.stringify(state)); renderAll(); };
 
-const fL = n => 'L. ' + Number(n).toLocaleString('en-US', {minimumFractionDigits:2});
-const hoy = () => new Date().getDate();
-
-function saveState() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
-
-// === NAVEGACIÓN ===
-function switchView(view) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-  document.getElementById('view-' + view).classList.add('active');
-  event.currentTarget.classList.add('active');
-  renderAll();
-}
-
-function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-function closeModalIfBg(e, id) { if(e.target.id === id) closeModal(id); }
-function toggleMovimientoForm() {
-  const tipo = document.getElementById('mv-tipo').value;
-  document.getElementById('mv-cat').disabled = (tipo === 'ingreso');
-}
-
-// === ONBOARDING ===
-function checkSetup() {
-  if (!state.setup) {
-    document.getElementById('onboarding').style.display = 'flex';
-    ['ob-salario','ob-deuda-int'].forEach(id => 
-      document.getElementById(id).addEventListener('input', updatePreview)
-    );
-  } else {
-    document.getElementById('onboarding').classList.add('hidden');
-  }
-}
-
-function updatePreview() {
-  const sal = parseFloat(document.getElementById('ob-salario').value) || 0;
-  const dt = parseFloat(document.getElementById('ob-deuda-int').value) || 0;
-  if (sal <= 0) return;
-  
-  const plan = dt > 0 ? 'rescate' : 'crecimiento';
-  const p = PLANS[plan];
-  
-  document.getElementById('preview-content').innerHTML = `
-    <div style="margin:8px 0;"><strong>Modo:</strong> ${plan === 'rescate' ? '⚠️ Rescate' : '✅ Crecimiento'}</div>
-    <div style="margin:8px 0;"><strong>Operación (${p.op*100}%):</strong> ${fL(sal * p.op)}</div>
-    <div style="margin:8px 0;"><strong>${plan === 'rescate' ? 'Ataque Deuda' : 'Ahorro'} (${p.cre*100}%):</strong> ${fL(sal * p.cre)}</div>
-    <div style="margin:8px 0;"><strong>Estilo de Vida (${p.ev*100}%):</strong> ${fL(sal * p.ev)}</div>
-  `;
-  document.getElementById('ob-preview').classList.remove('hidden');
-}
-
-function finishOnboarding() {
-  const nombre = document.getElementById('ob-nombre').value || 'Usuario';
-  const sal = parseFloat(document.getElementById('ob-salario').value) || 0;
-  const dt = parseFloat(document.getElementById('ob-deuda-int').value) || 0;
-  
-  if (sal <= 0) { alert("⚠️ Ingresa tu salario para continuar."); return; }
-  if (sal < 5000) { alert("⚠️ Verifica el monto: ¿salario en Lempiras?"); return; }
-
-  state.nombre = nombre;
-  state.salario = sal;
-  state.deudaToxica = dt;
-  state.deudaCero = parseFloat(document.getElementById('ob-deuda-cero').value) || 0;
-  state.cuotaCero = parseFloat(document.getElementById('ob-cuota').value) || 0;
-  state.plan = dt > 0 ? 'rescate' : 'crecimiento';
-  state.setup = true;
-  
-  saveState();
-  document.getElementById('onboarding').style.display = 'none';
-  renderAll();
-}
-
-// === CÁLCULOS ===
-function calcularDiasPara(diaObjetivo) {
-  const hoyNum = new Date().getDate();
-  const diasEnMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  return diaObjetivo >= hoyNum ? diaObjetivo - hoyNum : (diasEnMes - hoyNum) + diaObjetivo;
-}
-
-// === 🎯 SCORE DE SALUD FINANCIERA ===
+// 4. ALGORITMO DE CALIFICACIÓN (HEALTH SCORE)
 function calcularSaludFinanciera() {
-  const p = PLANS[state.plan];
+  const p = FINANCIAL_PLANS[state.plan];
+  const totalSalario = state.salario;
+  
   const spent = cat => state.transactions.filter(t => t.cat === cat).reduce((a, b) => a + b.amount, 0);
   
-  const limites = {
-    op: state.salario * p.op,
-    cre: state.salario * p.cre,
-    ev: state.salario * p.ev
-  };
+  const gastos = { op: spent('op'), cre: spent('cre'), ev: spent('ev') };
+  const limites = { op: totalSalario * p.op, cre: totalSalario * p.cre, ev: totalSalario * p.ev };
 
-  const excesos = [
-    spent('op') > limites.op,
-    spent('ev') > limites.ev
-  ].filter(x => x).length;
+  let fallos = 0;
+  if (gastos.op > limites.op) fallos++;
+  if (gastos.ev > limites.ev) fallos++;
+  
+  const ratioTotal = (gastos.op + gastos.cre + gastos.ev) / totalSalario;
 
-  const totalGasto = spent('op') + spent('cre') + spent('ev');
-  const totalPresupuesto = state.salario;
-  const ratio = totalGasto / totalPresupuesto;
-
-  let grado = "A";
-  let mensaje = "¡Excelente! Estás dominando tu dinero.";
-  let color = "var(--green)";
-
-  if (excesos === 1 || ratio > 0.9) {
-    grado = "B";
-    mensaje = "Buen trabajo, pero estás cerca de tus límites.";
-    color = "var(--amber)";
-  }
-  if (excesos >= 2 || ratio > 1) {
-    grado = "C";
-    mensaje = "¡Alerta! Tu flujo de caja está en riesgo.";
-    color = "var(--red)";
-  }
-
-  return { grado, mensaje, color, ratio: Math.min(ratio * 100, 100) };
+  if (fallos === 0 && ratioTotal <= 1) return { grado: 'A', msg: 'Excelente Control', color: 'var(--green)' };
+  if (fallos === 1 || ratioTotal <= 1.05) return { grado: 'B', msg: 'Disciplina Moderada', color: 'var(--amber)' };
+  return { grado: 'C', msg: 'Riesgo de Liquidez', color: 'var(--red)' };
 }
 
-function getLimits() {
-  const isRescate = state.plan === 'rescate';
-  const p = isRescate ? {op:0.50, cre:0.30, ev:0.20} : {op:0.65, cre:0.20, ev:0.15};
-  
-  const spentOp = state.transactions.filter(t => t.cat === 'op').reduce((a,b) => a + b.amount, 0);
-  const spentCre = state.transactions.filter(t => t.cat === 'cre').reduce((a,b) => a + b.amount, 0);
-  const spentEv = state.transactions.filter(t => t.cat === 'ev').reduce((a,b) => a + b.amount, 0);
-  
-  return {
-    op: { limit: state.salario * p.op, spent: spentOp, label: 'Operación' },
-    cre: { limit: state.salario * p.cre, spent: spentCre, label: isRescate ? 'Ataque Deuda' : 'Ahorro' },
-    ev: { limit: state.salario * p.ev, spent: spentEv, label: 'Estilo de Vida' }
-  };
-}
-
-// === RENDERIZADO ===
+// 5. RENDERIZADO DEL DASHBOARD
 function renderDashboard() {
-  const header = document.getElementById('dashboard-header');
-  const limits = document.getElementById('limits-container');
-  const healthContainer = document.getElementById('health-score-container');
-  const isRescate = state.plan === 'rescate';
-  
-  // Header con saludo
-  header.innerHTML = `
-    <h1 style="font-size:24px; margin:10px 0;">${fL(state.salario)}</h1>
-    <p style="color:var(--text2); font-size:14px;">Hola, ${state.nombre} • Flujo Mensual</p>
-  `;
-
-  // Score de Salud Financiera
+  const p = FINANCIAL_PLANS[state.plan];
   const salud = calcularSaludFinanciera();
-  healthContainer.innerHTML = `
+  const spent = cat => state.transactions.filter(t => t.cat === cat).reduce((a, b) => a + b.amount, 0);
+
+  // Renderizar Tarjeta de Salud
+  document.getElementById('header-status').innerHTML = `
     <div class="health-card">
       <div class="grade-circle" style="color:${salud.color}; border-color:${salud.color}">
         ${salud.grado}
       </div>
       <div class="health-info">
-        <div class="status-badge" style="color:${PLANS[state.plan].color}; border-color:${PLANS[state.plan].color}; margin:0;">
-          Plan ${PLANS[state.plan].name}
-        </div>
-        <p class="health-message">${salud.mensaje}</p>
-        <p class="health-ratio">Presupuesto utilizado: ${salud.ratio.toFixed(1)}%</p>
+        <div class="status-badge" style="color:${p.color}; border-color:${p.color}; margin:0;">Plan ${p.name}</div>
+        <div class="health-message">${salud.msg}</div>
+        <div class="health-ratio">${fL(state.salario)} Ingreso Mensual</div>
       </div>
     </div>
   `;
 
-  // Límites
-  const limitsData = getLimits();
-  limits.innerHTML = Object.values(limitsData).map(l => {
-    const remaining = l.limit - l.spent;
-    const pct = Math.min(100, (l.spent / l.limit) * 100);
-    const color = remaining < 0 ? 'var(--red)' : (pct > 80 ? 'var(--orange)' : 'var(--blue)');
+  // Renderizar Barras de Límites
+  const categorias = [
+    { id: 'op', n: 'Operación', lim: state.salario * p.op, color: 'var(--blue)' },
+    { id: 'cre', n: state.plan === 'rescate' ? 'Pago Deuda' : 'Crecimiento', lim: state.salario * p.cre, color: 'var(--green)' },
+    { id: 'ev', n: 'Estilo de Vida', lim: state.salario * p.ev, color: 'var(--purple)' }
+  ];
+
+  document.getElementById('limits-container').innerHTML = categorias.map(c => {
+    const s = spent(c.id);
+    const perc = Math.min((s / c.lim) * 100, 100);
+    const colorBarra = s > c.lim ? 'var(--red)' : c.color;
     return `
       <div class="limit-card">
-        <div class="limit-label">${l.label}</div>
-        <div class="limit-val ${remaining < 0 ? 'text-red' : ''}">${fL(remaining)}</div>
-        <div class="progress-container"><div class="progress-bar" style="width:${pct}%; background:${color};"></div></div>
+        <div class="limit-label"><span>${c.n}</span><span>${fL(c.lim - s)} disp.</span></div>
+        <div class="limit-val">${fL(s)} <small style="font-size:10px; color:var(--text2)">de ${fL(c.lim)}</small></div>
+        <div style="height:6px; background:var(--bg4); border-radius:10px; overflow:hidden;">
+          <div style="width:${perc}%; height:100%; background:${colorBarra}; transition:width 0.6s;"></div>
+        </div>
       </div>
     `;
   }).join('');
 
-  renderCardAlerts();
+  renderHistory();
 }
 
-function renderCardAlerts() {
-  const container = document.getElementById('cards-alerts-container');
-  const noAlerts = document.getElementById('no-alerts');
-  container.innerHTML = '';
+// 6. GESTIÓN DE TRANSACCIONES
+function saveMovimiento() {
+  const monto = parseFloat(document.getElementById('mv-monto').value);
+  const cat = document.getElementById('mv-cat').value;
+  const sub = document.getElementById('mv-subcat').value || 'Gasto General';
   
-  state.cards.forEach(c => {
-    const faltanCorte = calcularDiasPara(c.corte);
-    const faltanPago = calcularDiasPara(c.pago);
-    
-    if (faltanCorte <= 3 || faltanPago <= 5) {
-      container.innerHTML += `
-        <div class="card-alert">
-          <div style="font-weight:700;">${c.nombre}</div>
-          <div style="font-size:12px; color:var(--text2); margin-top:5px;">
-            ${faltanCorte <= 3 ? `📅 Corte en ${faltanCorte} día(s)` : ''}
-            ${faltanPago <= 5 ? `<br>⚠️ Pagar en ${faltanPago} día(s)` : ''}
-          </div>
-        </div>
-      `;
-    }
+  if (!monto || monto <= 0) return alert("Por favor ingresa un monto válido.");
+
+  state.transactions.push({
+    id: Date.now(),
+    amount: monto,
+    cat: cat,
+    subcat: sub,
+    date: new Date().toISOString()
+  });
+
+  save();
+  closeModal('modal-movimiento');
+  document.getElementById('mv-monto').value = '';
+  document.getElementById('mv-subcat').value = '';
+}
+
+function saveGasto() {
+  const monto = parseFloat(document.getElementById('gasto-monto').value);
+  const subcat = document.getElementById('gasto-subcat').value;
+  const cat = document.getElementById('gasto-cat').value;
+  
+  if (!monto || monto <= 0) { alert("Ingresa un monto válido"); return; }
+  
+  state.transactions.push({
+    id: Date.now(), type: 'gasto', amount: monto, cat, subcat,
+    date: new Date()
   });
   
-  noAlerts.classList.toggle('hidden', container.innerHTML !== '');
+  save(); closeModal('modal-gasto'); renderAll();
+  document.getElementById('gasto-monto').value = '';
+  document.getElementById('gasto-subcat').value = '';
+}
+
+function saveIngreso() {
+  const monto = parseFloat(document.getElementById('ingreso-monto').value);
+  const tipo = document.getElementById('ingreso-tipo').value;
+  
+  if (!monto || monto <= 0) { alert("Ingresa un monto válido"); return; }
+  
+  state.transactions.push({
+    id: Date.now(), type: 'ingreso', subtype: tipo, amount: monto,
+    cat: tipo === 'extra' ? 'cre' : 'op', date: new Date()
+  });
+  
+  save(); closeModal('modal-ingreso'); renderAll();
+  document.getElementById('ingreso-monto').value = '';
+}
+
+function deleteTx(id) {
+  if (confirm("¿Deseas eliminar este registro?")) {
+    state.transactions = state.transactions.filter(t => t.id !== id);
+    save();
+  }
+}
+
+function renderHistory() {
+  const container = document.getElementById('recent-history');
+  const ultimos = [...state.transactions].reverse().slice(0, 5);
+
+  if (ultimos.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:var(--text3); padding:20px;">No hay movimientos este mes.</p>';
+    return;
+  }
+
+  container.innerHTML = ultimos.map(t => `
+    <div class="history-item">
+      <div>
+        <div style="font-size:14px; font-weight:600;">${t.subcat || 'Sin detalle'}</div>
+        <div style="font-size:10px; color:var(--text2); text-transform:uppercase;">${t.cat || ''}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-family:'JetBrains Mono'; font-weight:700; color:${t.type==='ingreso'?'var(--green)':'var(--red)'}">
+          ${t.type==='ingreso'?'+':'-'}${fL(t.amount)}
+        </span>
+        <button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--red); cursor:pointer; font-size:16px; padding:5px;">✕</button>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderGastos() {
@@ -560,7 +513,7 @@ function renderGastos() {
         <span class="text-red">-${fL(t.amount)}</span>
       </div>
       <div style="font-size:12px; color:var(--text2); margin-top:5px;">
-        ${t.cat ? t.cat.toUpperCase() : ''} • ${t.pago || ''} • ${new Date(t.date).toLocaleDateString()}
+        ${t.cat ? t.cat.toUpperCase() : ''} • ${new Date(t.date).toLocaleDateString()}
       </div>
     </div>
   `).join('') || '<p style="color:var(--text2); text-align:center; padding:20px;">Sin gastos registrados</p>';
@@ -588,145 +541,96 @@ function renderIngresos() {
   `).join('') || '<p style="color:var(--text2); text-align:center; padding:20px;">Sin ingresos registrados</p>';
 }
 
-function renderMetas() {
-  const list = document.getElementById('metas-list');
-  list.innerHTML = state.goals.map(g => {
-    const pct = Math.min(100, (g.ahorrado / g.objetivo) * 100);
-    const faltante = g.objetivo - g.ahorrado;
-    return `
-      <div class="card">
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-          <strong>${g.nombre}</strong>
-          <span style="color:var(--amber);">${fL(g.ahorrado)} / ${fL(g.objetivo)}</span>
-        </div>
-        <div class="progress-container">
-          <div class="progress-bar" style="width:${pct}%; background:var(--green);"></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:10px;">
-          <span style="font-size:12px; color:var(--text2);">Faltan: ${fL(faltante)}</span>
-          <button class="btn btn-secondary" style="width:auto; padding:8px 12px; font-size:12px;" onclick="openAbono(${g.id})">+ Abonar</button>
-        </div>
-      </div>
-    `;
-  }).join('') || '<p style="color:var(--text2); text-align:center; padding:20px;">Sin metas creadas</p>';
+// 7. ALERTAS DE TARJETAS DE CRÉDITO
+function saveTarjeta() {
+  const nombre = document.getElementById('tc-nombre').value;
+  const corte = parseInt(document.getElementById('tc-corte').value);
+  const pago = parseInt(document.getElementById('tc-pago').value);
+
+  if (!nombre || !corte || !pago) return alert("Completa todos los campos de la tarjeta.");
+
+  state.cards.push({ id: Date.now(), nombre, corte, pago });
+  save();
+  closeModal('modal-tarjeta');
+}
+
+function calcularDiasPara(diaObjetivo) {
+  const hoyNum = new Date().getDate();
+  const diasEnMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  return diaObjetivo >= hoyNum ? diaObjetivo - hoyNum : (diasEnMes - hoyNum) + diaObjetivo;
 }
 
 function renderCardsList() {
-  const list = document.getElementById('cards-list');
-  list.innerHTML = state.cards.map(c => `
-    <div class="card">
-      <div style="display:flex; justify-content:space-between;">
-        <strong>${c.nombre}</strong>
-        <span onclick="deleteCard(${c.id})" style="color:var(--red); font-size:12px; cursor:pointer;">Eliminar</span>
+  const container = document.getElementById('cards-list');
+  const hoy = new Date().getDate();
+
+  if (state.cards.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:var(--text3); padding:20px;">Sin tarjetas vinculadas.</p>';
+    return;
+  }
+
+  container.innerHTML = state.cards.map(c => {
+    const faltanPago = calcularDiasPara(c.pago);
+    const alertaPago = (faltanPago <= 5 && faltanPago >= 0);
+    
+    return `
+      <div class="card-plan" style="border-left:4px solid ${alertaPago ? 'var(--red)' : 'var(--amber)'}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <strong>${c.nombre}</strong>
+            <div style="font-size:12px; color:var(--text2); margin-top:4px;">
+              Corte: Día ${c.corte} | Pago: Día ${c.pago}
+            </div>
+          </div>
+          <button onclick="deleteCard(${c.id})" style="background:none; border:none; color:var(--text3); cursor:pointer;">✕</button>
+        </div>
+        ${alertaPago ? `<div style="color:var(--red); font-size:11px; font-weight:700; margin-top:8px;">⚠ Pagar en ${faltanPago} días</div>` : ''}
       </div>
-      <div style="font-size:13px; margin-top:5px; color:var(--text2);">
-        📅 Corte: Día ${c.corte} | 💳 Pago: Día ${c.pago}
-      </div>
-    </div>
-  `).join('') || '<p style="color:var(--text2); text-align:center; padding:20px;">Sin tarjetas registradas</p>';
+    `;
+  }).join('');
 }
 
-function renderAll() {
-  if (!state.setup) return;
-  renderDashboard();
-  renderGastos();
-  renderIngresos();
-  renderMetas();
-  renderCardsList();
+function renderCardAlerts() {
+  const container = document.getElementById('cards-alerts-container');
+  const noAlerts = document.getElementById('no-alerts');
+  container.innerHTML = '';
   
-  const saldoCalc = state.salario - state.transactions.filter(t => t.type === 'gasto').reduce((a,b) => a + b.amount, 0);
-  document.getElementById('config-saldo-real').placeholder = `Saldo calculado: ${fL(saldoCalc)}`;
-}
-
-// === ACCIONES ===
-function saveMovimiento() {
-  const tipo = document.getElementById('mv-tipo').value;
-  const monto = parseFloat(document.getElementById('mv-monto').value);
-  const subcat = document.getElementById('mv-subcat').value;
-  const cat = document.getElementById('mv-cat').value;
-  const pago = document.getElementById('mv-pago').value;
-  
-  if (!monto || monto <= 0) { alert("Ingresa un monto válido"); return; }
-  
-  state.transactions.push({
-    id: Date.now(),
-    type: tipo,
-    subtype: tipo === 'ingreso' ? 'extra' : null,
-    amount: monto,
-    cat: tipo === 'gasto' ? cat : null,
-    subcat,
-    pago: tipo === 'gasto' ? pago : null,
-    date: new Date()
+  state.cards.forEach(c => {
+    const faltanCorte = calcularDiasPara(c.corte);
+    const faltanPago = calcularDiasPara(c.pago);
+    
+    if (faltanCorte <= 3 || faltanPago <= 5) {
+      container.innerHTML += `
+        <div class="card-alert">
+          <div style="font-weight:700;">${c.nombre}</div>
+          <div style="font-size:12px; color:var(--text2); margin-top:5px;">
+            ${faltanCorte <= 3 ? `📅 Corte en ${faltanCorte} día(s)` : ''}
+            ${faltanPago <= 5 ? `<br>⚠️ Pagar en ${faltanPago} día(s)` : ''}
+          </div>
+        </div>
+      `;
+    }
   });
   
-  saveState();
-  closeModal('modal-movimiento');
-  renderAll();
-  
-  document.getElementById('mv-monto').value = '';
-  document.getElementById('mv-subcat').value = '';
+  noAlerts.classList.toggle('hidden', container.innerHTML !== '');
 }
 
-function saveGasto() {
-  const monto = parseFloat(document.getElementById('gasto-monto').value);
-  const subcat = document.getElementById('gasto-subcat').value;
-  const cat = document.getElementById('gasto-cat').value;
-  const pago = document.getElementById('gasto-pago').value;
-  
-  if (!monto || monto <= 0) { alert("Ingresa un monto válido"); return; }
-  
-  state.transactions.push({
-    id: Date.now(),
-    type: 'gasto',
-    amount: monto,
-    cat,
-    subcat,
-    pago,
-    date: new Date()
-  });
-  
-  saveState();
-  closeModal('modal-gasto');
-  renderAll();
-  
-  document.getElementById('gasto-monto').value = '';
-  document.getElementById('gasto-subcat').value = '';
+function deleteCard(id) {
+  if (confirm("¿Desvincular esta tarjeta?")) {
+    state.cards = state.cards.filter(c => c.id !== id);
+    save();
+  }
 }
 
-function saveIngreso() {
-  const monto = parseFloat(document.getElementById('ingreso-monto').value);
-  const tipo = document.getElementById('ingreso-tipo').value;
-  
-  if (!monto || monto <= 0) { alert("Ingresa un monto válido"); return; }
-  
-  state.transactions.push({
-    id: Date.now(),
-    type: 'ingreso',
-    subtype: tipo,
-    amount: monto,
-    cat: tipo === 'extra' ? 'cre' : 'op',
-    date: new Date()
-  });
-  
-  saveState();
-  closeModal('modal-ingreso');
-  renderAll();
-  
-  document.getElementById('ingreso-monto').value = '';
-}
-
+// 8. METAS DE CAPITAL
 function saveMeta() {
-  const nombre = document.getElementById('meta-nombre').value;
-  const objetivo = parseFloat(document.getElementById('meta-objetivo').value);
-  const actual = parseFloat(document.getElementById('meta-actual').value) || 0;
-  
-  if (!nombre || !objetivo) { alert("Completa nombre y monto objetivo"); return; }
+  const nombre = document.getElementById('meta-nombre')?.value;
+  const objetivo = parseFloat(document.getElementById('meta-objetivo')?.value);
+  const actual = parseFloat(document.getElementById('meta-actual')?.value) || 0;
+  if (!nombre || !objetivo) return alert("Completa nombre y monto");
   
   state.goals.push({ id: Date.now(), nombre, objetivo, ahorrado: actual });
-  saveState();
-  closeModal('modal-meta');
-  renderAll();
-  
+  save(); closeModal('modal-meta');
   document.getElementById('meta-nombre').value = '';
   document.getElementById('meta-objetivo').value = '';
   document.getElementById('meta-actual').value = '0';
@@ -750,47 +654,70 @@ function saveAbono() {
   if (meta) {
     meta.ahorrado += monto;
     state.transactions.push({
-      id: Date.now(),
-      type: 'gasto',
-      amount: monto,
-      cat: 'cre',
-      subcat: `Abono: ${meta.nombre}`,
-      date: new Date()
+      id: Date.now(), type: 'gasto', amount: monto, cat: 'cre',
+      subcat: `Abono: ${meta.nombre}`, date: new Date()
     });
-    saveState();
+    save();
   }
-  
-  closeModal('modal-abono');
-  renderAll();
+  closeModal('modal-abono'); renderAll();
   document.getElementById('abono-monto').value = '';
 }
 
-function saveTarjeta() {
-  const nombre = document.getElementById('tc-nombre').value;
-  const corte = parseInt(document.getElementById('tc-corte').value);
-  const pago = parseInt(document.getElementById('tc-pago').value);
-  
-  if (!nombre || !corte || !pago) { alert("Completa todos los campos"); return; }
-  if (corte < 1 || corte > 31 || pago < 1 || pago > 31) { alert("Días deben ser 1-31"); return; }
-  
-  state.cards.push({ id: Date.now(), nombre, corte, pago });
-  saveState();
-  closeModal('modal-tarjeta');
-  renderAll();
-  
-  document.getElementById('tc-nombre').value = '';
-  document.getElementById('tc-corte').value = '';
-  document.getElementById('tc-pago').value = '';
+function renderMetas() {
+  const container = document.getElementById('metas-list');
+  if (!container) return;
+  container.innerHTML = state.goals.map(g => {
+    const pct = Math.min(100, (g.ahorrado / g.objetivo) * 100);
+    const faltante = g.objetivo - g.ahorrado;
+    return `
+      <div class="card-plan">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+          <strong>${g.nombre}</strong>
+          <span style="color:var(--amber);">${fL(g.ahorrado)} / ${fL(g.objetivo)}</span>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar" style="width:${pct}%; background:var(--green);"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:10px;">
+          <span style="font-size:12px; color:var(--text2);">Faltan: ${fL(faltante)}</span>
+          <button class="btn btn-secondary" style="width:auto; padding:8px 12px; font-size:12px;" onclick="openAbono(${g.id})">+ Abonar</button>
+        </div>
+      </div>
+    `;
+  }).join('') || '<p style="color:var(--text2); text-align:center; padding:20px;">Sin metas creadas</p>';
 }
 
-function deleteCard(id) {
-  if (confirm("¿Eliminar esta tarjeta?")) {
-    state.cards = state.cards.filter(c => c.id !== id);
-    saveState();
-    renderAll();
-  }
+// 9. ONBOARDING Y CONFIGURACIÓN
+function updateObPreview() {
+  const planKey = document.getElementById('ob-plan').value;
+  const salario = parseFloat(document.getElementById('ob-salario').value) || 0;
+  const p = FINANCIAL_PLANS[planKey];
+  
+  document.getElementById('preview-content').innerHTML = `
+    <div style="margin:8px 0;"><strong>Operación (${p.op*100}%):</strong> ${fL(salario * p.op)}</div>
+    <div style="margin:8px 0;"><strong>Crecimiento/Deuda (${p.cre*100}%):</strong> ${fL(salario * p.cre)}</div>
+    <div style="margin:8px 0;"><strong>Estilo de Vida (${p.ev*100}%):</strong> ${fL(salario * p.ev)}</div>
+  `;
+  document.getElementById('ob-preview').classList.remove('hidden');
 }
 
+function finishOnboarding() {
+  const nombre = document.getElementById('ob-nombre').value || 'Usuario';
+  const s = parseFloat(document.getElementById('ob-salario').value);
+  if (!s || s <= 0) return alert("Ingresa un sueldo válido para empezar.");
+  
+  state.nombre = nombre;
+  state.salario = s;
+  state.deudaToxica = parseFloat(document.getElementById('ob-deuda-int').value) || 0;
+  state.deudaCero = parseFloat(document.getElementById('ob-deuda-cero').value) || 0;
+  state.cuotaCero = parseFloat(document.getElementById('ob-cuota').value) || 0;
+  state.plan = document.getElementById('ob-plan').value;
+  state.setup = true;
+  save();
+  document.getElementById('onboarding').style.display = 'none';
+}
+
+// 10. FUNCIONES DE SISTEMA
 function reconciliar() {
   const saldoReal = parseFloat(document.getElementById('config-saldo-real').value);
   if (!saldoReal && saldoReal !== 0) { alert("Ingresa el saldo real"); return; }
@@ -802,69 +729,80 @@ function reconciliar() {
   if (Math.abs(diff) < 1) {
     result.innerHTML = `<span class="text-green">✅ Todo cuadrado. Diferencia: ${fL(diff)}</span>`;
   } else if (diff > 0) {
-    result.innerHTML = `<span class="text-amber">⚠️ Te sobran ${fL(diff)} sin registrar (¿ingreso olvidado?)</span>`;
+    result.innerHTML = `<span class="text-amber">⚠️ Te sobran ${fL(diff)} sin registrar</span>`;
   } else {
-    result.innerHTML = `<span class="text-red">❌ Faltan ${fL(Math.abs(diff))} por registrar (¿gasto olvidado?)</span>`;
+    result.innerHTML = `<span class="text-red">❌ Faltan ${fL(Math.abs(diff))} por registrar</span>`;
   }
 }
 
-function solicitarPermisoNotificaciones() {
-  if (!("Notification" in window)) { alert("Tu navegador no soporta notificaciones"); return; }
-  Notification.requestPermission().then(p => {
-    if (p === 'granted') {
-      alert("✅ Notificaciones activadas. Te avisaremos de cortes y pagos.");
-    }
-  });
-}
-
 function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
-  const url = URL.createObjectURL(blob);
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
   const a = document.createElement('a');
-  a.href = url;
-  a.download = `FinanzasHN_Backup_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  a.href = dataStr; a.download = "MisFinanzas_Respaldo.json";
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
 function importData(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  
+  const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
     try {
       const data = JSON.parse(ev.target.result);
       if (data.salario && data.transactions) {
         if (confirm("⚠️ Esto reemplazará tus datos actuales. ¿Continuar?")) {
-          state = data;
-          saveState();
-          alert("✅ Datos importados correctamente");
-          location.reload();
+          state = data; save(); alert("✅ Datos importados"); location.reload();
         }
-      } else {
-        alert("❌ Archivo inválido");
-      }
-    } catch {
-      alert("❌ Error al leer el archivo");
-    }
+      } else { alert("❌ Archivo inválido"); }
+    } catch { alert("❌ Error al leer el archivo"); }
   };
-  reader.readAsText(file);
-  e.target.value = '';
+  reader.readAsText(file); e.target.value = '';
+}
+
+function solicitarPermisoNotificaciones() {
+  if (!("Notification" in window)) { alert("Tu navegador no soporta notificaciones"); return; }
+  Notification.requestPermission().then(p => {
+    if (p === 'granted') alert("✅ Notificaciones activadas");
+  });
 }
 
 function resetApp() {
-  if (confirm("⚠️ ¿Seguro que quieres BORRAR TODOS tus datos? Esta acción NO se puede deshacer.")) {
-    if (confirm("🔄 Confirma: Se eliminarán ingresos, gastos, metas y configuración.")) {
-      localStorage.removeItem(LS_KEY);
-      location.reload();
+  if (confirm("⚠️ ¿Seguro que quieres BORRAR TODOS tus datos?")) {
+    if (confirm("🔄 Confirma: Se eliminarán todos los registros.")) {
+      localStorage.clear(); location.reload();
     }
   }
 }
 
-// === INICIALIZACIÓN ===
+// Navegación de Vistas
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  event.currentTarget.classList.add('active');
+  renderAll();
+}
+
+// Modales
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function closeModalIfBg(e, id) { if (e.target.id === id) closeModal(id); }
+
+// 11. INICIALIZACIÓN
+function renderAll() {
+  if (!state.setup) return;
+  renderDashboard();
+  renderGastos();
+  renderIngresos();
+  renderMetas();
+  renderCardsList();
+  renderCardAlerts();
+  
+  const saldoCalc = state.salario - state.transactions.filter(t => t.type === 'gasto').reduce((a,b) => a + b.amount, 0);
+  document.getElementById('config-saldo-real').placeholder = `Saldo calculado: ${fL(saldoCalc)}`;
+}
+
 window.onload = () => {
-  checkSetup();
+  if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
   renderAll();
   
   if ('serviceWorker' in navigator) {
