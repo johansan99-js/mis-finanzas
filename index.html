@@ -41,11 +41,22 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .expense-bar{background:var(--red)}
 .saving-bar{background:var(--blue)}
 .fab{position:fixed;bottom:80px;right:20px;width:60px;height:60px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--bg);cursor:pointer;box-shadow:0 4px 15px rgba(240,165,0,0.3);z-index:150}
+.fab-menu{position:fixed;bottom:150px;right:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:140;display:none;min-width:180px}
+.fab-menu-item{padding:12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;margin-bottom:5px}
+.fab-menu-item:hover{background:var(--bg3)}
+.fab-menu-item:last-child{margin-bottom:0}
 .history-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
 .history-item:last-child{border-bottom:none}
 .badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase}
 .badge-income{background:rgba(46,204,138,0.2);color:var(--green)}
 .badge-expense{background:rgba(232,93,93,0.2);color:var(--red)}
+.goal-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:15px}
+.goal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.goal-progress{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-bottom:10px}
+.goal-progress-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width 0.5s}
+.goal-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;margin-bottom:10px}
+.goal-stat{background:var(--bg3);padding:8px;border-radius:6px;text-align:center}
+.goal-actions{display:flex;gap:10px}
 </style>
 </head>
 <body>
@@ -153,10 +164,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <span style="color:var(--text2)">Extra</span>
       <strong id="ingreso-extra">L. 0.00</strong>
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:5px">Distribución automática</div>
-      <div style="font-size:11px;color:var(--text2)">Registra un ingreso para ver la distribución.</div>
-    </div>
   </div>
   <div id="ingresos-list"></div>
 </div>
@@ -190,8 +197,22 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   </div>
 </div>
 
-<!-- FLOATING ACTION BUTTON -->
-<div class="fab" onclick="openModal('modal-gasto')">+</div>
+<!-- FLOATING ACTION BUTTON WITH MENU -->
+<div class="fab" onclick="toggleFabMenu()">+</div>
+<div class="fab-menu" id="fab-menu">
+  <div class="fab-menu-item" onclick="openModal('modal-gasto');toggleFabMenu()">
+    <span style="color:var(--red);font-size:20px">📉</span>
+    <span>Nuevo Gasto</span>
+  </div>
+  <div class="fab-menu-item" onclick="openModal('modal-ingreso');toggleFabMenu()">
+    <span style="color:var(--green);font-size:20px">💰</span>
+    <span>Nuevo Ingreso</span>
+  </div>
+  <div class="fab-menu-item" onclick="openModal('modal-meta');toggleFabMenu()">
+    <span style="color:var(--blue);font-size:20px">🎯</span>
+    <span>Nueva Meta</span>
+  </div>
+</div>
 
 <!-- NAV -->
 <nav class="tab-nav">
@@ -205,54 +226,53 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <!-- MODAL GASTO -->
 <div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')">
   <div class="modal-content">
-    <h3 style="margin-bottom:15px">+ Nuevo Gasto</h3>
-    <input type="number" id="gasto-monto" class="input-field" placeholder="L. 0">
-    <input type="text" id="gasto-cat" class="input-field" placeholder="Categoría">
-    <input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría">
+    <h3 style="margin-bottom:15px">📉 Nuevo Gasto</h3>
+    <input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)">
+    <input type="text" id="gasto-cat" class="input-field" placeholder="Categoría (Ej. Comida, Transporte)">
+    <input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría (opcional)">
     <select id="gasto-pago" class="input-field">
       <option value="efectivo">Efectivo</option>
       <option value="debito">Tarjeta débito</option>
       <option value="credito">Tarjeta crédito</option>
       <option value="transfer">Transferencia</option>
     </select>
-    <input type="file" id="gasto-foto" class="input-field" accept="image/*">
     <button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveGasto()">Guardar</button>
+    <button class="btn btn-primary" onclick="saveGasto()">Guardar Gasto</button>
   </div>
 </div>
 
 <!-- MODAL INGRESO -->
 <div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')">
   <div class="modal-content">
-    <h3 style="margin-bottom:15px">Nuevo Ingreso</h3>
-    <input type="number" id="ingreso-monto" class="input-field" placeholder="L. 0">
+    <h3 style="margin-bottom:15px">💰 Nuevo Ingreso</h3>
+    <input type="number" id="ingreso-monto" class="input-field" placeholder="Monto (L)">
     <select id="ingreso-tipo" class="input-field">
       <option value="salario">Salario base</option>
       <option value="extra">Ingreso extra</option>
     </select>
-    <p style="font-size:11px;color:var(--text2);margin:10px 0">Los ingresos extra van 100% a Crecimiento.</p>
+    <p style="font-size:11px;color:var(--text2);margin:10px 0">💡 Los ingresos extra van 100% a Crecimiento.</p>
     <button class="btn btn-secondary" onclick="closeModal('modal-ingreso')">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveIngreso()">Registrar</button>
+    <button class="btn btn-primary" onclick="saveIngreso()">Registrar Ingreso</button>
   </div>
 </div>
 
 <!-- MODAL META -->
 <div id="modal-meta" class="modal" onclick="closeModalIfBg(event,'modal-meta')">
   <div class="modal-content">
-    <h3 style="margin-bottom:15px">Nueva Meta</h3>
-    <input type="text" id="meta-nombre" class="input-field" placeholder="Nombre">
+    <h3 style="margin-bottom:15px">🎯 Nueva Meta</h3>
+    <input type="text" id="meta-nombre" class="input-field" placeholder="Nombre de la meta">
     <input type="number" id="meta-objetivo" class="input-field" placeholder="Monto objetivo (L)">
     <input type="number" id="meta-actual" class="input-field" placeholder="Ahorrado actualmente (L)" value="0">
     <button class="btn btn-secondary" onclick="closeModal('modal-meta')">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveMeta()">Guardar</button>
+    <button class="btn btn-primary" onclick="saveMeta()">Guardar Meta</button>
   </div>
 </div>
 
 <!-- MODAL ABONO -->
 <div id="modal-abono" class="modal" onclick="closeModalIfBg(event,'modal-abono')">
   <div class="modal-content">
-    <h3 style="margin-bottom:15px">Abonar a Meta</h3>
-    <p id="abono-meta-nombre" style="color:var(--amber);margin-bottom:15px"></p>
+    <h3 style="margin-bottom:15px">💸 Abonar a Meta</h3>
+    <p id="abono-meta-nombre" style="color:var(--amber);margin-bottom:15px;font-weight:700"></p>
     <p style="font-size:12px;color:var(--text2);margin-bottom:15px">Este monto se descontará de tu saldo disponible.</p>
     <input type="number" id="abono-monto" class="input-field" placeholder="Monto a abonar (L)">
     <input type="hidden" id="abono-meta-id">
@@ -262,7 +282,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 </div>
 
 <script>
-const LS_KEY='mifinanzashn_v2';
+const LS_KEY='mifinanzashn_v3';
 let state=JSON.parse(localStorage.getItem(LS_KEY))||{
   setup:false,
   nombre:'',
@@ -291,6 +311,11 @@ function finishOnboarding(){
   save();
   document.getElementById('onboarding').style.display='none';
   renderAll();
+}
+
+function toggleFabMenu(){
+  const menu=document.getElementById('fab-menu');
+  menu.style.display=menu.style.display==='block'?'none':'block';
 }
 
 function saveGasto(){
@@ -419,11 +444,11 @@ function renderDashboard(){
   document.getElementById('total-expense').textContent=fL(expense);
   document.getElementById('total-extra').textContent=fL(extra);
   
-  // GRÁFICO
+  // GRÁFICO - Calcular alturas proporcionales
   const maxVal=Math.max(income,expense,balance,1);
   const incomePct=(income/maxVal)*100;
   const expensePct=(expense/maxVal)*100;
-  const savingPct=(balance>0?(balance/maxVal)*100:0);
+  const savingPct=balance>0?(balance/maxVal)*100:0;
   
   document.getElementById('bar-income').style.height=incomePct+'%';
   document.getElementById('bar-expense').style.height=expensePct+'%';
@@ -453,23 +478,33 @@ function renderDashboard(){
   if(state.goals.length>0){
     document.getElementById('goals-summary').innerHTML=state.goals.map(g=>{
       const pct=Math.min(100,(g.actual/g.objetivo)*100);
-      return `<div class="card" style="padding:12px;margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-          <strong style="font-size:13px">${g.nombre}</strong>
-          <span style="color:var(--green);font-size:12px">${pct.toFixed(0)}%</span>
+      return `<div class="goal-card">
+        <div class="goal-header">
+          <strong style="font-size:14px">${g.nombre}</strong>
+          <span style="color:${pct>=100?'var(--green)':'var(--amber)'};font-weight:700">${pct.toFixed(0)}%</span>
         </div>
-        <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:8px">
-          <div style="width:${pct}%;height:100%;background:var(--green);transition:width 0.5s"></div>
+        <div class="goal-progress">
+          <div class="goal-progress-bar" style="width:${pct}%"></div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)">
-          <span>${fL(g.actual)}</span>
-          <span>${fL(g.objetivo)}</span>
+        <div class="goal-stats">
+          <div class="goal-stat">
+            <div style="color:var(--text2);font-size:10px">Ahorrado</div>
+            <div style="font-weight:700;color:var(--green)">${fL(g.actual)}</div>
+          </div>
+          <div class="goal-stat">
+            <div style="color:var(--text2);font-size:10px">Falta</div>
+            <div style="font-weight:700;color:var(--amber)">${fL(g.objetivo-g.actual)}</div>
+          </div>
         </div>
-        <button class="btn btn-secondary" style="margin-top:8px;padding:8px;font-size:11px" onclick="openAbono(${g.id})">+ Abonar</button>
+        <div class="goal-actions">
+          <button class="btn btn-primary" style="flex:1;padding:10px;font-size:12px" onclick="openAbono(${g.id})">+ Abonar</button>
+          <button class="btn btn-secondary" style="width:auto;padding:10px;background:var(--bg4);color:var(--red)" onclick="deleteMeta(${g.id})">×</button>
+        </div>
+        ${pct>=100?'<div style="text-align:center;margin-top:8px;color:var(--green);font-size:11px;font-weight:700">🎉 ¡META LOGRADA!</div>':''}
       </div>`;
     }).join('');
   }else{
-    document.getElementById('goals-summary').innerHTML='<p style="text-align:center;color:var(--text2);padding:15px">Sin metas creadas</p>';
+    document.getElementById('goals-summary').innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin metas creadas<br><span style="font-size:11px">Toca + para crear tu primera meta</span></p>';
   }
 }
 
@@ -521,33 +556,39 @@ function renderIngresos(){
 }
 
 function renderMetas(){
+  if(state.goals.length===0){
+    document.getElementById('metas-list').innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin metas creadas<br><span style="font-size:11px">Toca + para crear tu primera meta</span></p>';
+    return;
+  }
+  
   document.getElementById('metas-list').innerHTML=state.goals.map(g=>{
     const pct=Math.min(100,(g.actual/g.objetivo)*100);
     const faltante=g.objetivo-g.actual;
-    return `<div class="card" style="padding:15px;margin-bottom:15px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-        <strong style="font-size:15px">${g.nombre}</strong>
-        <span style="color:var(--green);font-weight:700">${pct.toFixed(0)}%</span>
+    return `<div class="goal-card">
+      <div class="goal-header">
+        <strong style="font-size:16px">${g.nombre}</strong>
+        <span style="color:${pct>=100?'var(--green)':'var(--amber)'};font-weight:700">${pct.toFixed(0)}%</span>
       </div>
-      <div style="height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;margin-bottom:12px">
-        <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width 0.5s"></div>
+      <div class="goal-progress">
+        <div class="goal-progress-bar" style="width:${pct}%"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;margin-bottom:12px">
-        <div style="background:var(--bg3);padding:8px;border-radius:6px">
-          <div style="color:var(--text2);margin-bottom:2px">Ahorrado</div>
-          <div style="font-weight:700">${fL(g.actual)}</div>
+      <div class="goal-stats">
+        <div class="goal-stat">
+          <div style="color:var(--text2);font-size:10px">Ahorrado</div>
+          <div style="font-weight:700;color:var(--green)">${fL(g.actual)}</div>
         </div>
-        <div style="background:var(--bg3);padding:8px;border-radius:6px">
-          <div style="color:var(--text2);margin-bottom:2px">Falta</div>
+        <div class="goal-stat">
+          <div style="color:var(--text2);font-size:10px">Falta</div>
           <div style="font-weight:700;color:var(--amber)">${fL(faltante)}</div>
         </div>
       </div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-primary" style="padding:10px;font-size:12px" onclick="openAbono(${g.id})">+ Inyectar</button>
-        <button class="btn btn-secondary" style="padding:10px;font-size:12px;background:var(--bg4);color:var(--red)" onclick="deleteMeta(${g.id})">×</button>
+      <div class="goal-actions">
+        <button class="btn btn-primary" style="flex:1;padding:10px;font-size:12px" onclick="openAbono(${g.id})">+ Inyectar Ahorro</button>
+        <button class="btn btn-secondary" style="width:auto;padding:10px;background:var(--bg4);color:var(--red)" onclick="deleteMeta(${g.id})">Eliminar</button>
       </div>
+      ${pct>=100?'<div style="text-align:center;margin-top:10px;color:var(--green);font-size:12px;font-weight:700">🎉 ¡META LOGRADA!</div>':''}
     </div>`;
-  }).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin metas creadas</p>';
+  }).join('');
 }
 
 function reconciliar(){
@@ -621,12 +662,13 @@ function switchView(view){
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   event.currentTarget.classList.add('active');
+  document.getElementById('fab-menu').style.display='none';
   if(view==='gastos')renderGastos();
   if(view==='ingresos')renderIngresos();
   if(view==='metas')renderMetas();
 }
 
-function openModal(id){document.getElementById(id).style.display='flex'}
+function openModal(id){document.getElementById(id).style.display='flex';document.getElementById('fab-menu').style.display='none'}
 function closeModal(id){document.getElementById(id).style.display='none'}
 function closeModalIfBg(e,id){if(e.target.id===id)closeModal(id)}
 
