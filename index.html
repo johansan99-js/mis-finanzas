@@ -104,7 +104,7 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
 
 /* Modal */
 .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:200; justify-content:center; align-items:center; padding:20px; }
-.modal-content { background:var(--bg2); border-radius:var(--r); width:100%; max-width:380px; padding:20px; }
+.modal-content { background:var(--bg2); border-radius:var(--r); width:100%; max-width:380px; padding:20px; max-height:90vh; overflow-y:auto; }
 .input-field { width:100%; background:var(--bg3); border:1px solid var(--border); padding:12px; border-radius:8px; color:var(--text); margin-bottom:15px; }
 .btn { width:100%; padding:14px; border-radius:8px; border:none; font-weight:700; cursor:pointer; margin:5px 0; }
 .btn-primary { background:var(--amber); color:var(--bg); }
@@ -117,6 +117,13 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
 .text-green { color:var(--green); }
 .text-red { color:var(--red); }
 .mt-3 { margin-top:16px; }
+
+/* Deudas Module */
+.deuda-card { border-left:4px solid var(--blue); }
+.deuda-progress { height: 6px; background: var(--bg4); border-radius: 10px; overflow: hidden; margin: 8px 0; }
+.deuda-progress-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; }
+.deuda-summary { background:linear-gradient(135deg, var(--bg2), var(--bg3)); }
+.deuda-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:center; }
 </style>
 </head>
 <body>
@@ -171,6 +178,30 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
   <div id="recent-history"></div>
 
   <button class="btn btn-primary mt-3" onclick="openModal('modal-movimiento')">+ Nuevo Movimiento</button>
+</div>
+
+<!-- DEUDAS -->
+<div id="view-deudas" class="view">
+  <h2>💳 Mis Deudas</h2>
+  
+  <!-- Resumen Consolidado -->
+  <div class="card deuda-summary" style="margin:20px 0;">
+    <div class="deuda-grid">
+      <div>
+        <div style="font-size:11px; color:var(--text2);">TOTAL DEUDA</div>
+        <div style="font-size:20px; font-weight:700; color:var(--red);" id="deuda-total">L. 0</div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--text2);">CUOTAS/MES</div>
+        <div style="font-size:20px; font-weight:700;" id="cuotas-total">L. 0</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Lista de Deudas -->
+  <div id="deudas-list"></div>
+  
+  <button class="btn btn-secondary" onclick="openModal('modal-deuda')">+ Agregar Deuda</button>
 </div>
 
 <!-- GASTOS -->
@@ -284,12 +315,29 @@ body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(-
   </div>
 </div>
 
+<div id="modal-deuda" class="modal" onclick="closeModalIfBg(event, 'modal-deuda')">
+  <div class="modal-content">
+    <h3>💳 Nueva Deuda / Préstamo</h3>
+    
+    <input type="text" id="deuda-banco" class="input-field" placeholder="Banco (Ej. BAC, Ficohsa)">
+    <input type="text" id="deuda-tipo" class="input-field" placeholder="Tipo (Tarjeta, Auto, Personal)">
+    <input type="number" id="deuda-monto" class="input-field" placeholder="Monto total del préstamo (L)">
+    <input type="number" id="deuda-tasa" class="input-field" placeholder="Tasa de interés anual (%)">
+    <input type="number" id="deuda-plazo" class="input-field" placeholder="Plazo en meses">
+    <input type="number" id="deuda-cuota" class="input-field" placeholder="Cuota mensual (L)">
+    <input type="number" id="deuda-pagado" class="input-field" placeholder="Ya pagado (L)" value="0">
+    <input type="date" id="deuda-vencimiento" class="input-field">
+    
+    <button class="btn btn-primary" onclick="saveDeuda()">Guardar Deuda</button>
+  </div>
+</div>
+
 <!-- NAV -->
 <nav class="tab-nav">
   <div class="tab-item active" onclick="switchView('dashboard')">🏠 Inicio</div>
+  <div class="tab-item" onclick="switchView('deudas')">💳 Deudas</div>
   <div class="tab-item" onclick="switchView('gastos')">📊 Gastos</div>
   <div class="tab-item" onclick="switchView('ingresos')">💵 Ingresos</div>
-  <div class="tab-item" onclick="switchView('metas')">🎯 Metas</div>
   <div class="tab-item" onclick="switchView('config')">⚙️ Config</div>
 </nav>
 
@@ -309,10 +357,10 @@ const PLANS = {
   rescate: { name: 'Rescate', op: 0.50, cre: 0.40, ev: 0.10, color: '#e85d5d' }
 };
 
-const LS_KEY = 'mifinanzashn_final_v1';
+const LS_KEY = 'mifinanzashn_final_v2';
 let state = JSON.parse(localStorage.getItem(LS_KEY)) || {
   setup: false, nombre: '', perfil: 'empleado', salario: 0, plan: 'crecimiento',
-  transactions: [], cards: [], goals: []
+  transactions: [], cards: [], goals: [], deudas: []
 };
 
 const fL = n => 'L. ' + Number(n).toLocaleString('en-US', {minimumFractionDigits:2});
@@ -338,7 +386,7 @@ function finishOnboarding() {
   state = {
     setup: true, nombre, perfil, salario: ingreso,
     plan: PROFILES[perfil].plan,
-    transactions: [], cards: [], goals: []
+    transactions: [], cards: [], goals: [], deudas: []
   };
   save();
   document.getElementById('onboarding').style.display = 'none';
@@ -359,6 +407,145 @@ function calcularSalud() {
   if (fallos === 0 && ratio <= 1) return { grado: 'A', msg: '¡Excelente Control!', color: 'var(--green)' };
   if (fallos === 1 || ratio <= 1.05) return { grado: 'B', msg: 'Disciplina Moderada', color: 'var(--amber)' };
   return { grado: 'C', msg: 'Riesgo de Liquidez', color: 'var(--red)' };
+}
+
+// === GESTIÓN DE DEUDAS ===
+function calcularProgresoDeuda(deuda) {
+  const pagado = deuda.pagado || 0;
+  const total = deuda.monto;
+  const pct = Math.min(100, (pagado / total) * 100);
+  const restante = total - pagado;
+  
+  const mesesRestantes = deuda.cuota > 0 ? Math.ceil(restante / deuda.cuota) : deuda.plazo;
+  const anosRestantes = Math.floor(mesesRestantes / 12);
+  const mesesExtra = mesesRestantes % 12;
+  
+  return { pct, restante, mesesRestantes, anosRestantes, mesesExtra };
+}
+
+function saveDeuda() {
+  const banco = document.getElementById('deuda-banco').value.trim();
+  const tipo = document.getElementById('deuda-tipo').value.trim();
+  const monto = parseFloat(document.getElementById('deuda-monto').value);
+  const tasa = parseFloat(document.getElementById('deuda-tasa').value) || 0;
+  const plazo = parseInt(document.getElementById('deuda-plazo').value);
+  const cuota = parseFloat(document.getElementById('deuda-cuota').value);
+  const pagado = parseFloat(document.getElementById('deuda-pagado').value) || 0;
+  const vencimiento = document.getElementById('deuda-vencimiento').value;
+  
+  if (!banco || !monto || !cuota || !plazo) {
+    return alert("Completa: Banco, Monto, Cuota y Plazo");
+  }
+  
+  state.deudas.push({
+    id: Date.now(),
+    banco,
+    tipo,
+    monto,
+    tasa,
+    plazo,
+    cuota,
+    pagado,
+    vencimiento,
+    fechaCreacion: new Date().toISOString()
+  });
+  
+  save();
+  closeModal('modal-deuda');
+  
+  ['deuda-banco','deuda-tipo','deuda-monto','deuda-tasa','deuda-plazo','deuda-cuota','deuda-pagado','deuda-vencimiento']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('deuda-pagado').value = '0';
+}
+
+function renderDeudas() {
+  const container = document.getElementById('deudas-list');
+  const deudas = state.deudas || [];
+  
+  const totalDeuda = deudas.reduce((a, d) => a + (d.monto - (d.pagado || 0)), 0);
+  const totalCuotas = deudas.reduce((a, d) => a + (d.cuota || 0), 0);
+  document.getElementById('deuda-total').textContent = fL(totalDeuda);
+  document.getElementById('cuotas-total').textContent = fL(totalCuotas);
+  
+  if (deudas.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:var(--text2); padding:20px;">Sin deudas registradas</p>';
+    return;
+  }
+  
+  container.innerHTML = deudas.map(d => {
+    const prog = calcularProgresoDeuda(d);
+    const barraPct = Math.min(100, ((d.pagado || 0) / d.monto) * 100);
+    const colorBarra = prog.pct >= 50 ? 'var(--green)' : (prog.pct >= 25 ? 'var(--amber)' : 'var(--red)');
+    
+    let diasParaPago = 'Pronto';
+    if (d.vencimiento) {
+      const hoy = new Date();
+      const venc = new Date(d.vencimiento);
+      const diff = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+      diasParaPago = diff > 0 ? `En ${diff} días` : (diff === 0 ? '¡HOY!' : 'Vencido');
+    }
+    
+    return `
+      <div class="card deuda-card" style="border-left-color: ${colorBarra}">
+        <div style="display:flex; justify-content:space-between; align-items:start;">
+          <div>
+            <strong style="font-size:15px;">${d.banco}</strong>
+            <div style="font-size:12px; color:var(--text2);">${d.tipo}</div>
+          </div>
+          <button onclick="deleteDeuda(${d.id})" style="background:none; border:none; color:var(--text2); cursor:pointer;">✕</button>
+        </div>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; font-size:13px;">
+          <div><span style="color:var(--text2);">Saldo:</span> <strong>${fL(prog.restante)}</strong></div>
+          <div><span style="color:var(--text2);">Cuota:</span> <strong>${fL(d.cuota)}/mes</strong></div>
+          <div><span style="color:var(--text2);">Progreso:</span> <strong>${prog.pct.toFixed(0)}% pagado</strong></div>
+          <div><span style="color:var(--text2);">Tiempo:</span> <strong>${prog.anosRestantes}a ${prog.mesesExtra}m</strong></div>
+        </div>
+        
+        <div class="deuda-progress">
+          <div class="deuda-progress-fill" style="width:${barraPct}%; background:${colorBarra};"></div>
+        </div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+          <span style="font-size:11px; color:${diasParaPago.includes('HOY') || diasParaPago.includes('Vencido') ? 'var(--red)' : 'var(--text2)'}">
+            📅 Próximo pago: ${diasParaPago}
+          </span>
+          <button class="btn btn-secondary" style="width:auto; padding:6px 12px; font-size:11px;" onclick="abonarDeuda(${d.id})">
+            + Abonar
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteDeuda(id) {
+  if (confirm("¿Eliminar esta deuda del registro?")) {
+    state.deudas = state.deudas.filter(d => d.id !== id);
+    save();
+  }
+}
+
+function abonarDeuda(id) {
+  const deuda = state.deudas.find(d => d.id === id);
+  if (!deuda) return;
+  
+  const monto = prompt(`Abonar a ${deuda.banco} - ${deuda.tipo}:\n\nSaldo actual: ${fL(deuda.monto - (deuda.pagado||0))}\n\nMonto a abonar (L):`);
+  if (monto && !isNaN(monto) && parseFloat(monto) > 0) {
+    deuda.pagado = (deuda.pagado || 0) + parseFloat(monto);
+    
+    state.transactions.push({
+      id: Date.now(),
+      type: 'gasto',
+      amount: parseFloat(monto),
+      cat: 'cre',
+      subcat: `Pago: ${deuda.banco} ${deuda.tipo}`,
+      date: new Date()
+    });
+    
+    save();
+    alert(`✅ Abono de ${fL(monto)} registrado`);
+  }
 }
 
 // === RENDERIZADO ===
@@ -562,6 +749,7 @@ function renderAll() {
   renderGastos();
   renderIngresos();
   renderMetas();
+  if (document.getElementById('deudas-list')) renderDeudas();
 }
 
 window.onload = () => {
