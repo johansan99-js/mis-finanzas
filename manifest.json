@@ -1,5 +1,5 @@
 {
-  "name": "Mis Finanzas HN",
+  "name": "Mis Finanzas HN Pro",
   "short_name": "FinanzasHN",
   "start_url": "./index.html",
   "display": "standalone",
@@ -10,12 +10,14 @@
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
