@@ -1,637 +1,210 @@
-// === CONFIGURACIÓN ===
-const PROFILES = {
-  empleado: { rule: { op: 0.65, cre: 0.20, ev: 0.15 }, plan: 'crecimiento' },
-  estudiante: { rule: { op: 0.70, cre: 0.15, ev: 0.15 }, plan: 'estandar' },
-  semanal: { rule: { op: 0.60, cre: 0.25, ev: 0.15 }, plan: 'austeridad' },
-  freelance: { rule: { op: 0.50, cre: 0.30, ev: 0.20 }, plan: 'rescate' }
-};
-
-const PLANS = {
-  crecimiento: { name: 'Crecimiento', op: 0.65, cre: 0.20, ev: 0.15, color: '#4a9ef8' },
-  estandar: { name: 'Equilibrado', op: 0.50, cre: 0.20, ev: 0.30, color: '#2ecc8a' },
-  austeridad: { name: 'Austeridad', op: 0.70, cre: 0.20, ev: 0.10, color: '#f97316' },
-  rescate: { name: 'Rescate', op: 0.50, cre: 0.40, ev: 0.10, color: '#e85d5d' }
-};
-
-const LS_KEY = 'mifinanzashn_final_v3';
-let state = JSON.parse(localStorage.getItem(LS_KEY)) || {
-  setup: false, nombre: '', perfil: 'empleado', salario: 0, plan: 'crecimiento',
-  transactions: [], cards: [], goals: [], deudas: []
-};
-
-const fL = n => 'L. ' + Number(n).toLocaleString('en-US', {minimumFractionDigits:2});
-const save = () => { localStorage.setItem(LS_KEY, JSON.stringify(state)); renderAll(); };
-
-// === ONBOARDING ===
-function updateOnboarding() {
-  const nombre = document.getElementById('ob-nombre')?.value?.trim() || '';
-  const perfil = document.getElementById('ob-perfil')?.value || '';
-  const ingreso = parseFloat(document.getElementById('ob-ingreso')?.value) || 0;
-  
-  const section = document.getElementById('ob-ingreso-section');
-  if (section) section.classList.toggle('hidden', !perfil);
-  
-  const btn = document.getElementById('ob-btn');
-  if (btn) btn.disabled = !(nombre && perfil && ingreso > 0);
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1117">
+<title>Mis Finanzas HN</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f1117; --bg2:#1a1d27; --bg3:#232736; --bg4:#2d3147;
+  --amber:#f0a500; --text:#f0eff4; --text2:#9b9eb5;
+  --green:#2ecc8a; --red:#e85d5d; --blue:#4a9ef8; --purple:#9b7fe8;
+  --border:#2d3147; --r:12px;
 }
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(--text); max-width:430px; margin:0 auto; overflow-x:hidden; padding-bottom:80px; }
+.card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:15px; margin-bottom:15px; }
+.status-badge { padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700; text-transform:uppercase; }
+.badge-crecimiento { background:rgba(74,158,248,0.2); color:var(--blue); border:1px solid var(--blue); }
+.balance-card { background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); border: 1px solid var(--border); border-radius: var(--r); padding: 24px 20px; text-align: center; margin-bottom: 20px; }
+.balance-label { font-size: 12px; color: var(--text2); text-transform: uppercase; }
+.balance-amount { font-size: 36px; font-weight: 700; margin: 8px 0; font-family: 'JetBrains Mono', monospace; }
+.balance-sub { font-size: 12px; color: var(--text2); }
+.health-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
+.grade-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: 800; border: 3px solid; background: var(--bg); }
+.health-info { flex: 1; }
+.health-message { font-size: 14px; font-weight: 500; }
+.health-ratio { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.limits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.limit-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
+.limit-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.limit-name { font-size: 11px; color: var(--text2); text-transform: uppercase; font-weight: 600; }
+.limit-remaining { font-size: 11px; font-weight: 700; }
+.limit-amount { font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; }
+.limit-bar-bg { height: 5px; background: var(--bg4); border-radius: 10px; overflow: hidden; }
+.limit-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; }
+.section-title { font-size: 16px; font-weight: 600; margin: 24px 0 12px; }
+.growth-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; margin-bottom: 20px; }
+.growth-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.growth-item:last-child { border-bottom: none; }
+.growth-icon { font-size: 18px; width: 28px; text-align: center; }
+.growth-info { flex: 1; }
+.growth-label { font-size: 12px; color: var(--text2); }
+.growth-value { font-size: 14px; font-weight: 600; }
+.growth-status { font-size: 10px; padding: 3px 6px; border-radius: 4px; font-weight: 700; }
+.history-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.history-item:last-child { border-bottom:none; }
+.tab-nav { display:flex; background:var(--bg2); position:fixed; bottom:0; width:100%; max-width:430px; border-top:1px solid var(--border); z-index:100; }
+.tab-item { flex:1; padding:12px; text-align:center; color:var(--text2); font-size:11px; cursor:pointer; }
+.tab-item.active { color:var(--amber); font-weight:700; border-top:2px solid var(--amber); }
+.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:200; justify-content:center; align-items:center; padding:20px; }
+.modal-content { background:var(--bg2); border-radius:var(--r); width:100%; max-width:380px; padding:20px; max-height:90vh; overflow-y:auto; }
+.input-field { width:100%; background:var(--bg3); border:1px solid var(--border); padding:12px; border-radius:8px; color:var(--text); margin-bottom:15px; }
+.btn { width:100%; padding:14px; border-radius:8px; border:none; font-weight:700; cursor:pointer; margin:5px 0; }
+.btn-primary { background:var(--amber); color:var(--bg); }
+.btn-secondary { background:var(--bg3); color:var(--text); }
+.view { display:none; padding:20px; padding-bottom:100px; }
+.view.active { display:block; }
+.hidden { display:none !important; }
+.text-green { color:var(--green); }
+.text-red { color:var(--red); }
+.mt-3 { margin-top:16px; }
+</style>
+</head>
+<body>
 
-function finishOnboarding() {
-  const nombre = document.getElementById('ob-nombre')?.value?.trim();
-  const perfil = document.getElementById('ob-perfil')?.value;
-  let ingreso = parseFloat(document.getElementById('ob-ingreso')?.value) || 0;
-  
-  if (!nombre || !perfil || ingreso <= 0) return alert("Completa todos los campos para continuar.");
-  
-  if (perfil === 'semanal') ingreso *= 4.33;
-  
-  state = {
-    setup: true, nombre, perfil, salario: ingreso,
-    plan: PROFILES[perfil].plan,
-    transactions: [], cards: [], goals: [], deudas: []
-  };
-  save();
-  
-  const onboard = document.getElementById('onboarding');
-  if (onboard) onboard.style.display = 'none';
-  renderAll();
-}
-
-// === CÁLCULOS ===
-function calcularSalud() {
-  const p = PROFILES[state.perfil]?.rule || PROFILES.empleado.rule;
-  const spent = cat => state.transactions.filter(t => t.cat === cat).reduce((a,b) => a + b.amount, 0);
-  
-  let fallos = 0;
-  if (spent('op') > state.salario * p.op) fallos++;
-  if (spent('ev') > state.salario * p.ev) fallos++;
-  
-  const ratio = (spent('op') + spent('cre') + spent('ev')) / state.salario;
-  
-  if (fallos === 0 && ratio <= 1) return { grado: 'A', msg: '¡Excelente Control!', color: 'var(--green)' };
-  if (fallos === 1 || ratio <= 1.05) return { grado: 'B', msg: 'Disciplina Moderada', color: 'var(--amber)' };
-  return { grado: 'C', msg: 'Riesgo de Liquidez', color: 'var(--red)' };
-}
-
-// === GESTIÓN DE DEUDAS ===
-function calcularProgresoDeuda(deuda) {
-  const pagado = deuda.pagado || 0;
-  const total = deuda.monto;
-  const pct = Math.min(100, (pagado / total) * 100);
-  const restante = total - pagado;
-  
-  const mesesRestantes = deuda.cuota > 0 ? Math.ceil(restante / deuda.cuota) : deuda.plazo;
-  const anosRestantes = Math.floor(mesesRestantes / 12);
-  const mesesExtra = mesesRestantes % 12;
-  
-  return { pct, restante, mesesRestantes, anosRestantes, mesesExtra };
-}
-
-function saveDeuda() {
-  const banco = document.getElementById('deuda-banco')?.value?.trim();
-  const tipo = document.getElementById('deuda-tipo')?.value?.trim();
-  const monto = parseFloat(document.getElementById('deuda-monto')?.value);
-  const tasa = parseFloat(document.getElementById('deuda-tasa')?.value) || 0;
-  const plazo = parseInt(document.getElementById('deuda-plazo')?.value);
-  const cuota = parseFloat(document.getElementById('deuda-cuota')?.value);
-  const pagado = parseFloat(document.getElementById('deuda-pagado')?.value) || 0;
-  const vencimiento = document.getElementById('deuda-vencimiento')?.value;
-  
-  if (!banco || !monto || !cuota || !plazo) return alert("Completa: Banco, Monto, Cuota y Plazo");
-  
-  state.deudas.push({
-    id: Date.now(),
-    banco, tipo, monto, tasa, plazo, cuota, pagado, vencimiento,
-    fechaCreacion: new Date().toISOString()
-  });
-  
-  save();
-  closeModal('modal-deuda');
-  
-  ['deuda-banco','deuda-tipo','deuda-monto','deuda-tasa','deuda-plazo','deuda-cuota','deuda-pagado','deuda-vencimiento']
-    .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = id === 'deuda-pagado' ? '0' : '';
-    });
-}
-
-function deleteDeuda(id) {
-  if (confirm("¿Eliminar esta deuda del registro? Esta acción no se puede deshacer.")) {
-    state.deudas = state.deudas.filter(d => d.id !== id);
-    save();
-  }
-}
-
-function abonarDeuda(id) {
-  const deuda = state.deudas.find(d => d.id === id);
-  if (!deuda) return;
-  
-  const saldoActual = deuda.monto - (deuda.pagado || 0);
-  const monto = prompt(`Abonar a ${deuda.banco} - ${deuda.tipo}:\n\nSaldo actual: ${fL(saldoActual)}\n\nMonto a abonar (L):`);
-  
-  if (monto && !isNaN(monto) && parseFloat(monto) > 0) {
-    deuda.pagado = (deuda.pagado || 0) + parseFloat(monto);
-    
-    state.transactions.push({
-      id: Date.now(),
-      type: 'gasto',
-      amount: parseFloat(monto),
-      cat: 'cre',
-      subcat: `Pago: ${deuda.banco} ${deuda.tipo}`,
-      date: new Date()
-    });
-    
-    save();
-    alert(`✅ Abono de ${fL(monto)} registrado correctamente`);
-  }
-}
-
-function renderDeudas() {
-  const container = document.getElementById('deudas-list');
-  if (!container) return;
-  
-  const deudas = state.deudas || [];
-  
-  const totalDeuda = deudas.reduce((a, d) => a + (d.monto - (d.pagado || 0)), 0);
-  const totalCuotas = deudas.reduce((a, d) => a + (d.cuota || 0), 0);
-  
-  const deudaTotalEl = document.getElementById('deuda-total');
-  const cuotasTotalEl = document.getElementById('cuotas-total');
-  if (deudaTotalEl) deudaTotalEl.textContent = fL(totalDeuda);
-  if (cuotasTotalEl) cuotasTotalEl.textContent = fL(totalCuotas);
-  
-  if (deudas.length === 0) {
-    container.innerHTML = '<p style="text-align:center; color:var(--text2); padding:20px;">Sin deudas registradas</p>';
-    return;
-  }
-  
-  container.innerHTML = deudas.map(d => {
-    const prog = calcularProgresoDeuda(d);
-    const barraPct = Math.min(100, ((d.pagado || 0) / d.monto) * 100);
-    const colorBarra = prog.pct >= 50 ? 'var(--green)' : (prog.pct >= 25 ? 'var(--amber)' : 'var(--red)');
-    
-    let diasParaPago = 'Pronto';
-    if (d.vencimiento) {
-      const hoy = new Date();
-      const venc = new Date(d.vencimiento);
-      const diff = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
-      diasParaPago = diff > 0 ? `En ${diff} días` : (diff === 0 ? '¡HOY!' : 'Vencido');
-    }
-    
-    return `
-      <div class="card" style="border-left:4px solid ${colorBarra}">
-        <div style="display:flex; justify-content:space-between; align-items:start;">
-          <div>
-            <strong style="font-size:15px;">${d.banco}</strong>
-            <div style="font-size:12px; color:var(--text2);">${d.tipo}</div>
-          </div>
-          <button onclick="deleteDeuda(${d.id})" style="background:none; border:none; color:var(--text2); cursor:pointer; font-size:18px; padding:5px;">✕</button>
-        </div>
-        
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; font-size:13px;">
-          <div><span style="color:var(--text2);">Saldo:</span> <strong>${fL(prog.restante)}</strong></div>
-          <div><span style="color:var(--text2);">Cuota:</span> <strong>${fL(d.cuota)}/mes</strong></div>
-          <div><span style="color:var(--text2);">Progreso:</span> <strong>${prog.pct.toFixed(0)}% pagado</strong></div>
-          <div><span style="color:var(--text2);">Tiempo:</span> <strong>${prog.anosRestantes}a ${prog.mesesExtra}m</strong></div>
-        </div>
-        
-        <div style="height:6px; background:var(--bg4); border-radius:10px; overflow:hidden; margin:8px 0;">
-          <div style="width:${barraPct}%; height:100%; background:${colorBarra}; transition:width 0.4s;"></div>
-        </div>
-        
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-          <span style="font-size:11px; color:${diasParaPago.includes('HOY') || diasParaPago.includes('Vencido') ? 'var(--red)' : 'var(--text2)'}">
-            📅 Próximo pago: ${diasParaPago}
-          </span>
-          <button class="btn btn-secondary" style="width:auto; padding:6px 12px; font-size:11px;" onclick="abonarDeuda(${d.id})">
-            + Abonar
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// === RENDERIZADO ===
-function renderDashboard() {
-  const salud = calcularSalud();
-  const plan = PLANS[state.plan];
-  
-  const income = state.transactions.filter(t => t.type === 'ingreso').reduce((a,b) => a + b.amount, 0);
-  const expenses = state.transactions.filter(t => t.type === 'gasto').reduce((a,b) => a + b.amount, 0);
-  const balance = income - expenses;
-  
-  const balEl = document.getElementById('current-balance');
-  const statusEl = document.getElementById('balance-status');
-  if (balEl) {
-    balEl.textContent = fL(balance);
-    balEl.style.color = balance >= 0 ? 'var(--green)' : 'var(--red)';
-  }
-  if (statusEl) {
-    statusEl.textContent = balance >= 0 ? '✅ Dentro de presupuesto' : '⚠️ Gastando de más';
-  }
-  
-  const scoreContainer = document.getElementById('health-score-container');
-  if (scoreContainer) {
-    scoreContainer.innerHTML = `
-      <div class="health-card">
-        <div class="grade-circle" style="color:${salud.color}; border-color:${salud.color}">${salud.grado}</div>
-        <div class="health-info">
-          <span class="status-badge badge-crecimiento">Plan ${plan.name}</span>
-          <div class="health-message">${salud.msg}</div>
-          <div class="health-ratio">Ingreso: ${fL(state.salario)}</div>
-        </div>
-      </div>
-    `;
-  }
-  
-  const spent = cat => state.transactions.filter(t => t.cat === cat).reduce((a,b) => a + b.amount, 0);
-  const cats = [
-    { id: 'op', n: 'Operación', lim: state.salario * plan.op, color: 'var(--blue)' },
-    { id: 'cre', n: 'Crecimiento', lim: state.salario * plan.cre, color: 'var(--green)' },
-    { id: 'ev', n: 'Estilo Vida', lim: state.salario * plan.ev, color: 'var(--purple)' }
-  ];
-  
-  const limitsContainer = document.getElementById('limits-container');
-  if (limitsContainer) {
-    limitsContainer.innerHTML = cats.map(c => {
-      const s = spent(c.id);
-      const rem = c.lim - s;
-      const pct = Math.min((s / c.lim) * 100, 100);
-      return `
-        <div class="limit-item">
-          <div class="limit-header">
-            <span class="limit-name">${c.n}</span>
-            <span class="limit-remaining" style="color:${rem < 0 ? 'var(--red)' : 'var(--green)'}">${rem >= 0 ? '+' : ''}${fL(rem)}</span>
-          </div>
-          <div class="limit-amount">${fL(s)} <small style="font-size:11px; color:var(--text2)">/ ${fL(c.lim)}</small></div>
-          <div class="limit-bar-bg"><div class="limit-bar-fill" style="width:${pct}%; background:${s > c.lim ? 'var(--red)' : c.color}"></div></div>
-        </div>
-      `;
-    }).join('');
-  }
-  
-  renderGrowth();
-  renderHistory();
-}
-
-function renderGrowth() {
-  const container = document.getElementById('growth-progress-container');
-  if (!container) return;
-  
-  const totalSaved = state.goals.reduce((a,b) => a + b.ahorrado, 0);
-  const totalGoals = state.goals.reduce((a,b) => a + b.objetivo, 0);
-  const pct = totalGoals > 0 ? Math.min(100, (totalSaved / totalGoals) * 100) : 0;
-  
-  let html = '';
-  if (state.goals.length > 0) {
-    html += `<div class="growth-item"><div class="growth-icon">🎯</div><div class="growth-info"><div class="growth-label">Metas</div><div class="growth-value">${fL(totalSaved)} / ${fL(totalGoals)}</div></div><div class="growth-status" style="background:rgba(46,204,138,0.2); color:var(--green);">${pct.toFixed(0)}%</div></div>`;
-  }
-  html += `<div class="growth-item"><div class="growth-icon">📊</div><div class="growth-info"><div class="growth-label">Perfil</div><div class="growth-value">${state.perfil}</div></div><div class="growth-status" style="background:rgba(74,158,248,0.2); color:var(--blue);">Activo</div></div>`;
-  
-  container.innerHTML = html || '<p style="text-align:center; color:var(--text2); font-size:13px;">Sin metas</p>';
-}
-
-function renderHistory() {
-  const container = document.getElementById('recent-history');
-  if (!container) return;
-  
-  const ultimos = [...state.transactions].reverse().slice(0, 5);
-  
-  if (ultimos.length === 0) {
-    container.innerHTML = '<p style="text-align:center; color:var(--text2); padding:20px;">Sin movimientos</p>';
-    return;
-  }
-  
-  container.innerHTML = ultimos.map(t => `
-    <div class="history-item">
-      <div style="flex:1;">
-        <div style="font-weight:600; font-size:14px;">${t.subcat || 'Sin detalle'}</div>
-        <div style="font-size:10px; color:var(--text2); margin-top:2px;">${t.cat?.toUpperCase() || ''}</div>
-      </div>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <span style="font-family:'JetBrains Mono'; font-weight:700; color:${t.type==='ingreso'?'var(--green)':'var(--red)'}">${t.type==='ingreso'?'+':'-'}${fL(t.amount)}</span>
-        <button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--text2); cursor:pointer; font-size:18px; padding:5px;">✕</button>
-      </div>
+<div id="onboarding" class="modal">
+  <div class="modal-content">
+    <h2 style="margin-bottom:10px;">👋 ¡Bienvenido!</h2>
+    <p style="color:var(--text2); font-size:14px; margin-bottom:20px;">Configura tu perfil en 30 segundos.</p>
+    <label style="font-size:12px; color:var(--text2);">Tu nombre</label>
+    <input type="text" id="ob-nombre" class="input-field" placeholder="Ej. Carlos">
+    <label style="font-size:12px; color:var(--text2);">¿Tu situación actual?</label>
+    <select id="ob-perfil" class="input-field" onchange="updateOnboarding()">
+      <option value="">Selecciona...</option>
+      <option value="empleado">💼 Empleado con salario fijo</option>
+      <option value="estudiante">🎓 Estudiante / Mesada</option>
+      <option value="semanal">🛠️ Me pagan por semana</option>
+      <option value="freelance">🧑‍💻 Freelance / Irregular</option>
+    </select>
+    <div id="ob-ingreso-section" class="hidden">
+      <label style="font-size:12px; color:var(--text2);">Ingreso promedio (L)</label>
+      <input type="number" id="ob-ingreso" class="input-field" placeholder="L. 0.00" oninput="updateOnboarding()">
     </div>
-  `).join('');
-}
+    <button id="ob-btn" class="btn btn-primary" onclick="finishOnboarding()" disabled>Comenzar →</button>
+    <p style="font-size:11px; color:var(--text2); margin-top:15px;">🔒 Tus datos se guardan solo en este dispositivo.</p>
+  </div>
+</div>
 
-function renderGastos() {
-  const list = document.getElementById('gastos-list');
-  const mesEl = document.getElementById('gastos-mes');
-  const countEl = document.getElementById('gastos-count');
-  
-  const gastos = state.transactions.filter(t => t.type === 'gasto');
-  const total = gastos.reduce((a,b) => a + b.amount, 0);
-  
-  if (mesEl) mesEl.textContent = fL(total);
-  if (countEl) countEl.textContent = gastos.length;
-  
-  if (!list) return;
-  
-  if (gastos.length === 0) {
-    list.innerHTML = '<p style="text-align:center; color:var(--text2); padding:20px;">Sin gastos</p>';
-    return;
-  }
-  
-  list.innerHTML = gastos.slice(-10).reverse().map(t => `
-    <div class="card" style="padding:12px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="flex:1;">
-          <strong>${t.subcat || 'Sin detalle'}</strong>
-          <div style="font-size:11px; color:var(--text2); margin-top:2px;">${t.cat?.toUpperCase() || ''}</div>
-        </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span class="text-red" style="font-weight:700; font-family:'JetBrains Mono';">-${fL(t.amount)}</span>
-          <button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--text2); cursor:pointer; font-size:18px; padding:5px;">✕</button>
-        </div>
-      </div>
+<div id="view-dashboard" class="view active">
+  <div class="balance-card">
+    <p class="balance-label">Saldo Disponible</p>
+    <h1 class="balance-amount" id="current-balance">L. 0.00</h1>
+    <p class="balance-sub" id="balance-status">Registra tus ingresos y gastos</p>
+  </div>
+  <div id="health-score-container"></div>
+  <div class="limits-grid" id="limits-container"></div>
+  <h3 class="section-title">🔔 Alertas de Tarjetas</h3>
+  <div id="cards-alerts-container"></div>
+  <p id="no-alerts" style="text-align:center; color:var(--text2); font-size:13px; display:none;">✅ Sin alertas próximas</p>
+  <h3 class="section-title">🚀 Tu Plan de Crecimiento</h3>
+  <div id="growth-progress-container" class="growth-card"></div>
+  <h3 class="section-title">📜 Movimientos Recientes</h3>
+  <div id="recent-history"></div>
+  <button class="btn btn-primary mt-3" onclick="openModal('modal-movimiento')">+ Nuevo Movimiento</button>
+</div>
+
+<div id="view-deudas" class="view">
+  <h2>💳 Mis Deudas</h2>
+  <div class="card" style="margin:20px 0; background:linear-gradient(135deg, var(--bg2), var(--bg3));">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:center;">
+      <div><div style="font-size:11px; color:var(--text2);">TOTAL DEUDA</div><div style="font-size:20px; font-weight:700; color:var(--red);" id="deuda-total">L. 0</div></div>
+      <div><div style="font-size:11px; color:var(--text2);">CUOTAS/MES</div><div style="font-size:20px; font-weight:700;" id="cuotas-total">L. 0</div></div>
     </div>
-  `).join('');
-}
+  </div>
+  <div id="deudas-list"></div>
+  <button class="btn btn-secondary" onclick="openModal('modal-deuda')">+ Agregar Deuda</button>
+</div>
 
-function renderIngresos() {
-  const list = document.getElementById('ingresos-list');
-  const salarioEl = document.getElementById('ingreso-salario');
-  const extraEl = document.getElementById('ingreso-extra');
-  
-  const ingresos = state.transactions.filter(t => t.type === 'ingreso');
-  const salario = ingresos.filter(t => t.subtype === 'salario').reduce((a,b) => a + b.amount, 0);
-  const extra = ingresos.filter(t => t.subtype === 'extra').reduce((a,b) => a + b.amount, 0);
-  
-  if (salarioEl) salarioEl.textContent = fL(salario);
-  if (extraEl) extraEl.textContent = fL(extra);
-  
-  if (!list) return;
-  
-  if (ingresos.length === 0) {
-    list.innerHTML = '<p style="text-align:center; color:var(--text2); padding:20px;">Sin ingresos</p>';
-    return;
-  }
-  
-  list.innerHTML = ingresos.slice(-10).reverse().map(t => `
-    <div class="card" style="padding:12px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <strong>${t.subtype === 'salario' ? '💼 Salario' : '✨ Extra'}</strong>
-        </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span class="text-green" style="font-weight:700; font-family:'JetBrains Mono';">+${fL(t.amount)}</span>
-          <button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--text2); cursor:pointer; font-size:18px; padding:5px;">✕</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
+<div id="view-gastos" class="view">
+  <h2>📊 Gastos</h2>
+  <div class="card"><div style="display:flex; justify-content:space-between;"><span style="color:var(--text2);">Este mes</span><strong id="gastos-mes">L. 0.00</strong></div></div>
+  <div id="gastos-list"></div>
+  <button class="btn btn-primary" onclick="openModal('modal-gasto')">+ Nuevo Gasto</button>
+</div>
 
-function renderMetas() {
-  const container = document.getElementById('metas-list');
-  if (!container) return;
-  
-  if (state.goals.length === 0) {
-    container.innerHTML = '<p style="text-align:center; color:var(--text2); padding:20px;">Sin metas</p>';
-    return;
-  }
-  
-  container.innerHTML = state.goals.map(g => {
-    const pct = Math.min(100, (g.ahorrado / g.objetivo) * 100);
-    return `
-      <div class="card" style="padding:15px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <strong>${g.nombre}</strong>
-          <span style="font-family:'JetBrains Mono';">${fL(g.ahorrado)} / ${fL(g.objetivo)}</span>
-        </div>
-        <div style="height:4px; background:var(--bg4); border-radius:4px; margin:8px 0;">
-          <div style="width:${pct}%; height:100%; background:var(--green); border-radius:4px; transition:width 0.4s;"></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-          <span style="font-size:11px; color:var(--text2);">Faltan: ${fL(g.objetivo - g.ahorrado)}</span>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-secondary" style="width:auto; padding:6px 10px; font-size:11px;" onclick="openAbono(${g.id})">+ Abonar</button>
-            <button style="background:none; border:none; color:var(--text2); cursor:pointer; font-size:16px;" onclick="deleteMeta(${g.id})">✕</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
+<div id="view-ingresos" class="view">
+  <h2>💵 Ingresos</h2>
+  <div class="card">
+    <div style="display:flex; justify-content:space-between;"><span style="color:var(--text2);">Salario</span><strong id="ingreso-salario">L. 0.00</strong></div>
+    <div style="display:flex; justify-content:space-between; margin-top:10px;"><span style="color:var(--text2);">Extra</span><strong id="ingreso-extra">L. 0.00</strong></div>
+  </div>
+  <div id="ingresos-list"></div>
+  <button class="btn btn-primary" onclick="openModal('modal-ingreso')">+ Registrar Ingreso</button>
+</div>
 
-// === ACCIONES ===
-function saveMovimiento() {
-  const monto = parseFloat(document.getElementById('mv-monto')?.value);
-  const cat = document.getElementById('mv-cat')?.value;
-  const sub = document.getElementById('mv-subcat')?.value?.trim();
-  
-  if (!monto || monto <= 0) return alert('Ingresa un monto válido.');
-  
-  state.transactions.push({
-    id: Date.now(),
-    amount: monto,
-    cat,
-    subcat: sub || 'Gasto',
-    date: new Date()
-  });
-  
-  save();
-  closeModal('modal-movimiento');
-  
-  const montoInput = document.getElementById('mv-monto');
-  const subInput = document.getElementById('mv-subcat');
-  if (montoInput) montoInput.value = '';
-  if (subInput) subInput.value = '';
-}
+<div id="view-metas" class="view">
+  <h2>🎯 Metas</h2>
+  <div id="metas-list"></div>
+  <button class="btn btn-secondary" onclick="openModal('modal-meta')">+ Nueva Meta</button>
+</div>
 
-function saveGasto() {
-  const monto = parseFloat(document.getElementById('gasto-monto')?.value);
-  const subcat = document.getElementById('gasto-subcat')?.value?.trim();
-  const cat = document.getElementById('gasto-cat')?.value;
-  
-  if (!monto || monto <= 0) return alert('Ingresa un monto válido.');
-  
-  state.transactions.push({
-    id: Date.now(),
-    type: 'gasto',
-    amount: monto,
-    cat,
-    subcat: subcat || 'Gasto',
-    date: new Date()
-  });
-  
-  save();
-  closeModal('modal-gasto');
-  renderAll();
-}
+<div id="view-config" class="view">
+  <h2>⚙️ Configuración</h2>
+  <div class="card"><h4 style="margin-bottom:10px;">💾 Respaldo</h4><button class="btn btn-secondary" onclick="exportData()">📥 Exportar JSON</button><input type="file" id="import-file" style="display:none" onchange="importData(event)"><button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Importar JSON</button></div>
+  <div class="card" style="border-color:var(--red);"><button class="btn btn-secondary" onclick="resetApp()" style="color:var(--red);">🗑 Reiniciar app</button></div>
+</div>
 
-function saveIngreso() {
-  const monto = parseFloat(document.getElementById('ingreso-monto')?.value);
-  const tipo = document.getElementById('ingreso-tipo')?.value;
-  
-  if (!monto || monto <= 0) return alert('Ingresa un monto válido.');
-  
-  state.transactions.push({
-    id: Date.now(),
-    type: 'ingreso',
-    subtype: tipo,
-    amount: monto,
-    date: new Date()
-  });
-  
-  save();
-  closeModal('modal-ingreso');
-  renderAll();
-}
+<!-- Modales -->
+<div id="modal-movimiento" class="modal" onclick="closeModalIfBg(event, 'modal-movimiento')"><div class="modal-content"><h3>➕ Nuevo Movimiento</h3><input type="number" id="mv-monto" class="input-field" placeholder="Monto L."><input type="text" id="mv-subcat" class="input-field" placeholder="Detalle"><select id="mv-cat" class="input-field"><option value="op">Operación</option><option value="cre">Crecimiento / Deuda</option><option value="ev">Estilo de Vida</option></select><button class="btn btn-primary" onclick="saveMovimiento()">Guardar</button></div></div>
+<div id="modal-gasto" class="modal" onclick="closeModalIfBg(event, 'modal-gasto')"><div class="modal-content"><h3>📉 Nuevo Gasto</h3><input type="number" id="gasto-monto" class="input-field" placeholder="Monto L."><input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría"><select id="gasto-cat" class="input-field"><option value="op">Operación</option><option value="ev">Estilo de Vida</option></select><button class="btn btn-primary" onclick="saveGasto()">Guardar</button></div></div>
+<div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event, 'modal-ingreso')"><div class="modal-content"><h3>💰 Nuevo Ingreso</h3><input type="number" id="ingreso-monto" class="input-field" placeholder="Monto L."><select id="ingreso-tipo" class="input-field"><option value="salario">Salario</option><option value="extra">Extra</option></select><button class="btn btn-primary" onclick="saveIngreso()">Registrar</button></div></div>
+<div id="modal-meta" class="modal" onclick="closeModalIfBg(event, 'modal-meta')"><div class="modal-content"><h3>🎯 Nueva Meta</h3><input type="text" id="meta-nombre" class="input-field" placeholder="Nombre"><input type="number" id="meta-objetivo" class="input-field" placeholder="Monto objetivo"><input type="number" id="meta-actual" class="input-field" placeholder="Ahorrado" value="0"><button class="btn btn-primary" onclick="saveMeta()">Guardar</button></div></div>
+<div id="modal-abono" class="modal" onclick="closeModalIfBg(event, 'modal-abono')"><div class="modal-content"><h3>💸 Abonar</h3><p id="abono-meta-nombre" style="color:var(--amber); margin-bottom:15px;"></p><input type="number" id="abono-monto" class="input-field" placeholder="Monto"><input type="hidden" id="abono-meta-id"><button class="btn btn-primary" onclick="saveAbono()">Abonar</button></div></div>
+<div id="modal-deuda" class="modal" onclick="closeModalIfBg(event, 'modal-deuda')"><div class="modal-content"><h3>💳 Nueva Deuda</h3><input type="text" id="deuda-banco" class="input-field" placeholder="Banco (Ej. BAC, Ficohsa)"><input type="text" id="deuda-tipo" class="input-field" placeholder="Tipo (Tarjeta, Auto, Personal)"><input type="number" id="deuda-monto" class="input-field" placeholder="Monto total del préstamo (L)"><input type="number" id="deuda-tasa" class="input-field" placeholder="Tasa de interés anual (%)"><input type="number" id="deuda-plazo" class="input-field" placeholder="Plazo en meses"><input type="number" id="deuda-cuota" class="input-field" placeholder="Cuota mensual (L)"><input type="number" id="deuda-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><input type="date" id="deuda-vencimiento" class="input-field"><button class="btn btn-primary" onclick="saveDeuda()">Guardar Deuda</button></div></div>
 
-function deleteTx(id) {
-  if (confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) {
-    state.transactions = state.transactions.filter(t => t.id !== id);
-    save();
-  }
-}
+<nav class="tab-nav">
+  <div class="tab-item active" onclick="switchView('dashboard')">🏠 Inicio</div>
+  <div class="tab-item" onclick="switchView('deudas')">💳 Deudas</div>
+  <div class="tab-item" onclick="switchView('gastos')">📊 Gastos</div>
+  <div class="tab-item" onclick="switchView('ingresos')">💵 Ingresos</div>
+  <div class="tab-item" onclick="switchView('config')">⚙️ Config</div>
+</nav>
 
-function saveMeta() {
-  const nombre = document.getElementById('meta-nombre')?.value?.trim();
-  const objetivo = parseFloat(document.getElementById('meta-objetivo')?.value);
-  const actual = parseFloat(document.getElementById('meta-actual')?.value) || 0;
-  
-  if (!nombre || !objetivo) return alert('Completa nombre y monto objetivo.');
-  
-  state.goals.push({
-    id: Date.now(),
-    nombre,
-    objetivo,
-    ahorrado: actual
-  });
-  
-  save();
-  closeModal('modal-meta');
-}
+<script>
+const PROFILES={empleado:{rule:{op:0.65,cre:0.2,ev:0.15},plan:'crecimiento'},estudiante:{rule:{op:0.7,cre:0.15,ev:0.15},plan:'estandar'},semanal:{rule:{op:0.6,cre:0.25,ev:0.15},plan:'austeridad'},freelance:{rule:{op:0.5,cre:0.3,ev:0.2},plan:'rescate'}};
+const PLANS={crecimiento:{name:'Crecimiento',op:0.65,cre:0.2,ev:0.15,color:'#4a9ef8'},estandar:{name:'Equilibrado',op:0.5,cre:0.2,ev:0.3,color:'#2ecc8a'},austeridad:{name:'Austeridad',op:0.7,cre:0.2,ev:0.1,color:'#f97316'},rescate:{name:'Rescate',op:0.5,cre:0.4,ev:0.1,color:'#e85d5d'}};
+const LS_KEY='mifinanzashn_final_v3';
+let state=JSON.parse(localStorage.getItem(LS_KEY))||{setup:false,nombre:'',perfil:'empleado',salario:0,plan:'crecimiento',transactions:[],cards:[],goals:[],deudas:[]};
+const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
+const save=()=>{localStorage.setItem(LS_KEY,JSON.stringify(state));renderAll();};
 
-function deleteMeta(id) {
-  if (confirm('¿Eliminar esta meta?')) {
-    state.goals = state.goals.filter(g => g.id !== id);
-    save();
-  }
-}
-
-function openAbono(id) {
-  const meta = state.goals.find(g => g.id === id);
-  if (!meta) return;
-  
-  const nombreEl = document.getElementById('abono-meta-nombre');
-  const idEl = document.getElementById('abono-meta-id');
-  if (nombreEl) nombreEl.textContent = meta.nombre;
-  if (idEl) idEl.value = id;
-  
-  openModal('modal-abono');
-}
-
-function saveAbono() {
-  const id = parseInt(document.getElementById('abono-meta-id')?.value);
-  const monto = parseFloat(document.getElementById('abono-monto')?.value);
-  
-  if (!monto || monto <= 0) return alert('Ingresa un monto válido.');
-  
-  const meta = state.goals.find(g => g.id === id);
-  if (meta) {
-    meta.ahorrado += monto;
-    state.transactions.push({
-      id: Date.now(),
-      type: 'gasto',
-      amount: monto,
-      cat: 'cre',
-      subcat: `Abono: ${meta.nombre}`,
-      date: new Date()
-    });
-    save();
-  }
-  
-  closeModal('modal-abono');
-  renderAll();
-}
-
-function exportData() {
-  const a = document.createElement('a');
-  a.href = "text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-  a.download = `MisFinanzas_Backup_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
-
-function importData(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try {
-      const data = JSON.parse(ev.target.result);
-      if (data.salario && data.transactions) {
-        if (confirm('⚠️ Esto reemplazará todos tus datos actuales. ¿Continuar?')) {
-          state = data;
-          save();
-          alert('✅ Datos importados correctamente');
-          location.reload();
-        }
-      } else {
-        alert('❌ Archivo inválido');
-      }
-    } catch {
-      alert('❌ Error al leer el archivo');
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-}
-
-function resetApp() {
-  if (confirm('⚠️ ¿Estás seguro de BORRAR TODOS tus datos? Esta acción NO se puede deshacer.')) {
-    if (confirm('🔄 Confirma: Se eliminarán ingresos, gastos, deudas, metas y configuración.')) {
-      localStorage.clear();
-      location.reload();
-    }
-  }
-}
-
-function switchView(view) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-  
-  const viewEl = document.getElementById('view-' + view);
-  if (viewEl) viewEl.classList.add('active');
-  if (event && event.currentTarget) event.currentTarget.classList.add('active');
-  
-  renderAll();
-}
-
-function openModal(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'flex';
-}
-
-function closeModal(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'none';
-}
-
-function closeModalIfBg(e, id) {
-  if (e.target.id === id) closeModal(id);
-}
-
-function renderAll() {
-  if (!state.setup) return;
-  renderDashboard();
-  renderGastos();
-  renderIngresos();
-  renderMetas();
-  renderDeudas();
-}
-
-window.onload = () => {
-  const onboard = document.getElementById('onboarding');
-  if (!state.setup && onboard) {
-    onboard.style.display = 'flex';
-  } else {
-    renderAll();
-  }
-};
+function updateOnboarding(){const n=document.getElementById('ob-nombre')?.value?.trim()||'',p=document.getElementById('ob-perfil')?.value||'',i=parseFloat(document.getElementById('ob-ingreso')?.value)||0;document.getElementById('ob-ingreso-section')?.classList.toggle('hidden',!p);document.getElementById('ob-btn').disabled=!(n&&p&&i>0)}
+function finishOnboarding(){const n=document.getElementById('ob-nombre')?.value?.trim(),p=document.getElementById('ob-perfil')?.value;let i=parseFloat(document.getElementById('ob-ingreso')?.value)||0;if(!n||!p||i<=0)return alert('Completa todos los campos');if(p==='semanal')i*=4.33;state={setup:true,nombre:n,perfil:p,salario:i,plan:PROFILES[p].plan,transactions:[],cards:[],goals:[],deudas:[]};save();document.getElementById('onboarding').style.display='none';renderAll()}
+function calcularSalud(){const p=PROFILES[state.perfil]?.rule||PROFILES.empleado.rule;const s=c=>state.transactions.filter(t=>t.cat===c).reduce((a,b)=>a+b.amount,0);let f=0;if(s('op')>state.salario*p.op)f++;if(s('ev')>state.salario*p.ev)f++;const r=(s('op')+s('cre')+s('ev'))/state.salario;if(f===0&&r<=1)return{grado:'A',msg:'¡Excelente Control!',color:'var(--green)'};if(f===1||r<=1.05)return{grado:'B',msg:'Disciplina Moderada',color:'var(--amber)'};return{grado:'C',msg:'Riesgo de Liquidez',color:'var(--red)'}}
+function calcularProgresoDeuda(d){const pg=d.pagado||0;const t=d.monto;const pct=Math.min(100,(pg/t)*100);const rest=t-pg;const mr=d.cuota>0?Math.ceil(rest/d.cuota):d.plazo;return{pct,restante:rest,mesesRestantes:mr,anosRestantes:Math.floor(mr/12),mesesExtra:mr%12}}
+function saveDeuda(){const b=document.getElementById('deuda-banco')?.value?.trim(),t=document.getElementById('deuda-tipo')?.value?.trim(),m=parseFloat(document.getElementById('deuda-monto')?.value),ta=parseFloat(document.getElementById('deuda-tasa')?.value)||0,pl=parseInt(document.getElementById('deuda-plazo')?.value),c=parseFloat(document.getElementById('deuda-cuota')?.value),pg=parseFloat(document.getElementById('deuda-pagado')?.value)||0,v=document.getElementById('deuda-vencimiento')?.value;if(!b||!m||!c||!pl)return alert('Completa: Banco, Monto, Cuota y Plazo');state.deudas.push({id:Date.now(),banco:b,tipo:t,monto:m,tasa:ta,plazo:pl,cuota:c,pagado:pg,vencimiento:v,fechaCreacion:new Date().toISOString()});save();closeModal('modal-deuda');['deuda-banco','deuda-tipo','deuda-monto','deuda-tasa','deuda-plazo','deuda-cuota','deuda-pagado','deuda-vencimiento'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=id==='deuda-pagado'?'0':''})}
+function deleteDeuda(id){if(confirm('¿Eliminar esta deuda?')){state.deudas=state.deudas.filter(d=>d.id!==id);save()}}
+function abonarDeuda(id){const d=state.deudas.find(x=>x.id===id);if(!d)return;const m=prompt(`Abonar a ${d.banco} - ${d.tipo}:\n\nSaldo: ${fL(d.monto-(d.pagado||0))}\n\nMonto:`);if(m&&!isNaN(m)&&parseFloat(m)>0){d.pagado=(d.pagado||0)+parseFloat(m);state.transactions.push({id:Date.now(),type:'gasto',amount:parseFloat(m),cat:'cre',subcat:`Pago: ${d.banco} ${d.tipo}`,date:new Date()});save();alert(`✅ Abono de ${fL(m)} registrado`)}}
+function renderDeudas(){const c=document.getElementById('deudas-list');if(!c)return;const ds=state.deudas||[];const td=ds.reduce((a,d)=>a+(d.monto-(d.pagado||0)),0);const tc=ds.reduce((a,d)=>a+(d.cuota||0),0);const dte=document.getElementById('deuda-total'),cte=document.getElementById('cuotas-total');if(dte)dte.textContent=fL(td);if(cte)cte.textContent=fL(tc);if(ds.length===0){c.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px;">Sin deudas</p>';return}c.innerHTML=ds.map(d=>{const pr=calcularProgresoDeuda(d);const bp=Math.min(100,((d.pagado||0)/d.monto)*100);const cb=pr.pct>=50?'var(--green)':(pr.pct>=25?'var(--amber)':'var(--red)');let dp='Pronto';if(d.vencimiento){const h=new Date(),v=new Date(d.vencimiento),diff=Math.ceil((v-h)/(1000*60*60*24));dp=diff>0?`En ${diff} días`:(diff===0?'¡HOY!':'Vencido')}return`<div class="card" style="border-left:4px solid ${cb}"><div style="display:flex;justify-content:space-between;align-items:start"><div><strong style="font-size:15px">${d.banco}</strong><div style="font-size:12px;color:var(--text2)">${d.tipo}</div></div><button onclick="deleteDeuda(${d.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">✕</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;font-size:13px"><div><span style="color:var(--text2)">Saldo:</span><strong>${fL(pr.restante)}</strong></div><div><span style="color:var(--text2)">Cuota:</span><strong>${fL(d.cuota)}/mes</strong></div><div><span style="color:var(--text2)">Progreso:</span><strong>${pr.pct.toFixed(0)}% pagado</strong></div><div><span style="color:var(--text2)">Tiempo:</span><strong>${pr.anosRestantes}a ${pr.mesesExtra}m</strong></div></div><div style="height:6px;background:var(--bg4);border-radius:10px;overflow:hidden;margin:8px 0"><div style="width:${bp}%;height:100%;background:${cb};transition:width 0.4s"></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:11px;color:${dp.includes('HOY')||dp.includes('Vencido')?'var(--red)':'var(--text2)'}">📅 Pago: ${dp}</span><button class="btn btn-secondary" style="width:auto;padding:6px 12px;font-size:11px" onclick="abonarDeuda(${d.id})">+ Abonar</button></div></div>`}).join('')}
+function renderDashboard(){const s=calcularSalud(),pl=PLANS[state.plan];const inc=state.transactions.filter(t=>t.type==='ingreso').reduce((a,b)=>a+b.amount,0);const exp=state.transactions.filter(t=>t.type==='gasto').reduce((a,b)=>a+b.amount,0);const bal=inc-exp;const be=document.getElementById('current-balance'),bs=document.getElementById('balance-status');if(be){be.textContent=fL(bal);be.style.color=bal>=0?'var(--green)':'var(--red)'}if(bs)bs.textContent=bal>=0?'✅ Dentro de presupuesto':'⚠️ Gastando de más';const hc=document.getElementById('health-score-container');if(hc)hc.innerHTML=`<div class="health-card"><div class="grade-circle" style="color:${s.color};border-color:${s.color}">${s.grado}</div><div class="health-info"><span class="status-badge badge-crecimiento">Plan ${pl.name}</span><div class="health-message">${s.msg}</div><div class="health-ratio">Ingreso: ${fL(state.salario)}</div></div></div>`;const sp=c=>state.transactions.filter(t=>t.cat===c).reduce((a,b)=>a+b.amount,0);const cats=[{id:'op',n:'Operación',lim:state.salario*pl.op,color:'var(--blue)'},{id:'cre',n:'Crecimiento',lim:state.salario*pl.cre,color:'var(--green)'},{id:'ev',n:'Estilo Vida',lim:state.salario*pl.ev,color:'var(--purple)'}];const lc=document.getElementById('limits-container');if(lc)lc.innerHTML=cats.map(c=>{const x=sp(c.id),rem=c.lim-x,pct=Math.min((x/c.lim)*100,100);return`<div class="limit-item"><div class="limit-header"><span class="limit-name">${c.n}</span><span class="limit-remaining" style="color:${rem<0?'var(--red)':'var(--green)'}">${rem>=0?'+':''}${fL(rem)}</span></div><div class="limit-amount">${fL(x)}<small style="font-size:11px;color:var(--text2)">/ ${fL(c.lim)}</small></div><div class="limit-bar-bg"><div class="limit-bar-fill" style="width:${pct}%;background:${x>c.lim?'var(--red)':c.color}"></div></div></div>`}).join('');renderGrowth();renderHistory()}
+function renderGrowth(){const c=document.getElementById('growth-progress-container');if(!c)return;const ts=state.goals.reduce((a,b)=>a+b.ahorrado,0);const tg=state.goals.reduce((a,b)=>a+b.objetivo,0);const pc=tg>0?Math.min(100,(ts/tg)*100):0;let h='';if(state.goals.length>0)h+=`<div class="growth-item"><div class="growth-icon">🎯</div><div class="growth-info"><div class="growth-label">Metas</div><div class="growth-value">${fL(ts)}/${fL(tg)}</div></div><div class="growth-status" style="background:rgba(46,204,138,0.2);color:var(--green)">${pc.toFixed(0)}%</div></div>`;h+=`<div class="growth-item"><div class="growth-icon">📊</div><div class="growth-info"><div class="growth-label">Perfil</div><div class="growth-value">${state.perfil}</div></div><div class="growth-status" style="background:rgba(74,158,248,0.2);color:var(--blue)">Activo</div></div>`;c.innerHTML=h||'<p style="text-align:center;color:var(--text2);font-size:13px">Sin metas</p>'}
+function renderHistory(){const c=document.getElementById('recent-history');if(!c)return;const ul=[...state.transactions].reverse().slice(0,5);if(ul.length===0){c.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin movimientos</p>';return}c.innerHTML=ul.map(t=>`<div class="history-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">${t.subcat||'Sin detalle'}</div><div style="font-size:10px;color:var(--text2);margin-top:2px">${t.cat?.toUpperCase()||''}</div></div><div style="display:flex;align-items:center;gap:12px"><span style="font-family:'JetBrains Mono';font-weight:700;color:${t.type==='ingreso'?'var(--green)':'var(--red)'}">${t.type==='ingreso'?'+':'-'}${fL(t.amount)}</span><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:5px">✕</button></div></div>`).join('')}
+function renderGastos(){const l=document.getElementById('gastos-list'),me=document.getElementById('gastos-mes');const gs=state.transactions.filter(t=>t.type==='gasto'),tot=gs.reduce((a,b)=>a+b.amount,0);if(me)me.textContent=fL(tot);if(!l)return;if(gs.length===0){l.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin gastos</p>';return}l.innerHTML=gs.slice(-10).reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div style="flex:1"><strong>${t.subcat||'Sin detalle'}</strong><div style="font-size:11px;color:var(--text2);margin-top:2px">${t.cat?.toUpperCase()||''}</div></div><div style="display:flex;align-items:center;gap:10px"><span class="text-red" style="font-weight:700;font-family:'JetBrains Mono'">-${fL(t.amount)}</span><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:5px">✕</button></div></div></div>`).join('')}
+function renderIngresos(){const l=document.getElementById('ingresos-list'),se=document.getElementById('ingreso-salario'),ee=document.getElementById('ingreso-extra');const ing=state.transactions.filter(t=>t.type==='ingreso'),sal=ing.filter(t=>t.subtype==='salario').reduce((a,b)=>a+b.amount,0),ext=ing.filter(t=>t.subtype==='extra').reduce((a,b)=>a+b.amount,0);if(se)se.textContent=fL(sal);if(ee)ee.textContent=fL(ext);if(!l)return;if(ing.length===0){l.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin ingresos</p>';return}l.innerHTML=ing.slice(-10).reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${t.subtype==='salario'?'💼 Salario':'✨ Extra'}</strong></div><div style="display:flex;align-items:center;gap:10px"><span class="text-green" style="font-weight:700;font-family:'JetBrains Mono'">+${fL(t.amount)}</span><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:5px">✕</button></div></div></div>`).join('')}
+function renderMetas(){const c=document.getElementById('metas-list');if(!c)return;if(state.goals.length===0){c.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin metas</p>';return}c.innerHTML=state.goals.map(g=>{const pc=Math.min(100,(g.ahorrado/g.objetivo)*100);return`<div class="card" style="padding:15px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><strong>${g.nombre}</strong><span style="font-family:'JetBrains Mono'">${fL(g.ahorrado)}/${fL(g.objetivo)}</span></div><div style="height:4px;background:var(--bg4);border-radius:4px;margin:8px 0"><div style="width:${pc}%;height:100%;background:var(--green);border-radius:4px;transition:width 0.4s"></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font-size:11px;color:var(--text2)">Faltan: ${fL(g.objetivo-g.ahorrado)}</span><div style="display:flex;gap:8px"><button class="btn btn-secondary" style="width:auto;padding:6px 10px;font-size:11px" onclick="openAbono(${g.id})">+ Abonar</button><button style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px" onclick="deleteMeta(${g.id})">✕</button></div></div></div>`}).join('')}
+function saveMovimiento(){const m=parseFloat(document.getElementById('mv-monto')?.value),c=document.getElementById('mv-cat')?.value,s=document.getElementById('mv-subcat')?.value?.trim;if(!m||m<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),amount:m,cat:c,subcat:s||'Gasto',date:new Date()});save();closeModal('modal-movimiento');const mi=document.getElementById('mv-monto'),si=document.getElementById('mv-subcat');if(mi)mi.value='';if(si)si.value=''}
+function saveGasto(){const m=parseFloat(document.getElementById('gasto-monto')?.value),s=document.getElementById('gasto-subcat')?.value?.trim(),c=document.getElementById('gasto-cat')?.value;if(!m||m<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'gasto',amount:m,cat:c,subcat:s||'Gasto',date:new Date()});save();closeModal('modal-gasto');renderAll()}
+function saveIngreso(){const m=parseFloat(document.getElementById('ingreso-monto')?.value),t=document.getElementById('ingreso-tipo')?.value;if(!m||m<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'ingreso',subtype:t,amount:m,date:new Date()});save();closeModal('modal-ingreso');renderAll()}
+function deleteTx(id){if(confirm('¿Eliminar este registro?')){state.transactions=state.transactions.filter(t=>t.id!==id);save()}}
+function saveMeta(){const n=document.getElementById('meta-nombre')?.value?.trim(),o=parseFloat(document.getElementById('meta-objetivo')?.value),a=parseFloat(document.getElementById('meta-actual')?.value)||0;if(!n||!o)return alert('Completa nombre y monto');state.goals.push({id:Date.now(),nombre:n,objetivo:o,ahorrado:a});save();closeModal('modal-meta')}
+function deleteMeta(id){if(confirm('¿Eliminar esta meta?')){state.goals=state.goals.filter(g=>g.id!==id);save()}}
+function openAbono(id){const m=state.goals.find(g=>g.id===id);if(!m)return;const ne=document.getElementById('abono-meta-nombre'),ie=document.getElementById('abono-meta-id');if(ne)ne.textContent=m.nombre;if(ie)ie.value=id;openModal('modal-abono')}
+function saveAbono(){const id=parseInt(document.getElementById('abono-meta-id')?.value),m=parseFloat(document.getElementById('abono-monto')?.value);if(!m||m<=0)return alert('Monto inválido');const mt=state.goals.find(g=>g.id===id);if(mt){mt.ahorrado+=m;state.transactions.push({id:Date.now(),type:'gasto',amount:m,cat:'cre',subcat:`Abono: ${mt.nombre}`,date:new Date()});save()}closeModal('modal-abono');renderAll()}
+function exportData(){const a=document.createElement('a');a.href="text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(state,null,2));a.download=`MisFinanzas_Backup_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove()}
+function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=(ev)=>{try{const d=JSON.parse(ev.target.result);if(d.salario&&d.transactions){if(confirm('⚠️ ¿Reemplazar todos los datos?')){state=d;save();alert('✅ Importado');location.reload()}}else alert('❌ Archivo inválido')}catch{alert('❌ Error al leer')}};r.readAsText(f);e.target.value=''}
+function resetApp(){if(confirm('⚠️ ¿BORRAR TODO?')){if(confirm('🔄 Confirma: Se eliminarán TODOS los datos')){localStorage.clear();location.reload()}}}
+function switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-item').forEach(x=>x.classList.remove('active'));const ve=document.getElementById('view-'+v);if(ve)ve.classList.add('active');if(event&&event.currentTarget)event.currentTarget.classList.add('active');renderAll()}
+function openModal(id){const el=document.getElementById(id);if(el)el.style.display='flex'}
+function closeModal(id){const el=document.getElementById(id);if(el)el.style.display='none'}
+function closeModalIfBg(e,id){if(e.target.id===id)closeModal(id)}
+function renderAll(){if(!state.setup)return;renderDashboard();renderGastos();renderIngresos();renderMetas();renderDeudas()}
+window.onload=()=>{const ob=document.getElementById('onboarding');if(!state.setup&&ob)ob.style.display='flex';else renderAll()};
+</script>
+</body>
+</html>
