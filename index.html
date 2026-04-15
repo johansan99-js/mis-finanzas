@@ -351,7 +351,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="tab-item" onclick="switchView('config')">⚙️ Config</div>
 </nav>
 
-<!-- MODALES (Gasto, Ingreso, Meta, Abono, Cobrar, Pagar, Préstamo, Tarjeta, Pago Recurrente) -->
+<!-- MODALES -->
 <div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')"><div class="modal-content"><h3>📉 Nuevo Gasto</h3><input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)"><input type="text" id="gasto-cat" class="input-field" placeholder="Categoría"><input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría"><select id="gasto-pago" class="input-field"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option></select><button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button><button class="btn btn-primary" onclick="saveGasto()">Guardar</button></div></div>
 
 <div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')"><div class="modal-content"><h3>💰 Nuevo Ingreso</h3><input type="number" id="ingreso-monto" class="input-field" placeholder="Monto (L)"><select id="ingreso-tipo" class="input-field"><option value="salario">Salario</option><option value="extra">Extra</option></select><button class="btn btn-secondary" onclick="closeModal('modal-ingreso')">Cancelar</button><button class="btn btn-primary" onclick="saveIngreso()">Registrar</button></div></div>
@@ -372,7 +372,33 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 
 <script>
 const LS_KEY='mifinanzashn_secure_v8';
-let state=JSON.parse(localStorage.getItem(LS_KEY))||{setup:false,nombre:'',saldoInicial:0,transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[]};
+let savedState=JSON.parse(localStorage.getItem(LS_KEY));
+let state={
+  setup:false,
+  nombre:'',
+  saldoInicial:0,
+  transactions:[],
+  goals:[],
+  receivables:[],
+  payables:[],
+  prestamos:[],
+  tarjetas:[],
+  pagosRecurrentes:[]
+};
+
+// Merge con datos guardados si existen
+if(savedState && typeof savedState==='object'){
+  Object.keys(state).forEach(key=>{
+    if(savedState[key]!==undefined){
+      if(Array.isArray(state[key]) && !Array.isArray(savedState[key])){
+        state[key]=[];
+      }else{
+        state[key]=savedState[key];
+      }
+    }
+  });
+}
+
 let appPIN=localStorage.getItem('finanzas_pin')||'';
 let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
 const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
@@ -456,7 +482,6 @@ async function requestNotificationPermission(){
   if(Notification.permission!=='denied'){
     const permission=await Notification.requestPermission();
     if(permission==='granted'){
-      // Registrar service worker para notificaciones
       if('serviceWorker' in navigator){
         navigator.serviceWorker.register('./sw.js')
           .then(reg=>console.log('✅ Service Worker registrado'))
@@ -547,65 +572,168 @@ function renderCardAlerts(){const container=document.getElementById('card-alerts
 
 // === PAGOS RECURRENTES ===
 function savePagoRecurrente(){
-  const servicio=document.getElementById('pago-servicio').value.trim();
-  const monto=parseFloat(document.getElementById('pago-monto').value)||0;
-  const dia=parseInt(document.getElementById('pago-dia').value)||1;
-  const alertaDias=parseInt(document.getElementById('pago-alerta').value)||3;
-  const notificacion=document.getElementById('pago-notificacion').checked;
+  const servicioEl = document.getElementById('pago-servicio');
+  const montoEl = document.getElementById('pago-monto');
+  const diaEl = document.getElementById('pago-dia');
+  const alertaEl = document.getElementById('pago-alerta');
+  const notificacionEl = document.getElementById('pago-notificacion');
   
-  if(!servicio||!monto)return alert('Completa servicio y monto');
+  const servicio = servicioEl?.value?.trim();
+  const monto = parseFloat(montoEl?.value) || 0;
+  const dia = parseInt(diaEl?.value) || 1;
+  const alertaDias = parseInt(alertaEl?.value) || 3;
+  const notificacion = notificacionEl?.checked || false;
   
-  state.pagosRecurrentes.push({id:Date.now(),servicio,monto,dia,alertaDias,notificacion,ultimoPago:null});
-  
-  if(notificacion) requestNotificationPermission();
-  
-  save();
-  closeModal('modal-pago-recurrente');
-  renderPagosRecurrentes();
-  
-  ['pago-servicio','pago-monto','pago-dia'].forEach(id=>document.getElementById(id).value='');
-}
-
-function renderPagosRecurrentes(){
-  const container=document.getElementById('pagos-list');
-  const alertasContainer=document.getElementById('pagos-alertas');
-  const hoy=new Date().getDate();
-  const mes=new Date().getMonth();
-  const anio=new Date().getFullYear();
-  
-  if(!state.pagosRecurrentes) state.pagosRecurrentes=[];
-  
-  if(state.pagosRecurrentes.length===0){
-    container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin pagos recurrentes registrados</p>';
-    alertasContainer.innerHTML='';
+  if(!servicio || !monto || monto <= 0){
+    alert('❌ Completa: Nombre del servicio y monto válido');
     return;
   }
   
-  let alertasHTML='';
+  if(dia < 1 || dia > 31){
+    alert('❌ El día debe ser entre 1 y 31');
+    return;
+  }
   
-  container.innerHTML=state.pagosRecurrentes.map(p=>{
-    const faltanDias=p.dia>=hoy?p.dia-hoy:(new Date(anio,mes+1,0).getDate()-hoy)+p.dia;
-    const urgente=faltanDias<=p.alertaDias;
-    const vencido=faltanDias===0;
-    
-    if(urgente&&!vencido){
-      alertasHTML+=`<div class="alert-card ${faltanDias<=1?'urgent':''}"><div class="alert-icon">${faltanDias<=1?'🚨':''}</div><div class="alert-content"><div class="alert-title">${p.servicio}</div><div class="alert-detail">Vence en ${faltanDias} día(s) • Monto: ${fL(p.monto)}</div></div></div>`;
-      if(p.notificacion&&Notification.permission==='granted'){
-        sendNotification(`💳 ${p.servicio}`,`Tu pago de ${fL(p.monto)} vence en ${faltanDias} día(s)`);
-      }
+  try{
+    if(!Array.isArray(state.pagosRecurrentes)){
+      state.pagosRecurrentes = [];
+      console.log('📝 Array pagosRecurrentes inicializado');
     }
     
-    if(vencido){
-      alertasHTML+=`<div class="alert-card urgent"><div class="alert-icon">⚠️</div><div class="alert-content"><div class="alert-title">${p.servicio}</div><div class="alert-detail" style="color:var(--red)">¡VENCE HOY! • Monto: ${fL(p.monto)}</div></div></div>`;
-      if(p.notificacion&&Notification.permission==='granted'){
-        sendNotification(`⚠️ ${p.servicio}`,`¡Tu pago de ${fL(p.monto)} VENCE HOY!`);
-      }
+    const nuevoPago = {
+      id: Date.now(),
+      servicio: servicio,
+      monto: monto,
+      dia: dia,
+      alertaDias: alertaDias,
+      notificacion: notificacion,
+      ultimoPago: null,
+      pagado: 0,
+      fechaCreacion: new Date().toISOString()
+    };
+    
+    state.pagosRecurrentes.push(nuevoPago);
+    
+    console.log(`✅ Pago agregado. Total: ${state.pagosRecurrentes.length} pagos`);
+    console.log('Último pago:', nuevoPago);
+    
+    if(notificacion){
+      requestNotificationPermission().catch(err => {
+        console.log('Permiso notificaciones denegado:', err);
+      });
     }
     
-    return `<div class="card card-credit"><div class="debt-header"><div><div class="debt-title">${p.servicio}</div><div class="debt-meta">Monto: ${fL(p.monto)} • Día de pago: ${p.dia}</div></div><button onclick="deletePagoRecurrente(${p.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div style="font-size:11px;color:var(--text2);margin:10px 0">${urgente?`<span style="color:var(--red);font-weight:700">⚠️ Vence en ${faltanDias} día(s)</span>`:`✅ Próximo pago en ${faltanDias} día(s)`}</div><div class="debt-actions"><button class="btn btn-primary" style="flex:1;padding:10px;font-size:12px" onclick="marcarPagoRecurrente(${p.id})">Marcar como Pagado</button></div></div>`;
-  }).join('');
+    save();
+    
+    if(servicioEl) servicioEl.value = '';
+    if(montoEl) montoEl.value = '';
+    if(diaEl) diaEl.value = '';
+    if(alertaEl) alertaEl.value = '3';
+    
+    closeModal('modal-pago-recurrente');
+    renderPagosRecurrentes();
+    
+    alert(`✅ Pago recurrente registrado:\n${servicio} - ${fL(monto)}\nDía: ${dia}\nAlerta: ${alertaDias} días antes`);
+    
+  }catch(err){
+    console.error('❌ Error al guardar pago recurrente:', err);
+    alert('Error al guardar. Revisa la consola (F12).');
+  }
+}
+
+function renderPagosRecurrentes(){
+  const container = document.getElementById('pagos-list');
+  const alertasContainer = document.getElementById('pagos-alertas');
   
-  alertasContainer.innerHTML=alertasHTML||'<p style="text-align:center;color:var(--text2);padding:15px">✅ No hay pagos próximos</p>';
+  if(!container || !alertasContainer){
+    console.log('ℹ️ Vista de pagos no activa');
+    return;
+  }
+  
+  if(!Array.isArray(state.pagosRecurrentes)){
+    state.pagosRecurrentes = [];
+    console.log('⚠️ Array inicializado en render');
+  }
+  
+  const hoy = new Date().getDate();
+  const mes = new Date().getMonth();
+  const anio = new Date().getFullYear();
+  
+  console.log(`📊 Renderizando ${state.pagosRecurrentes.length} pagos recurrentes`);
+  
+  if(state.pagosRecurrentes.length === 0){
+    container.innerHTML = '<p style="text-align:center;color:var(--text2);padding:40px 20px">📭 Sin pagos recurrentes<br><br>Registra tus servicios (agua, luz, teléfono, etc.) para recibir alertas antes del vencimiento.</p>';
+    alertasContainer.innerHTML = '';
+    return;
+  }
+  
+  let alertasHTML = '';
+  let pagosHTML = '';
+  
+  state.pagosRecurrentes.forEach(p => {
+    try{
+      const faltanDias = p.dia >= hoy ? p.dia - hoy : (new Date(anio, mes + 1, 0).getDate() - hoy) + p.dia;
+      const urgente = faltanDias <= p.alertaDias;
+      const vencido = faltanDias === 0;
+      
+      if(urgente && !vencido){
+        alertasHTML += `
+          <div class="alert-card ${faltanDias <= 1 ? 'urgent' : ''}" style="margin-bottom:10px">
+            <div class="alert-icon">${faltanDias <= 1 ? '🚨' : '⏰'}</div>
+            <div class="alert-content">
+              <div class="alert-title">${p.servicio}</div>
+              <div class="alert-detail">Vence en ${faltanDias} día(s) • Monto: ${fL(p.monto)}</div>
+            </div>
+          </div>
+        `;
+        if(p.notificacion && Notification.permission === 'granted'){
+          sendNotification(`💳 ${p.servicio}`, `Tu pago de ${fL(p.monto)} vence en ${faltanDias} día(s)`);
+        }
+      }
+      
+      if(vencido){
+        alertasHTML += `
+          <div class="alert-card urgent" style="margin-bottom:10px">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+              <div class="alert-title">${p.servicio}</div>
+              <div class="alert-detail" style="color:var(--red)">¡VENCE HOY! • Monto: ${fL(p.monto)}</div>
+            </div>
+          </div>
+        `;
+        if(p.notificacion && Notification.permission === 'granted'){
+          sendNotification(`⚠️ ${p.servicio}`, `¡Tu pago de ${fL(p.monto)} VENCE HOY!`);
+        }
+      }
+      
+      pagosHTML += `
+        <div class="card card-credit" style="margin-bottom:15px">
+          <div class="debt-header">
+            <div>
+              <div class="debt-title" style="font-size:16px">${p.servicio}</div>
+              <div class="debt-meta">Monto: ${fL(p.monto)} • Día: ${p.dia} • Alerta: ${p.alertaDias} días</div>
+            </div>
+            <button onclick="deletePagoRecurrente(${p.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;padding:5px">×</button>
+          </div>
+          <div style="padding:12px;background:${urgente ? 'rgba(232,93,93,0.1)' : 'var(--bg3)'};border-radius:8px;margin:10px 0">
+            <div style="font-size:13px;color:${urgente ? 'var(--red)' : 'var(--green)'};font-weight:600">
+              ${urgente ? (vencido ? '⚠️ ¡VENCE HOY!' : `⏰ Vence en ${faltanDias} día(s)`) : `✅ Próximo pago en ${faltanDias} día(s)`}
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="marcarPagoRecurrente(${p.id})" style="margin-top:10px">
+            ✓ Marcar como Pagado
+          </button>
+        </div>
+      `;
+    }catch(err){
+      console.error('Error al renderizar pago:', p, err);
+    }
+  });
+  
+  container.innerHTML = pagosHTML;
+  alertasContainer.innerHTML = alertasHTML || '<p style="text-align:center;color:var(--text2);padding:20px;background:var(--bg3);border-radius:8px">✅ No hay pagos próximos en los próximos días</p>';
+  
+  console.log('✅ Render completado');
 }
 
 function marcarPagoRecurrente(id){
@@ -622,10 +750,30 @@ function marcarPagoRecurrente(id){
 }
 
 function deletePagoRecurrente(id){
-  if(confirm('¿Eliminar?')){
-    state.pagosRecurrentes=state.pagosRecurrentes.filter(p=>p.id!==id);
-    save();
-    renderPagosRecurrentes();
+  if(confirm('¿Eliminar este pago recurrente?')){
+    try{
+      if(!Array.isArray(state.pagosRecurrentes)){
+        state.pagosRecurrentes = [];
+      }
+      
+      const antes = state.pagosRecurrentes.length;
+      state.pagosRecurrentes = state.pagosRecurrentes.filter(p => p.id !== id);
+      const despues = state.pagosRecurrentes.length;
+      
+      console.log(`🗑️ Pago eliminado: ${antes} -> ${despues} pagos`);
+      
+      save();
+      renderPagosRecurrentes();
+      
+      if(despues === antes - 1){
+        console.log('✅ Eliminación exitosa');
+      }else{
+        console.error('❌ Error: El pago no se eliminó');
+      }
+    }catch(err){
+      console.error('❌ Error al eliminar:', err);
+      alert('Error al eliminar el pago. Revisa la consola.');
+    }
   }
 }
 
@@ -763,7 +911,6 @@ function exportDataEncriptado(){
 }
 
 function exportToExcel(){
-  // Crear CSV similar al Excel de ejemplo
   let csv='Presupuesto mensual personal\n\n';
   csv+='INGRESOS MENSUALES\n';
   csv+='Tipo,Monto\n';
@@ -881,12 +1028,15 @@ function renderAll(){
 
 // === INICIALIZACIÓN ===
 window.onload=()=>{
-  // Si hay PIN configurado y NO está marcado "recordar", mostrar modal PIN
+  if(!state.pagosRecurrentes || !Array.isArray(state.pagosRecurrentes)){
+    state.pagosRecurrentes = [];
+    console.log('🔧 Array pagosRecurrentes reparado en onload');
+  }
+  
   if(appPIN && !recordarPIN){
     document.getElementById('modal-pin').style.display='flex';
     document.getElementById('pin-input').focus();
   }else if(appPIN && recordarPIN){
-    // Si está marcado "recordar", entrar directo pero mostrar aviso
     if(!state.setup){
       document.getElementById('onboarding').style.display='flex';
     }else{
@@ -894,7 +1044,6 @@ window.onload=()=>{
       initPaymentNotifications();
     }
   }else{
-    // Sin PIN configurado
     if(!state.setup){
       document.getElementById('onboarding').style.display='flex';
     }else{
@@ -903,14 +1052,19 @@ window.onload=()=>{
     }
   }
   
-  // Actualizar checkbox de "recordar PIN"
-  document.getElementById('recordar-pin').checked=recordarPIN;
+  const recordarEl = document.getElementById('recordar-pin');
+  if(recordarEl) recordarEl.checked = recordarPIN;
   
-  // Mostrar/ocultar botón de configurar PIN
-  const btnConfigPIN=document.getElementById('btn-config-pin');
+  const btnConfigPIN = document.getElementById('btn-config-pin');
   if(btnConfigPIN){
-    btnConfigPIN.textContent=appPIN?'Cambiar PIN':'Configurar PIN';
+    btnConfigPIN.textContent = appPIN ? 'Cambiar PIN' : 'Configurar PIN';
   }
+  
+  console.log('📊 Estado inicial:', {
+    setup: state.setup,
+    pagosRecurrentes: state.pagosRecurrentes.length,
+    transactions: state.transactions.length
+  });
 };
 </script>
 </body>
