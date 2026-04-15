@@ -46,7 +46,6 @@
     .toast.success{background:linear-gradient(135deg,#16a34a,#22c55e)}.toast.error{background:linear-gradient(135deg,#dc2626,#ef4444)}.toast.info{background:linear-gradient(135deg,#2563eb,#3b82f6)}
     .actions{display:flex;gap:6px}.btn-icon{background:none;border:none;color:var(--text2);font-size:1.2rem;cursor:pointer;padding:4px}.btn-icon:hover{color:var(--err)}
     .total-bar{background:var(--bg2);padding:12px 16px;border-radius:10px;margin:8px 0;display:flex;justify-content:space-between;font-weight:600}
-    .progress{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin:8px 0}.progress-fill{height:100%;background:var(--accent);transition:width 0.3s}
   </style>
 </head>
 <body>
@@ -55,9 +54,7 @@
 
   <!-- ONBOARDING -->
   <section id="onboarding" class="active">
-    <div class="card">
-      <h3 style="margin-bottom:12px">👋 Bienvenido</h3>
-      <p style="color:var(--text2);margin-bottom:16px">Para comenzar tu administración financiera:</p>
+    <div class="card"><h3 style="margin-bottom:12px">👋 Bienvenido</h3><p style="color:var(--text2);margin-bottom:16px">Para comenzar tu administración financiera:</p>
       <div class="form-g"><label for="saldoInicio">¿Cuánto dinero tienes actualmente?</label>
         <input type="number" id="saldoInicio" placeholder="Ej: 5000" step="0.01" min="0" required>
         <small class="hint">Este será tu punto de partida para administrar tus finanzas</small>
@@ -75,19 +72,15 @@
         <div class="stat"><span class="stat-v" id="extDisplay">L. 0</span><span class="stat-l">Disponible</span></div></div>
     </div>
 
-    <!-- Cuentas por Cobrar (RESTAURADO) -->
-    <div class="card">
-      <div class="card-header"><span>💰 Dinero que me deben</span><button class="btn-s btn-sm" onclick="nav('cobrar')">+ Nuevo</button></div>
+    <!-- Cuentas por Cobrar -->
+    <div class="card"><div class="card-header"><span>💰 Dinero que me deben</span><button class="btn-s btn-sm" onclick="nav('cobrar')">+ Nuevo</button></div>
       <div id="listaCobrar"><p class="tc" style="color:var(--text2)">Sin cuentas por cobrar</p></div>
-      <div class="total-bar"><span>TOTAL POR COBRAR:</span><span id="totalCobrar" class="t-ok">L. 0.00</span></div>
-    </div>
+      <div class="total-bar"><span>TOTAL POR COBRAR:</span><span id="totalCobrar" class="t-ok">L. 0.00</span></div></div>
 
-    <!-- Cuentas por Pagar (RESTAURADO) -->
-    <div class="card">
-      <div class="card-header"><span>💸 Lo que debo pagar</span><button class="btn-s btn-sm" onclick="nav('pagar')">+ Nuevo</button></div>
+    <!-- Cuentas por Pagar -->
+    <div class="card"><div class="card-header"><span>💸 Lo que debo pagar</span><button class="btn-s btn-sm" onclick="nav('pagar')">+ Nuevo</button></div>
       <div id="listaPagar"><p class="tc" style="color:var(--text2)">Sin cuentas por pagar</p></div>
-      <div class="total-bar"><span>TOTAL POR PAGAR:</span><span id="totalPagar" class="t-err">L. 0.00</span></div>
-    </div>
+      <div class="total-bar"><span>TOTAL POR PAGAR:</span><span id="totalPagar" class="t-err">L. 0.00</span></div></div>
 
     <div class="card"><div class="card-header"><span>🔔 Alertas</span><button class="btn-s btn-sm" onclick="nav('alertas')">+ Nueva</button></div>
       <div id="listaAlertas"><p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p></div></div>
@@ -108,8 +101,7 @@
 
   <!-- CUENTAS POR COBRAR -->
   <section id="cobrar">
-    <div class="card">
-      <div class="card-header"><span>💰 Nuevo: Dinero que me deben</span></div>
+    <div class="card"><div class="card-header"><span>💰 Nuevo: Dinero que me deben</span></div>
       <div class="form-g"><label>Persona/Empresa</label><input type="text" id="cobrarNombre" placeholder="Ej: Juan Pérez"></div>
       <div class="form-g"><label>Monto</label><input type="number" id="cobrarMonto" placeholder="Ej: 500" step="0.01" min="0" required></div>
       <div class="form-g"><label>Descripción</label><input type="text" id="cobrarDesc" placeholder="Ej: Préstamo personal"></div>
@@ -121,8 +113,7 @@
 
   <!-- CUENTAS POR PAGAR -->
   <section id="pagar">
-    <div class="card">
-      <div class="card-header"><span>💸 Nuevo: Lo que debo pagar</span></div>
+    <div class="card"><div class="card-header"><span>💸 Nuevo: Lo que debo pagar</span></div>
       <div class="form-g"><label>Proveedor/Persona</label><input type="text" id="pagarNombre" placeholder="Ej: Electricidad"></div>
       <div class="form-g"><label>Monto</label><input type="number" id="pagarMonto" placeholder="Ej: 350" step="0.01" min="0" required></div>
       <div class="form-g"><label>Descripción</label><input type="text" id="pagarDesc" placeholder="Ej: Factura #1234"></div>
@@ -173,8 +164,7 @@
 
   <!-- FORMULARIO MOVIMIENTO -->
   <section id="formMov">
-    <div class="card">
-      <div class="card-header"><span id="titMov">📉 Nuevo Gasto</span><button class="btn-s btn-sm" onclick="toggleTipoMov()">💰/📉</button></div>
+    <div class="card"><div class="card-header"><span id="titMov">📉 Nuevo Gasto</span><button class="btn-s btn-sm" onclick="toggleTipoMov()">💰/📉</button></div>
       <div class="form-g"><label>Monto</label><input type="number" id="montoMov" placeholder="Ej: 250.00" step="0.01" min="0" required></div>
       <div class="form-g"><label>Categoría</label><select id="catMov">
         <option value="vivienda">🏠 Vivienda</option><option value="alimentacion">🍽 Alimentación</option>
@@ -222,7 +212,6 @@ function parseMonto(val){
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', ()=>{ init(); regSW(); cfgPWA(); cargar(); cfgConc(); cfgAutoCampos(); });
-
 function init(){
   document.getElementById('cfgNombre').value = CFG.nombre;
   document.getElementById('cfgMoneda').value = CFG.moneda;
@@ -271,7 +260,7 @@ function actualizar(){
   document.getElementById('gasDisplay').textContent = `${CFG.moneda} ${gas.toFixed(0)}`;
   document.getElementById('extDisplay').textContent = `${CFG.moneda} ${(saldo-CFG.saldoIni).toFixed(0)}`;
   const d = document.getElementById('saldoAppDisplay'); if(d) d.textContent = `${CFG.moneda} ${saldo.toFixed(2)}`;
-  renderCobrar(); renderPagar(); // Actualizar totales de cuentas
+  renderCobrar(); renderPagar();
 }
 
 function toggleTipoMov(){ movTipo = movTipo==='gasto'?'ingreso':'gasto'; document.getElementById('titMov').textContent = movTipo==='gasto'?'📉 Nuevo Gasto':'💰 Nuevo Ingreso'; document.getElementById('ingresoTipoDiv').style.display = movTipo==='ingreso'?'block':'none'; }
@@ -301,7 +290,6 @@ function renderMov(){
     </div>`).join('');
 }
 
-// 🗑️ ELIMINAR MOVIMIENTO
 function eliminarMov(id){
   if(!confirm('¿Eliminar este movimiento? Esta acción no se puede deshacer.')) return;
   let lista = JSON.parse(localStorage.getItem('movimientos')||'[]');
@@ -310,7 +298,7 @@ function eliminarMov(id){
   actualizar(); renderMov(); toast('✅ Movimiento eliminado','success');
 }
 
-// ==================== CUENTAS POR COBRAR (RESTAURADO) ====================
+// ==================== CUENTAS POR COBRAR ====================
 function guardarCobrar(){
   const nombre = document.getElementById('cobrarNombre').value.trim(), monto = parseMonto(document.getElementById('cobrarMonto').value), desc = document.getElementById('cobrarDesc').value||'Préstamo', fecha = document.getElementById('cobrarFecha').value;
   if(!nombre||monto===null||!fecha){ toast('⚠️ Completa todos los campos','error'); return; }
@@ -335,17 +323,15 @@ function marcarPagadoCobrar(id){
   if(!confirm('¿Marcar como COBRADO? Esto sumará el monto a tu saldo disponible.')) return;
   let lista=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'), cuenta=lista.find(c=>c.id===id);
   if(!cuenta) return;
-  // Registrar como ingreso real
   const mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
   mov.push({ id:`cob_pago_${Date.now()}`, tipo:'ingreso', monto:cuenta.monto, cat:'cobro', descripcion:`✅ Cobrado: ${cuenta.descripcion}`, fecha:new Date().toISOString(), metodoPago:'efectivo', tipoIngreso:'cobro', esAjuste:false });
   localStorage.setItem('movimientos', JSON.stringify(mov));
-  // Marcar como pagada
   cuenta.pagado = true; cuenta.fechaPago = new Date().toISOString();
   localStorage.setItem('cuentasCobrar', JSON.stringify(lista));
   actualizar(); renderCobrar(); toast(`✅ ${CFG.moneda} ${cuenta.monto.toFixed(2)} agregado a tu saldo`,'success');
 }
 
-// ==================== CUENTAS POR PAGAR (RESTAURADO) ====================
+// ==================== CUENTAS POR PAGAR ====================
 function guardarPagar(){
   const nombre = document.getElementById('pagarNombre').value.trim(), monto = parseMonto(document.getElementById('pagarMonto').value), desc = document.getElementById('pagarDesc').value||'Deuda', fecha = document.getElementById('pagarFecha').value;
   if(!nombre||monto===null||!fecha){ toast('⚠️ Completa todos los campos','error'); return; }
@@ -370,11 +356,9 @@ function marcarPagadoPagar(id){
   if(!confirm('¿Marcar como PAGADO? Esto restará el monto de tu saldo disponible.')) return;
   let lista=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'), cuenta=lista.find(c=>c.id===id);
   if(!cuenta) return;
-  // Registrar como gasto real
   const mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
   mov.push({ id:`pag_pago_${Date.now()}`, tipo:'gasto', monto:cuenta.monto, cat:'pago-deuda', descripcion:`💸 Pagado: ${cuenta.descripcion}`, fecha:new Date().toISOString(), metodoPago:'efectivo', tipoIngreso:'ninguno', esAjuste:false });
   localStorage.setItem('movimientos', JSON.stringify(mov));
-  // Marcar como pagada
   cuenta.pagado = true; cuenta.fechaPago = new Date().toISOString();
   localStorage.setItem('cuentasPagar', JSON.stringify(lista));
   actualizar(); renderPagar(); toast(`✅ ${CFG.moneda} ${cuenta.monto.toFixed(2)} registrado como pago`,'success');
@@ -413,11 +397,51 @@ function activarAhorro(){ const pct=parseFloat(document.getElementById('ahorroPc
 function cfgAutoCampos(){ document.getElementById('catMov')?.addEventListener('change',e=>{ const desc=document.getElementById('descMov'), met=document.getElementById('metMov'); const map={'combustible':'Gasolina - ','peajes':'Peaje - ','mantenimiento':'Mantenimiento - ','educacion':'Mensualidad - ','alimentacion':'Supermercado - '}; if(map[e.target.value]){ desc.placeholder=map[e.target.value]; desc.focus(); } if(['combustible','peajes','alimentacion'].includes(e.target.value)){ met.value='efectivo'; }}); }
 function guardarCfg(){ localStorage.setItem('cfg_nombre',document.getElementById('cfgNombre').value); localStorage.setItem('cfg_moneda',document.getElementById('cfgMoneda').value); CFG.nombre=document.getElementById('cfgNombre').value; CFG.moneda=document.getElementById('cfgMoneda').value; actualizar(); toast('✅ Configuración guardada','success'); }
 
-// ==================== RESPALDO ====================
+// ==================== RESPALDO & EXPORT ====================
 function exportarJSON(){ const d={v:'3.3',fecha:new Date().toISOString(),cfg:{moneda:CFG.moneda,nombre:CFG.nombre,saldoIni:CFG.saldoIni},movimientos:localStorage.getItem('movimientos'),alertas:localStorage.getItem('alertas'),cobrar:localStorage.getItem('cuentasCobrar'),pagar:localStorage.getItem('cuentasPagar')}; const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}), u=URL.createObjectURL(b), f=`mis-finanzas-${new Date().toISOString().slice(0,10)}.json`; if(navigator.share&&navigator.canShare?.({files:[new File([b],f,{type:'application/json'})]})) navigator.share({title:'Respaldo',files:[new File([b],f)]}).catch(()=>dl(u,f)); else dl(u,f); }
 function dl(u,f){ const a=document.createElement('a'); a.href=u; a.download=f; a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(u),100); }
 function importarJSON(){ const input=document.createElement('input'); input.type='file'; input.accept='.json'; input.onchange=e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>{ try{ const data=JSON.parse(ev.target.result); if(!data.cfg&&!data.movimientos) throw new Error('Estructura inválida'); if(data.cfg){ localStorage.setItem('cfg_moneda',data.cfg.moneda||'L'); localStorage.setItem('cfg_nombre',data.cfg.nombre||''); localStorage.setItem('saldoIni',data.cfg.saldoIni?.toString()||'0'); } if(data.movimientos) localStorage.setItem('movimientos',data.movimientos); if(data.alertas) localStorage.setItem('alertas',data.alertas); if(data.cobrar) localStorage.setItem('cuentasCobrar',data.cobrar); if(data.pagar) localStorage.setItem('cuentasPagar',data.pagar); toast('✅ Datos importados','success'); setTimeout(()=>location.reload(),1000); }catch(err){ toast('❌ '+err.message,'error'); } }; r.readAsText(f); }; input.click(); }
-function exportarExcel(){ const wb=XLSX.utils.book_new(), mov=JSON.parse(localStorage.getItem('movimientos')||'[]'), alertas=JSON.parse(localStorage.getItem('alertas')||'[]'), cobrar=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'), pagar=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'); const ing=mov.filter(m=>m.tipo==='ingreso'), gas=mov.filter(m=>m.tipo==='gasto'), tI=ing.reduce((s,m)=>s+m.monto,0), tG=gas.reduce((s,m)=>s+m.monto,0), saldo=tI-tG+CFG.saldoIni; const r=[['Presupuesto mensual personal'],[],['INGRESOS MENSUALES'],['Total ingresos','',CFG.moneda+' '+tI.toFixed(2)],['SALDO REAL','',CFG.moneda+' '+saldo.toFixed(2)],[],['GASTOS POR CATEGORÍA'],['Categoría','Previsto','Real','Diferencia']]; const pc={}; gas.forEach(g=>pc[g.cat]=(pc[g.cat]||0)+g.monto); Object.entries(pc).forEach(([c,t])=>r.push([c,'-',CFG.moneda+' '+t.toFixed(2),'-'])); r.push([],['TOTAL GASTOS','',CFG.moneda+' '+tG.toFixed(2)],['DIFERENCIA','',CFG.moneda+' '+(tI-tG).toFixed(2)]); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r),'Resumen'); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mov.map(m=>({Fecha:new Date(m.fecha).toLocaleDateString('es-HN'),Tipo:m.tipo==='ingreso'?'💰 Ingreso':'💸 Gasto',Categoría:m.cat,Descripción:m.descripcion,Monto:CFG.moneda+' '+m.monto.toFixed(2),Método:m.metodoPago}))), 'Movimientos'); if(alertas.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alertas.map(a=>({Descripción:a.descripcion,Tipo:a.tipo,Monto:a.monto!==null?CFG.moneda+' '+a.monto.toFixed(2):'-','Fecha Límite':new Date(a.fechaLimite).toLocaleDateString('es-HN')}))), 'Alertas'); if(cobrar.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cobrar.map(c=>({Nombre:c.nombre,Descripción:c.descripcion,Monto:CFG.moneda+' '+c.monto.toFixed(2),'Fecha Límite':new Date(c.fechaLimite).toLocaleDateString('es-HN'),Estado:c.pagado?'✅ Cobrado':'⏳ Pendiente'}))), 'Por Cobrar'); if(pagar.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pagar.map(p=>({Nombre:p.nombre,Descripción:p.descripcion,Monto:CFG.moneda+' '+p.monto.toFixed(2),'Fecha Límite':new Date(p.fechaLimite).toLocaleDateString('es-HN'),Estado:p.pagado?'✅ Pagado':'⏳ Pendiente'}))), 'Por Pagar'); XLSX.writeFile(wb,`mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`); }
+
+function exportarExcel(){ 
+  const wb=XLSX.utils.book_new(); 
+  const mov=JSON.parse(localStorage.getItem('movimientos')||'[]');
+  const alertas=JSON.parse(localStorage.getItem('alertas')||'[]');
+  const cobrar=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]');
+  const pagar=JSON.parse(localStorage.getItem('cuentasPagar')||'[]');
+  
+  const ing=mov.filter(m=>m.tipo==='ingreso'), gas=mov.filter(m=>m.tipo==='gasto');
+  const tI=ing.reduce((s,m)=>s+m.monto,0), tG=gas.reduce((s,m)=>s+m.monto,0), saldo=tI-tG+CFG.saldoIni;
+  
+  // Estructura tipo tu plantilla "Presupuesto mensual personal"
+  const resumen = [
+    ['Presupuesto mensual personal'], [],
+    ['INGRESOS MENSUALES REALES'],
+    ['Total de ingresos mensuales', '', '', `${CFG.moneda} ${tI.toFixed(2)}`],
+    [],
+    ['SALDO REAL (Ingresos reales menos gastos)', '', '', `${CFG.moneda} ${saldo.toFixed(2)}`],
+    ['DIFERENCIA (Real menos previsto)', '', '', `${CFG.moneda} ${saldo.toFixed(2)}`],
+    [],
+    ['GASTOS POR CATEGORÍA'],
+    ['Categoría', 'Costo previsto', 'Costo real', 'Diferencia']
+  ];
+  const pc={}; gas.forEach(g=>pc[g.cat]=(pc[g.cat]||0)+g.monto);
+  Object.entries(pc).forEach(([c,t])=> resumen.push([c, '0 €', `${CFG.moneda} ${t.toFixed(2)}`, `-${CFG.moneda} ${t.toFixed(2)}`]));
+  resumen.push([], ['TOTAL DE COSTO REAL', '', `${CFG.moneda} ${tG.toFixed(2)}`], ['DIFERENCIA DE TOTALES', '', `${CFG.moneda} ${(tI-tG).toFixed(2)}`]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen Mensual');
+  
+  // Movimientos detallados
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mov.map(m=>({Fecha:new Date(m.fecha).toLocaleDateString('es-HN'),Tipo:m.tipo==='ingreso'?'💰 Ingreso':'💸 Gasto',Categoría:m.cat,Descripción:m.descripcion,Monto:`${CFG.moneda} ${m.monto.toFixed(2)}`,Método:m.metodoPago}))), 'Movimientos');
+  
+  // Alertas
+  if(alertas.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(alertas.map(a=>({Descripción:a.descripcion,Tipo:a.tipo,Monto:a.monto!==null?`${CFG.moneda} ${a.monto.toFixed(2)}`:'-','Fecha Límite':new Date(a.fechaLimite).toLocaleDateString('es-HN')}))), 'Alertas');
+  
+  // Cuentas
+  if(cobrar.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cobrar.map(c=>({Nombre:c.nombre,Descripción:c.descripcion,Monto:`${CFG.moneda} ${c.monto.toFixed(2)}`,'Fecha Límite':new Date(c.fechaLimite).toLocaleDateString('es-HN'),Estado:c.pagado?'✅ Cobrado':'⏳ Pendiente'}))), 'Por Cobrar');
+  if(pagar.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pagar.map(p=>({Nombre:p.nombre,Descripción:p.descripcion,Monto:`${CFG.moneda} ${p.monto.toFixed(2)}`,'Fecha Límite':new Date(p.fechaLimite).toLocaleDateString('es-HN'),Estado:p.pagado?'✅ Pagado':'⏳ Pendiente'}))), 'Por Pagar');
+  
+  XLSX.writeFile(wb, `mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 function reiniciarApp(){ if(confirm('⚠️ ¿Borrar TODOS los datos?')){ localStorage.clear(); location.reload(); } }
 </script>
 </body>
