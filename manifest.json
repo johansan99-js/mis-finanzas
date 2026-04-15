@@ -8,6 +8,8 @@
   "orientation": "portrait",
   "description": "Administra tus finanzas personales con conciliación bancaria y alertas inteligentes",
   "lang": "es-HN",
+  "categories": ["finance", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
@@ -21,7 +23,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "categories": ["finance", "productivity"],
-  "prefer_related_applications": false
+  ]
 }
