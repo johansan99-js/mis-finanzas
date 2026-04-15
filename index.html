@@ -1,390 +1,1097 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-HN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0f1117">
-<title>Mis Finanzas HN - Pro</title>
-<link rel="manifest" href="manifest.json">
-<style>
-:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#232736;--bg4:#2d3147;--amber:#f0a500;--text:#f0eff4;--text2:#9b9eb5;--green:#2ecc8a;--red:#e85d5d;--blue:#4a9ef8;--purple:#9b7fe8;--border:#2d3147;--r:12px}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);max-width:430px;margin:0 auto;padding-bottom:100px}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:15px}
-.card-debt{border-left:4px solid var(--red)}
-.card-credit{border-left:4px solid var(--amber)}
-.card-receivable{border-left:4px solid var(--green)}
-.card-saving{border-left:4px solid var(--blue)}
-.btn{width:100%;padding:14px;border-radius:8px;border:none;font-weight:700;cursor:pointer;margin:5px 0}
-.btn-primary{background:var(--amber);color:var(--bg)}
-.btn-secondary{background:var(--bg3);color:var(--text)}
-.btn-danger{background:var(--red);color:white}
-.input-field{width:100%;background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:8px;color:var(--text);margin-bottom:10px}
-.input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-/* === NAVEGACIÓN SCROLLABLE === */
-.tab-nav {
-  display:flex;
-  background:var(--bg2);
-  position:fixed;
-  bottom:0;
-  width:100%;
-  max-width:430px;
-  border-top:1px solid var(--border);
-  z-index:100;
-  overflow-x:auto;
-  overflow-y:hidden;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:none;
-}
-.tab-nav::-webkit-scrollbar {
-  display:none;
-}
-.tab-item {
-  flex:0 0 auto;
-  min-width:70px;
-  padding:12px 8px;
-  text-align:center;
-  color:var(--text2);
-  font-size:10px;
-  cursor:pointer;
-  white-space:nowrap;
-}
-.tab-item.active {
-  color:var(--amber);
-  font-weight:700;
-  border-top:2px solid var(--amber);
-}
-/* === FIN NAVEGACIÓN === */
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:200;justify-content:center;align-items:center;padding:20px}
-.modal-content{background:var(--bg2);border-radius:var(--r);width:100%;max-width:380px;padding:20px;max-height:90vh;overflow-y:auto}
-.view{display:none;padding:20px;padding-bottom:100px}
-.view.active{display:block}
-.hidden{display:none!important}
-.balance-card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:15px}
-.balance-amount{font-size:32px;font-weight:700;margin:10px 0}
-.summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:15px}
-.summary-box{text-align:center;padding:15px;background:var(--bg3);border-radius:8px}
-.summary-label{font-size:11px;color:var(--text2);margin-bottom:5px}
-.summary-value{font-size:18px;font-weight:700}
-.chart-container{background:var(--bg3);border-radius:8px;padding:15px;margin:15px 0}
-.chart-title{font-size:14px;font-weight:600;margin-bottom:15px;text-align:center}
-.chart-bars{display:flex;align-items:flex-end;justify-content:space-around;height:150px;gap:10px;padding:10px 0}
-.chart-bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px}
-.bar{width:100%;border-radius:6px 6px 0 0;transition:height 0.5s ease}
-.bar-label{font-size:10px;color:var(--text2);text-align:center}
-.bar-value{font-size:11px;font-weight:700;text-align:center}
-.income-bar{background:var(--green)}
-.expense-bar{background:var(--red)}
-.saving-bar{background:var(--blue)}
-.fab{position:fixed;bottom:80px;right:20px;width:60px;height:60px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--bg);cursor:pointer;box-shadow:0 4px 15px rgba(240,165,0,0.3);z-index:150}
-.fab-menu{position:fixed;bottom:150px;right:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:140;display:none;min-width:200px}
-.fab-menu-item{padding:12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;margin-bottom:5px}
-.fab-menu-item:hover{background:var(--bg3)}
-.history-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
-.history-item:last-child{border-bottom:none}
-.badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase}
-.badge-income{background:rgba(46,204,138,0.2);color:var(--green)}
-.badge-expense{background:rgba(232,93,93,0.2);color:var(--red)}
-.alert-card{background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:var(--r);padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
-.alert-card.urgent{border-left-color:var(--red);background:rgba(232,93,93,0.1)}
-.alert-icon{font-size:20px}
-.alert-content{flex:1}
-.alert-title{font-weight:600;font-size:13px}
-.alert-detail{font-size:11px;color:var(--text2)}
-.debt-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:12px}
-.debt-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:10px}
-.debt-title{font-weight:600;font-size:14px}
-.debt-meta{font-size:11px;color:var(--text2);margin-top:3px}
-.debt-progress{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin:10px 0}
-.debt-progress-bar{height:100%;transition:width 0.4s ease}
-.debt-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin:10px 0}
-.debt-stat{background:var(--bg3);padding:8px;border-radius:6px;text-align:center}
-.debt-actions{display:flex;gap:8px;margin-top:10px}
-.tag{display:inline-block;background:var(--bg4);color:var(--text2);padding:2px 6px;border-radius:4px;font-size:10px;margin-right:5px}
-.interest-badge{background:var(--red);color:white;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700}
-.no-interest-badge{background:var(--green);color:white;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700}
-.daily-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:15px 0}
-.daily-box{background:var(--bg3);padding:12px;border-radius:8px;text-align:center}
-.daily-label{font-size:10px;color:var(--text2);margin-bottom:5px}
-.daily-value{font-size:16px;font-weight:700}
-.pwa-banner{background:var(--amber);color:var(--bg);padding:12px;border-radius:8px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;cursor:pointer}
-.pwa-banner span{flex:1}
-.pwa-banner button{background:var(--bg);color:var(--amber);border:none;padding:6px 12px;border-radius:4px;font-weight:700;cursor:pointer;margin-left:10px}
-.loan-breakdown{background:var(--bg3);padding:10px;border-radius:6px;margin:10px 0;font-size:11px}
-.loan-breakdown-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--border)}
-.loan-breakdown-row:last-child{border-bottom:none}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="description" content="Administra tus finanzas personales con conciliación bancaria">
+  <title>Mis Finanzas HN - Pro</title>
+  
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
+  
+  <!-- SheetJS para exportar Excel -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-primary: #0f1117;
+      --bg-secondary: #1a1d2d;
+      --bg-card: #1e2337;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --border: rgba(255,255,255,0.1);
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding-bottom: 80px;
+      line-height: 1.5;
+    }
+    
+    .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+    
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    
+    .app-title { font-size: 1.3rem; font-weight: 700; }
+    
+    .install-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: none;
+    }
+    .install-btn.show { display: block; }
+    
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    
+    /* Balance display */
+    .balance {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 20px 0;
+      color: var(--success);
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+    
+    .stat-item {
+      text-align: center;
+      padding: 12px 8px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+    }
+    
+    .stat-value { font-size: 1.1rem; font-weight: 600; display: block; }
+    .stat-label { font-size: 0.75rem; color: var(--text-secondary); }
+    
+    /* Forms */
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 1rem;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .form-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    
+    .btn-group { display: flex; gap: 8px; }
+    .btn-group .btn { flex: 1; }
+    
+    /* Sections */
+    section { display: none; animation: fadeIn 0.3s ease; }
+    section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* Alerts */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: var(--bg-secondary);
+      border-left: 4px solid var(--warning);
+    }
+    .alert.urgent { border-left-color: var(--danger); }
+    
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0;
+      z-index: 100;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 12px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .nav-item.active { color: var(--accent); }
+    .nav-icon { font-size: 1.3rem; }
+    
+    /* FAB */
+    .fab {
+      position: fixed;
+      bottom: 70px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+      z-index: 90;
+    }
+    
+    /* Conciliación */
+    .conciliacion-result {
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      margin: 12px 0;
+    }
+    .diff-positive { color: var(--success); }
+    .diff-negative { color: var(--danger); }
+    
+    /* Utility */
+    .text-center { text-align: center; }
+    .mt-2 { margin-top: 16px; }
+    .hidden { display: none !important; }
+    .text-success { color: var(--success); }
+    .text-danger { color: var(--danger); }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="app-title">💰 Mis Finanzas HN</div>
+      <button class="install-btn" id="installBtn">📱 Instalar</button>
+    </header>
 
-<!-- PWA INSTALL BANNER -->
-<div id="pwa-banner" class="pwa-banner hidden">
-  <span>📱 Instala esta app en tu pantalla principal</span>
-  <button onclick="installPWA()">Instalar</button>
-</div>
+    <!-- Sección: Inicio -->
+    <section id="home" class="active">
+      <!-- Saldo Actual -->
+      <div class="card">
+        <div class="form-group">
+          <label for="saldo-inicial">¿Cuánto dinero tienes actualmente?</label>
+          <input type="number" id="saldo-inicial" placeholder="Ej: 5000" step="0.01">
+          <small class="form-hint">Este será tu punto de partida para administrar tus finanzas</small>
+        </div>
+        <button class="btn btn-primary" onclick="iniciarAdministracion()">Comenzar →</button>
+      </div>
 
-<!-- ONBOARDING SIMPLIFICADO -->
-<div id="onboarding" class="modal">
-  <div class="modal-content">
-    <h2 style="margin-bottom:10px">💰 Mis Finanzas HN</h2>
-    <p style="color:var(--text2);font-size:14px;margin-bottom:20px">Configura tu perfil una sola vez.<br>La app hará los cálculos automáticamente.</p>
-    <input type="text" id="ob-nombre" class="input-field" placeholder="Tu nombre">
-    <input type="number" id="ob-salario" class="input-field" placeholder="Salario neto mensual (L)">
-    <div class="card" style="margin:15px 0">
-      <strong style="font-size:12px">Tu distribución mensual (Regla 65/20/15)</strong>
-      <div id="ob-preview" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
+      <!-- Resumen -->
+      <div class="card">
+        <div class="balance" id="display-saldo">L. 0.00</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-value text-success" id="display-ingresos">L. 0</span>
+            <span class="stat-label">Ingresos</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value text-danger" id="display-gastos">L. 0</span>
+            <span class="stat-label">Gastos</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="display-extra">L. 0</span>
+            <span class="stat-label">Extra</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alertas -->
+      <div class="card">
+        <div class="card-header">
+          <span>🔔 Alertas</span>
+          <button class="btn-secondary" style="padding:4px 10px;font-size:0.8rem" onclick="mostrarFormularioAlerta()">+ Nueva</button>
+        </div>
+        <div id="lista-alertas">
+          <p class="text-center" style="color:var(--text-secondary)">✅ Sin alertas próximas</p>
+        </div>
+      </div>
+
+      <!-- Conciliación Bancaria -->
+      <div class="card">
+        <div class="card-header">
+          <span>🏦 Conciliación Bancaria</span>
+        </div>
+        <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:12px">
+          Ajusta tus registros al saldo real de tu banco
+        </p>
+        
+        <div class="form-group">
+          <label>Saldo en la app</label>
+          <div id="saldo-app-display" style="font-size:1.3rem;font-weight:600">L. 0.00</div>
+        </div>
+        
+        <div class="form-group">
+          <label>Saldo real en tu banco</label>
+          <input type="number" id="saldo-banco-input" placeholder="Ej: 4850.50" step="0.01">
+        </div>
+        
+        <button class="btn btn-secondary" id="btn-calcular-conciliacion">🔍 Calcular diferencia</button>
+        
+        <div id="resultado-conciliacion" class="hidden">
+          <div class="conciliacion-result">
+            <p><strong>Diferencia:</strong> <span id="diferencia-conciliacion">L. 0.00</span></p>
+            <p id="sugerencia-conciliacion" style="font-size:0.85rem;color:var(--text-secondary)"></p>
+          </div>
+          <button class="btn btn-success" id="btn-ajustar-conciliacion">✅ Ajustar automáticamente</button>
+        </div>
+      </div>
+
+      <!-- Respaldo -->
+      <div class="card">
+        <div class="card-header"><span>💾 Respaldo</span></div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="exportarJSON()">📥 Exportar JSON</button>
+          <button class="btn btn-secondary" onclick="exportarExcel()">📊 Exportar Excel</button>
+        </div>
+        <button class="btn btn-secondary mt-2" onclick="importarJSON()">📤 Importar</button>
+        <button class="btn btn-danger mt-2" onclick="reiniciarApp()">🗑 Reiniciar app</button>
+      </div>
+    </section>
+
+    <!-- Sección: Nuevo Movimiento (Gasto/Ingreso) -->
+    <section id="nuevo-movimiento">
+      <div class="card">
+        <div class="card-header">
+          <span id="titulo-movimiento">📉 Nuevo Gasto</span>
+          <button class="btn-secondary" style="padding:4px 10px" onclick="cambiarTipoMovimiento()">💰/📉</button>
+        </div>
+        
+        <div class="form-group">
+          <label>Monto</label>
+          <input type="number" id="monto-movimiento" placeholder="Ej: 250.00" step="0.01">
+        </div>
+        
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="categoria-movimiento">
+            <option value="vivienda">🏠 Vivienda</option>
+            <option value="alimentacion">🍽 Alimentación</option>
+            <option value="transporte">🚗 Transporte</option>
+            <option value="ocio">🎬 Ocio</option>
+            <option value="salud">🏥 Salud</option>
+            <option value="otros">📦 Otros</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Descripción</label>
+          <input type="text" id="descripcion-movimiento" placeholder="Ej: Supermercado">
+        </div>
+        
+        <div class="form-group">
+          <label>Método de pago</label>
+          <select id="metodo-movimiento">
+            <option value="efectivo">Efectivo</option>
+            <option value="debito">Débito</option>
+            <option value="credito">Crédito</option>
+          </select>
+        </div>
+        
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="navegar('home')">Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarMovimiento()">Guardar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sección: Alertas -->
+    <section id="alertas-section">
+      <div class="card">
+        <div class="card-header">
+          <span>🔔 Nueva Alerta</span>
+        </div>
+        
+        <div class="form-group">
+          <label>Tipo de alerta</label>
+          <select id="tipo-alerta">
+            <option value="vencimiento">📅 Vencimiento de pago</option>
+            <option value="limite">⚠️ Límite de gasto</option>
+            <option value="meta">🎯 Meta de ahorro</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Descripción</label>
+          <input type="text" id="descripcion-alerta" placeholder="Ej: Pago de tarjeta">
+        </div>
+        
+        <div class="form-group">
+          <label>Monto (opcional)</label>
+          <input type="number" id="monto-alerta" placeholder="Ej: 500" step="0.01">
+        </div>
+        
+        <div class="form-group">
+          <label>Fecha límite</label>
+          <input type="date" id="fecha-alerta">
+        </div>
+        
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="navegar('home')">Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarAlerta()">Guardar Alerta</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header"><span>Alertas Activas</span></div>
+        <div id="lista-alertas-detallada"></div>
+      </div>
+    </section>
+
+    <!-- Sección: Configuración -->
+    <section id="config">
+      <div class="card">
+        <div class="card-header"><span>⚙️ Configuración</span></div>
+        
+        <div class="form-group">
+          <label>Nombre del usuario</label>
+          <input type="text" id="config-nombre" placeholder="Tu nombre">
+        </div>
+        
+        <div class="form-group">
+          <label>Moneda</label>
+          <select id="config-moneda">
+            <option value="L">Lempiras (L)</option>
+            <option value="$">Dólares ($)</option>
+            <option value="€">Euros (€)</option>
+          </select>
+        </div>
+        
+        <button class="btn btn-primary" onclick="guardarConfiguracion()">Guardar Configuración</button>
+      </div>
+      
+      <div class="card">
+        <div class="card-header"><span>🔔 Notificaciones</span></div>
+        <button class="btn btn-secondary" onclick="solicitarPermisoNotificaciones()">
+          Activar notificaciones push
+        </button>
+        <small class="form-hint">Recibe alertas incluso con la app cerrada</small>
+      </div>
+    </section>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="navegar('home')">
+      <span class="nav-icon">🏠</span>
+      <span>Inicio</span>
     </div>
-    <button class="btn btn-primary" onclick="finishOnboarding()">Comenzar →</button>
-    <p style="font-size:11px;color:var(--text2);margin-top:15px;text-align:center">🔒 Tus datos se guardan solo en este dispositivo.<br>Nadie más tiene acceso a tu información.</p>
-  </div>
-</div>
-
-<!-- DASHBOARD -->
-<div id="view-dashboard" class="view active">
-  <div class="balance-card">
-    <div style="font-size:12px;color:var(--text2)">Disponible hoy</div>
-    <div class="balance-amount" id="balance-amount" style="color:var(--green)">L. 0.00</div>
-    <div id="balance-status" style="font-size:12px;color:var(--text2)">Sin ingresos este mes</div>
-  </div>
-
-  <div class="daily-summary">
-    <div class="daily-box"><div class="daily-label">💰 Cobrado hoy</div><div class="daily-value" id="cobrado-hoy" style="color:var(--green)">L. 0</div></div>
-    <div class="daily-box"><div class="daily-label">💸 Pagado hoy</div><div class="daily-value" id="pagado-hoy" style="color:var(--red)">L. 0</div></div>
-  </div>
-
-  <div class="summary-grid">
-    <div class="summary-box"><div class="summary-label">Ingresos</div><div class="summary-value" id="total-income" style="color:var(--green)">L. 0</div></div>
-    <div class="summary-box"><div class="summary-label">Gastos</div><div class="summary-value" id="total-expense" style="color:var(--red)">L. 0</div></div>
-    <div class="summary-box"><div class="summary-label">Extra</div><div class="summary-value" id="total-extra" style="color:var(--blue)">L. 0</div></div>
-  </div>
-  <div class="card" style="text-align:center;padding:10px"><span class="badge" style="background:var(--amber);color:var(--bg)">Regla 65/20/15</span></div>
-  
-  <div class="chart-container">
-    <div class="chart-title">📊 Resumen del Mes</div>
-    <div class="chart-bars">
-      <div class="chart-bar"><div class="bar income-bar" id="bar-income" style="height:0%"></div><div class="bar-value" id="val-income">L. 0</div><div class="bar-label">Ingresos</div></div>
-      <div class="chart-bar"><div class="bar expense-bar" id="bar-expense" style="height:0%"></div><div class="bar-value" id="val-expense">L. 0</div><div class="bar-label">Gastos</div></div>
-      <div class="chart-bar"><div class="bar saving-bar" id="bar-saving" style="height:0%"></div><div class="bar-value" id="val-saving">L. 0</div><div class="bar-label">Ahorro</div></div>
+    <div class="nav-item" onclick="navegar('nuevo-movimiento')">
+      <span class="nav-icon">➕</span>
+      <span>Nuevo</span>
     </div>
-  </div>
-
-  <h3 style="margin:20px 0 10px;font-size:14px">🔔 Alertas de Tarjetas</h3>
-  <div id="card-alerts"></div>
-  <p id="no-card-alerts" style="text-align:center;color:var(--text2);font-size:12px;padding:10px">✅ Sin alertas próximas</p>
-
-  <h3 style="margin:20px 0 10px;font-size:14px">🎯 Metas de Ahorro</h3>
-  <div id="goals-summary"></div>
-
-  <h3 style="margin:20px 0 10px;font-size:14px">📜 Movimientos Recientes</h3>
-  <div id="recent-history"></div>
-</div>
-
-<!-- CUENTAS POR COBRAR -->
-<div id="view-cobrar" class="view">
-  <h2 style="margin-bottom:15px">💰 Dinero que me deben</h2>
-  <div class="card" style="background:linear-gradient(135deg,var(--bg2),var(--bg3));margin-bottom:20px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:11px;color:var(--text2)">TOTAL POR COBRAR</div><div style="font-size:24px;font-weight:700;color:var(--green)" id="total-cobrar">L. 0.00</div></div>
-      <button class="btn btn-primary" style="width:auto;padding:10px 20px" onclick="openModal('modal-cobrar')">+ Nuevo</button>
+    <div class="nav-item" onclick="navegar('alertas-section')">
+      <span class="nav-icon">🔔</span>
+      <span>Alertas</span>
     </div>
-  </div>
-  <div id="cobrar-list"></div>
-</div>
-
-<!-- CUENTAS POR PAGAR -->
-<div id="view-pagar" class="view">
-  <h2 style="margin-bottom:15px">💸 Lo que debo pagar</h2>
-  <div class="card" style="background:linear-gradient(135deg,var(--bg2),var(--bg3));margin-bottom:20px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:11px;color:var(--text2)">TOTAL POR PAGAR</div><div style="font-size:24px;font-weight:700;color:var(--red)" id="total-pagar">L. 0.00</div></div>
-      <button class="btn btn-secondary" style="width:auto;padding:10px 20px" onclick="openModal('modal-pagar')">+ Nuevo</button>
+    <div class="nav-item" onclick="navegar('config')">
+      <span class="nav-icon">⚙️</span>
+      <span>Config</span>
     </div>
-  </div>
-  <div id="pagar-list"></div>
-</div>
+  </nav>
 
-<!-- PRÉSTAMOS -->
-<div id="view-prestamos" class="view">
-  <h2 style="margin-bottom:15px">🏦 Préstamos Bancarios</h2>
-  <div class="card" style="background:linear-gradient(135deg,var(--bg2),var(--bg3));margin-bottom:20px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:11px;color:var(--text2)">TOTAL PRESTADO</div><div style="font-size:24px;font-weight:700;color:var(--red)" id="total-prestamos">L. 0.00</div></div>
-      <button class="btn btn-secondary" style="width:auto;padding:10px 20px" onclick="openModal('modal-prestamo')">+ Nuevo Préstamo</button>
-    </div>
-  </div>
-  <div id="prestamos-list"></div>
-</div>
+  <!-- Floating Action Button -->
+  <button class="fab" onclick="navegar('nuevo-movimiento')">+</button>
 
-<!-- TARJETAS -->
-<div id="view-tarjetas" class="view">
-  <h2 style="margin-bottom:15px">💳 Tarjetas de Crédito</h2>
-  <p style="font-size:12px;color:var(--text2);margin-bottom:15px">Registra tus tarjetas para recibir alertas de corte y pago.</p>
-  <div id="tarjetas-list"></div>
-  <button class="btn btn-secondary" onclick="openModal('modal-tarjeta')">+ Agregar Tarjeta</button>
-</div>
+  <script>
+    // ==================== CONFIGURACIÓN GLOBAL ====================
+    const APP_CONFIG = {
+      moneda: localStorage.getItem('config_moneda') || 'L',
+      nombre: localStorage.getItem('config_nombre') || '',
+      saldoInicial: parseFloat(localStorage.getItem('saldoInicial') || 0)
+    };
 
-<!-- PAGOS RECURRENTES -->
-<div id="view-pagos" class="view">
-  <h2 style="margin-bottom:15px">🔔 Pagos Recurrentes</h2>
-  <p style="font-size:12px;color:var(--text2);margin-bottom:15px">Registra tus pagos de servicios y recibe notificaciones antes del vencimiento.</p>
-  <div id="pagos-alertas" style="margin-bottom:20px"></div>
-  <div id="pagos-list"></div>
-  <button class="btn btn-secondary" onclick="openModal('modal-pago-recurrente')">+ Nuevo Pago Recurrente</button>
-</div>
+    // ==================== INICIALIZACIÓN ====================
+    document.addEventListener('DOMContentLoaded', () => {
+      inicializarApp();
+      registrarServiceWorker();
+      configurarPWAInstall();
+      cargarDatosIniciales();
+      configurarConciliacion();
+    });
 
-<!-- GASTOS -->
-<div id="view-gastos" class="view">
-  <h2 style="margin-bottom:15px">📊 Gastos</h2>
-  <div class="card"><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Este mes</span><strong id="gastos-mes">L. 0.00</strong></div></div>
-  <div id="gastos-list"></div>
-</div>
+    function inicializarApp() {
+      // Cargar configuración guardada
+      document.getElementById('config-nombre').value = APP_CONFIG.nombre;
+      document.getElementById('config-moneda').value = APP_CONFIG.moneda;
+      
+      // Actualizar UI con moneda
+      actualizarSimboloMoneda();
+      
+      // Solicitar permiso de notificaciones
+      if ('Notification' in window && Notification.permission === 'default') {
+        // No molestar al inicio, esperar interacción del usuario
+      }
+    }
 
-<!-- INGRESOS -->
-<div id="view-ingresos" class="view">
-  <h2 style="margin-bottom:15px">💵 Ingresos</h2>
-  <div class="card"><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Salario</span><strong id="ingreso-salario">L. 0.00</strong></div></div>
-  <div id="ingresos-list"></div>
-</div>
+    function registrarServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => {
+            console.log('✅ SW registrado:', reg.scope);
+            // Notificar al SW que puede activarse
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          })
+          .catch(err => console.error('❌ Error SW:', err));
+      }
+    }
 
-<!-- METAS DE AHORRO -->
-<div id="view-metas" class="view">
-  <h2 style="margin-bottom:15px">🎯 Metas de Ahorro</h2>
-  <div id="metas-list"></div>
-</div>
+    function configurarPWAInstall() {
+      let deferredPrompt;
+      const installBtn = document.getElementById('installBtn');
+      
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.classList.add('show');
+      });
+      
+      installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log(`Instalación ${outcome}`);
+          deferredPrompt = null;
+          installBtn.classList.remove('show');
+        }
+      });
+      
+      // Ocultar botón si ya está instalada
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        installBtn.classList.remove('show');
+      }
+    }
 
-<!-- CONFIG -->
-<div id="view-config" class="view">
-  <h2 style="margin-bottom:15px">⚙️ Configuración</h2>
-  <div class="card">
-    <h4 style="margin-bottom:10px">💾 Respaldo</h4>
-    <button class="btn btn-secondary" onclick="exportData()">📥 Exportar JSON</button>
-    <input type="file" id="import-file" style="display:none" onchange="importData(event)">
-    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Importar</button>
-  </div>
-  <div class="card" style="border-color:var(--red)"><button class="btn btn-danger" onclick="resetApp()">🗑 Reiniciar app</button></div>
-</div>
+    function cargarDatosIniciales() {
+      actualizarResumen();
+      renderizarAlertas();
+    }
 
-<!-- FAB MENU -->
-<div class="fab" onclick="toggleFabMenu()">+</div>
-<div class="fab-menu" id="fab-menu">
-  <div class="fab-menu-item" onclick="openModal('modal-gasto');toggleFabMenu()"><span style="color:var(--red)">📉</span> Nuevo Gasto</div>
-  <div class="fab-menu-item" onclick="openModal('modal-ingreso');toggleFabMenu()"><span style="color:var(--green)">💰</span> Nuevo Ingreso</div>
-  <div class="fab-menu-item" onclick="openModal('modal-meta');toggleFabMenu()"><span style="color:var(--blue)">🎯</span> Nueva Meta de Ahorro</div>
-  <div class="fab-menu-item" onclick="openModal('modal-cobrar');toggleFabMenu()"><span style="color:var(--green)">💰</span> Dinero que me deben</div>
-  <div class="fab-menu-item" onclick="openModal('modal-pagar');toggleFabMenu()"><span style="color:var(--red)">💸</span> Lo que debo pagar</div>
-  <div class="fab-menu-item" onclick="openModal('modal-prestamo');toggleFabMenu()"><span style="color:var(--amber)">🏦</span> Nuevo Préstamo</div>
-  <div class="fab-menu-item" onclick="openModal('modal-tarjeta');toggleFabMenu()"><span style="color:var(--purple)">💳</span> Nueva Tarjeta</div>
-  <div class="fab-menu-item" onclick="openModal('modal-pago-recurrente');toggleFabMenu()"><span style="color:var(--amber)">🔔</span> Pago Recurrente</div>
-</div>
+    // ==================== NAVEGACIÓN ====================
+    function navegar(seccionId) {
+      // Ocultar todas las secciones
+      document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+      // Mostrar la seleccionada
+      document.getElementById(seccionId).classList.add('active');
+      
+      // Actualizar nav
+      document.querySelectorAll('.nav-item').forEach((item, i) => {
+        item.classList.toggle('active', item.querySelector('span:last-child').textContent.toLowerCase().includes(
+          seccionId === 'home' ? 'inicio' : 
+          seccionId === 'nuevo-movimiento' ? 'nuevo' :
+          seccionId === 'alertas-section' ? 'alertas' : 'config'
+        ));
+      });
+    }
 
-<!-- NAV SCROLLABLE -->
-<nav class="tab-nav">
-  <div class="tab-item active" onclick="switchView('dashboard')">🏠 Inicio</div>
-  <div class="tab-item" onclick="switchView('cobrar')">💰 Cobrar</div>
-  <div class="tab-item" onclick="switchView('pagar')">💸 Pagar</div>
-  <div class="tab-item" onclick="switchView('prestamos')">🏦 Préstamos</div>
-  <div class="tab-item" onclick="switchView('tarjetas')">💳 Tarjetas</div>
-  <div class="tab-item" onclick="switchView('pagos')">🔔 Alertas</div>
-  <div class="tab-item" onclick="switchView('metas')">🎯 Ahorro</div>
-  <div class="tab-item" onclick="switchView('config')">⚙️ Config</div>
-</nav>
+    // ==================== SALDO Y MOVIMIENTOS ====================
+    function iniciarAdministracion() {
+      const saldoInput = document.getElementById('saldo-inicial');
+      const saldo = parseFloat(saldoInput.value) || 0;
+      
+      if (saldo < 0) {
+        alert('Por favor ingresa un monto válido');
+        return;
+      }
+      
+      // Guardar como saldo inicial
+      localStorage.setItem('saldoInicial', saldo.toString());
+      APP_CONFIG.saldoInicial = saldo;
+      
+      // Registrar movimiento inicial
+      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+      movimientos.push({
+        id: `inicio_${Date.now()}`,
+        tipo: 'ingreso',
+        monto: saldo,
+        categoria: 'saldo-inicial',
+        descripcion: 'Saldo inicial de administración',
+        fecha: new Date().toISOString(),
+        metodoPago: 'efectivo',
+        esInicial: true
+      });
+      localStorage.setItem('movimientos', JSON.stringify(movimientos));
+      
+      actualizarResumen();
+      alert('✅ ¡Listo! Tu administración comienza con L. ' + saldo.toFixed(2));
+    }
 
-<!-- MODALES -->
-<div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')"><div class="modal-content"><h3>📉 Nuevo Gasto</h3><input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)"><input type="text" id="gasto-cat" class="input-field" placeholder="Categoría"><input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría"><select id="gasto-pago" class="input-field"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option></select><button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button><button class="btn btn-primary" onclick="saveGasto()">Guardar</button></div></div>
+    function calcularSaldoActual() {
+      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+      return movimientos.reduce((saldo, m) => {
+        return m.tipo === 'ingreso' ? saldo + m.monto : saldo - m.monto;
+      }, APP_CONFIG.saldoInicial);
+    }
 
-<div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')"><div class="modal-content"><h3>💰 Nuevo Ingreso</h3><input type="number" id="ingreso-monto" class="input-field" placeholder="Monto (L)"><select id="ingreso-tipo" class="input-field"><option value="salario">Salario</option><option value="extra">Extra</option></select><button class="btn btn-secondary" onclick="closeModal('modal-ingreso')">Cancelar</button><button class="btn btn-primary" onclick="saveIngreso()">Registrar</button></div></div>
+    function actualizarResumen() {
+      const saldo = calcularSaldoActual();
+      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+      const ingresos = movimientos.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0);
+      const gastos = movimientos.filter(m => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0);
+      
+      document.getElementById('display-saldo').textContent = `${APP_CONFIG.moneda} ${saldo.toFixed(2)}`;
+      document.getElementById('display-ingresos').textContent = `${APP_CONFIG.moneda} ${ingresos.toFixed(0)}`;
+      document.getElementById('display-gastos').textContent = `${APP_CONFIG.moneda} ${gastos.toFixed(0)}`;
+      document.getElementById('display-extra').textContent = `${APP_CONFIG.moneda} ${(ingresos - gastos).toFixed(0)}`;
+      
+      // Actualizar display de conciliación si está visible
+      const saldoAppDisplay = document.getElementById('saldo-app-display');
+      if (saldoAppDisplay) {
+        saldoAppDisplay.textContent = `${APP_CONFIG.moneda} ${saldo.toFixed(2)}`;
+      }
+    }
 
-<div id="modal-meta" class="modal" onclick="closeModalIfBg(event,'modal-meta')"><div class="modal-content"><h3>🎯 Nueva Meta de Ahorro</h3><input type="text" id="meta-nombre" class="input-field" placeholder="Nombre de la meta"><input type="number" id="meta-objetivo" class="input-field" placeholder="Monto objetivo (L)"><input type="number" id="meta-actual" class="input-field" placeholder="Ahorrado actualmente" value="0"><button class="btn btn-secondary" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Guardar Meta</button></div></div>
+    function guardarMovimiento() {
+      const monto = parseFloat(document.getElementById('monto-movimiento').value);
+      const categoria = document.getElementById('categoria-movimiento').value;
+      const descripcion = document.getElementById('descripcion-movimiento').value;
+      const metodoPago = document.getElementById('metodo-movimiento').value;
+      const tipo = document.getElementById('titulo-movimiento').textContent.includes('Gasto') ? 'gasto' : 'ingreso';
+      
+      if (!monto || monto <= 0) {
+        alert('Ingresa un monto válido');
+        return;
+      }
+      
+      const movimiento = {
+        id: `mov_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+        tipo,
+        monto,
+        categoria,
+        descripcion: descripcion || (tipo === 'ingreso' ? 'Ingreso' : 'Gasto'),
+        fecha: new Date().toISOString(),
+        metodoPago,
+        esAjuste: false
+      };
+      
+      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+      movimientos.push(movimiento);
+      localStorage.setItem('movimientos', JSON.stringify(movimientos));
+      
+      actualizarResumen();
+      navegar('home');
+      
+      // Limpiar formulario
+      document.getElementById('monto-movimiento').value = '';
+      document.getElementById('descripcion-movimiento').value = '';
+      
+      alert('✅ Movimiento guardado');
+    }
 
-<div id="modal-abono" class="modal" onclick="closeModalIfBg(event,'modal-abono')"><div class="modal-content"><h3>💸 Abonar a Meta de Ahorro</h3><p id="abono-meta-nombre" style="color:var(--amber);margin-bottom:15px"></p><p style="font-size:12px;color:var(--text2);margin-bottom:15px">Este monto se restará de tu saldo disponible.</p><input type="number" id="abono-monto" class="input-field" placeholder="Monto a abonar (L)"><input type="hidden" id="abono-meta-id"><button class="btn btn-primary" onclick="saveAbono()">Abonar</button></div></div>
+    function cambiarTipoMovimiento() {
+      const titulo = document.getElementById('titulo-movimiento');
+      const esGasto = titulo.textContent.includes('Gasto');
+      titulo.textContent = esGasto ? '💰 Nuevo Ingreso' : '📉 Nuevo Gasto';
+    }
 
-<div id="modal-cobrar" class="modal" onclick="closeModalIfBg(event,'modal-cobrar')"><div class="modal-content"><h3>💰 Dinero que me deben</h3><input type="text" id="cobrar-persona" class="input-field" placeholder="¿Quién te debe?"><input type="number" id="cobrar-monto" class="input-field" placeholder="Monto total (L)"><input type="number" id="cobrar-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><input type="date" id="cobrar-fecha" class="input-field"><button class="btn btn-primary" onclick="saveCobrar()">Guardar</button></div></div>
+    // ==================== ALERTAS (CORRECCIÓN CRÍTICA) ====================
+    function mostrarFormularioAlerta() {
+      navegar('alertas-section');
+    }
 
-<div id="modal-pagar" class="modal" onclick="closeModalIfBg(event,'modal-pagar')"><div class="modal-content"><h3>💸 Lo que debo pagar</h3><input type="text" id="pagar-creditor" class="input-field" placeholder="¿A quién le debes?"><input type="number" id="pagar-monto" class="input-field" placeholder="Monto total (L)"><input type="number" id="pagar-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><input type="date" id="pagar-fecha" class="input-field"><button class="btn btn-secondary" onclick="savePagar()">Registrar</button></div></div>
+    function guardarAlerta() {
+      try {
+        const tipo = document.getElementById('tipo-alerta').value;
+        const descripcion = document.getElementById('descripcion-alerta').value;
+        const monto = parseFloat(document.getElementById('monto-alerta').value) || null;
+        const fechaLimite = document.getElementById('fecha-alerta').value;
+        
+        // Validaciones mínimas
+        if (!tipo || !fechaLimite) {
+          throw new Error('Tipo y fecha son requeridos');
+        }
+        
+        const alertas = JSON.parse(localStorage.getItem('alertas') || '[]');
+        
+        const nuevaAlerta = {
+          id: `alerta_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+          tipo,
+          descripcion: descripcion || `Alerta de ${tipo}`,
+          monto,
+          fechaLimite,
+          fechaCreacion: new Date().toISOString(),
+          activa: true,
+          notificada: false
+        };
+        
+        alertas.push(nuevaAlerta);
+        localStorage.setItem('alertas', JSON.stringify(alertas));
+        
+        // Notificación local inmediata
+        notificarLocalmente('✅ Alerta guardada', `Recordatorio: ${nuevaAlerta.descripcion}`);
+        
+        // Limpiar y regresar
+        document.getElementById('descripcion-alerta').value = '';
+        document.getElementById('monto-alerta').value = '';
+        document.getElementById('fecha-alerta').value = '';
+        
+        renderizarAlertas();
+        alert('✅ Alerta guardada exitosamente');
+        
+        return { success: true, id: nuevaAlerta.id };
+        
+      } catch (error) {
+        console.error('❌ Error guardando alerta:', error);
+        alert('❌ No se pudo guardar la alerta: ' + error.message);
+        return { success: false, error: error.message };
+      }
+    }
 
-<div id="modal-prestamo" class="modal" onclick="closeModalIfBg(event,'modal-prestamo')"><div class="modal-content"><h3>🏦 Nuevo Préstamo Bancario</h3><input type="text" id="prest-entidad" class="input-field" placeholder="Entidad (Ej. BAC, Ficohsa, Familiar)"><input type="number" id="prest-monto" class="input-field" placeholder="Monto total del préstamo (L)"><input type="number" id="prest-tasa" class="input-field" placeholder="Tasa de interés anual (%)"><div class="input-row"><input type="number" id="prest-cuotas" class="input-field" placeholder="Número de cuotas"><input type="number" id="prest-cuota-calc" class="input-field" placeholder="Cuota calculada" readonly></div><input type="date" id="prest-fecha-pago" class="input-field"><input type="number" id="prest-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><div id="prest-breakdown" class="loan-breakdown hidden"></div><button class="btn btn-primary" onclick="calculateLoan();savePrestamo()">Calcular y Guardar</button></div></div>
+    function renderizarAlertas() {
+      const alertas = JSON.parse(localStorage.getItem('alertas') || '[]');
+      const contenedor = document.getElementById('lista-alertas');
+      const contenedorDetallado = document.getElementById('lista-alertas-detallada');
+      
+      const alertasActivas = alertas.filter(a => a.activa);
+      
+      if (alertasActivas.length === 0) {
+        if (contenedor) contenedor.innerHTML = '<p class="text-center" style="color:var(--text-secondary)">✅ Sin alertas próximas</p>';
+        if (contenedorDetallado) contenedorDetallado.innerHTML = '<p class="text-center" style="color:var(--text-secondary)">No hay alertas activas</p>';
+        return;
+      }
+      
+      const html = alertasActivas.map(alerta => {
+        const diasRestantes = Math.ceil((new Date(alerta.fechaLimite) - new Date()) / (1000*60*60*24));
+        const urgente = diasRestantes <= 2;
+        
+        return `
+          <div class="alert ${urgente ? 'urgent' : ''}">
+            <strong>${alerta.descripcion}</strong><br>
+            <small style="color:var(--text-secondary)">
+              📅 ${new Date(alerta.fechaLimite).toLocaleDateString('es-HN')} 
+              ${alerta.monto ? `| ${APP_CONFIG.moneda} ${alerta.monto.toFixed(2)}` : ''}
+              ${diasRestantes >= 0 ? `| ⏰ ${diasRestantes} días` : '⚠️ Vencida'}
+            </small>
+          </div>
+        `;
+      }).join('');
+      
+      if (contenedor) contenedor.innerHTML = html;
+      if (contenedorDetallado) contenedorDetallado.innerHTML = html;
+      
+      // Verificar alertas vencidas para notificar
+      verificarAlertasVencidas(alertasActivas);
+    }
 
-<div id="modal-tarjeta" class="modal" onclick="closeModalIfBg(event,'modal-tarjeta')"><div class="modal-content"><h3>💳 Nueva Tarjeta de Crédito</h3><input type="text" id="tc-nombre" class="input-field" placeholder="Nombre (Ej. BAC Oro, Visa)"><div class="input-row"><input type="number" id="tc-corte" class="input-field" placeholder="Día de corte" min="1" max="31"><input type="number" id="tc-pago" class="input-field" placeholder="Día de pago" min="1" max="31"></div><input type="number" id="tc-limite" class="input-field" placeholder="Límite de crédito (L)"><input type="number" id="tc-saldo" class="input-field" placeholder="Saldo actual (L)" value="0"><button class="btn btn-primary" onclick="saveTarjeta()">Guardar Tarjeta</button></div></div>
+    function verificarAlertasVencidas(alertas) {
+      const ahora = new Date();
+      
+      alertas.forEach(alerta => {
+        if (!alerta.notificada && new Date(alerta.fechaLimite) <= ahora && alerta.activa) {
+          // Enviar notificación push si es posible
+          enviarNotificacionPush({
+            title: '⚠️ Alerta vencida',
+            body: alerta.descripcion,
+            tag: alerta.id
+          });
+          
+          // Marcar como notificada
+          alerta.notificada = true;
+          localStorage.setItem('alertas', JSON.stringify(
+            JSON.parse(localStorage.getItem('alertas') || '[]')
+          ));
+        }
+      });
+    }
 
-<div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="number" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
+    function notificarLocalmente(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+          body,
+          icon: 'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',
+          requireInteraction: false
+        });
+      }
+      // Fallback: mensaje en consola para debug
+      console.log(`🔔 ${title}: ${body}`);
+    }
 
-<script>
-const LS_KEY='mifinanzashn_pro_v6_final';
-let state=JSON.parse(localStorage.getItem(LS_KEY))||{
-  setup:false,nombre:'',salario:0,
-  transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[]
-};
-const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
-const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
-const todayStr=()=>new Date().toISOString().split('T')[0];
+    function enviarNotificacionPush(data) {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(data.title, {
+            body: data.body,
+            icon: 'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',
+            tag: data.tag,
+            requireInteraction: true
+          });
+        });
+      } else {
+        notificarLocalmente(data.title, data.body);
+      }
+    }
 
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;document.getElementById('pwa-banner').classList.remove('hidden')});
-function installPWA(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{document.getElementById('pwa-banner').classList.add('hidden');deferredPrompt=null})}}
-window.addEventListener('appinstalled',()=>{document.getElementById('pwa-banner').classList.add('hidden')});
+    function solicitarPermisoNotificaciones() {
+      if (!('Notification' in window)) {
+        alert('Tu navegador no soporta notificaciones');
+        return;
+      }
+      
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          alert('✅ Notificaciones activadas. Recibirás alertas de vencimientos.');
+          // Registrar para push (requiere backend con VAPID)
+          registrarPushSubscription();
+        } else if (permission === 'denied') {
+          alert('❌ Permiso denegado. Puedes activarlo en la configuración del navegador.');
+        }
+      });
+    }
 
-async function requestNotificationPermission(){if(!('Notification' in window)){return false}if(Notification.permission==='granted') return true;if(Notification.permission!=='denied'){const p=await Notification.requestPermission();return p==='granted'}return false}
-function sendNotification(title,body){if(Notification.permission==='granted'){new Notification(title,{body:body,icon:'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',badge:'💳',tag:'pago-recurrente',requireInteraction:true})}}
+    async function registrarPushSubscription() {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        // Nota: Para push real necesitas un backend con claves VAPID
+        // Esto es un placeholder para la estructura
+        console.log('🔔 Listo para suscripción push (requiere backend)');
+      } catch (error) {
+        console.error('❌ Error en suscripción push:', error);
+      }
+    }
 
-function finishOnboarding(){const nombre=document.getElementById('ob-nombre').value.trim();const salario=parseFloat(document.getElementById('ob-salario').value)||0;if(!nombre||!salario)return alert('Completa todos los campos');state={setup:true,nombre,salario,transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[]};save();document.getElementById('onboarding').style.display='none';renderAll()}
+    // ==================== CONCILIACIÓN BANCARIA ====================
+    function configurarConciliacion() {
+      document.getElementById('btn-calcular-conciliacion')?.addEventListener('click', calcularConciliacion);
+      document.getElementById('btn-ajustar-conciliacion')?.addEventListener('click', aplicarAjusteConciliacion);
+    }
 
-function toggleFabMenu(){const m=document.getElementById('fab-menu');m.style.display=m.style.display==='block'?'none':'block'}
+    function calcularConciliacion() {
+      const saldoApp = calcularSaldoActual();
+      const saldoBanco = parseFloat(document.getElementById('saldo-banco-input').value);
+      
+      if (isNaN(saldoBanco)) {
+        alert('Ingresa el saldo real de tu banco');
+        return;
+      }
+      
+      const diferencia = saldoBanco - saldoApp;
+      
+      // Mostrar resultados
+      document.getElementById('resultado-conciliacion').classList.remove('hidden');
+      
+      const elemDiferencia = document.getElementById('diferencia-conciliacion');
+      const elemSugerencia = document.getElementById('sugerencia-conciliacion');
+      
+      elemDiferencia.textContent = `${APP_CONFIG.moneda} ${diferencia.toFixed(2)}`;
+      elemDiferencia.className = diferencia >= 0 ? 'diff-positive' : 'diff-negative';
+      
+      if (Math.abs(diferencia) < 0.01) {
+        elemSugerencia.textContent = '✅ ¡Tus registros coinciden perfectamente con el banco!';
+      } else if (diferencia > 0) {
+        elemSugerencia.textContent = '🟢 Hay dinero en el banco no registrado en la app. ¿Olvidaste anotar un ingreso?';
+      } else {
+        elemSugerencia.textContent = '🔴 Hay gastos registrados que no aparecen en el banco. ¿Pagos pendientes o errores de registro?';
+      }
+      
+      // Guardar para ajuste posterior
+      window._conciliacionData = { saldoApp, saldoBanco, diferencia };
+    }
 
-function calculateLoan(){const P=parseFloat(document.getElementById('prest-monto').value)||0;const r=(parseFloat(document.getElementById('prest-tasa').value)||0)/100/12;const n=parseInt(document.getElementById('prest-cuotas').value)||1;let cuota;if(r===0){cuota=P/n}else{cuota=P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1)}document.getElementById('prest-cuota-calc').value=fL(cuota);const interes=P*r;const capital=cuota-interes;document.getElementById('prest-breakdown').classList.remove('hidden');document.getElementById('prest-breakdown').innerHTML=`<div style="font-weight:600;margin-bottom:8px">Desglose primer pago:</div><div class="loan-breakdown-row"><span>Cuota mensual:</span><strong>${fL(cuota)}</strong></div><div class="loan-breakdown-row"><span>→ Interés:</span><span style="color:var(--red)">${fL(interes)}</span></div><div class="loan-breakdown-row"><span>→ Capital:</span><span style="color:var(--green)">${fL(capital)}</span></div><div class="loan-breakdown-row"><span>Total intereses:</span><span style="color:var(--amber)">${fL(cuota*n-P)}</span></div>`;return cuota}
+    function aplicarAjusteConciliacion() {
+      if (!window._conciliacionData) return;
+      const { diferencia } = window._conciliacionData;
+      
+      if (Math.abs(diferencia) < 0.01) {
+        alert('✅ No hay diferencia que ajustar');
+        return;
+      }
+      
+      if (!confirm(`¿Aplicar ajuste de ${APP_CONFIG.moneda} ${Math.abs(diferencia).toFixed(2)}? Esto creará un movimiento de conciliación.`)) {
+        return;
+      }
+      
+      const ajuste = {
+        id: `ajuste_${Date.now()}`,
+        tipo: diferencia > 0 ? 'ingreso' : 'gasto',
+        monto: Math.abs(diferencia),
+        categoria: '⚖️ Conciliación bancaria',
+        descripcion: `Ajuste automático - Diferencia con banco al ${new Date().toLocaleDateString('es-HN')}`,
+        fecha: new Date().toISOString(),
+        metodoPago: 'ajuste',
+        esAjuste: true
+      };
+      
+      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+      movimientos.push(ajuste);
+      localStorage.setItem('movimientos', JSON.stringify(movimientos));
+      
+      // Actualizar UI
+      actualizarResumen();
+      document.getElementById('resultado-conciliacion').classList.add('hidden');
+      document.getElementById('saldo-banco-input').value = '';
+      
+      alert('✅ Ajuste aplicado. Tu saldo ahora coincide con el banco.');
+      
+      // Limpiar datos temporales
+      delete window._conciliacionData;
+    }
 
-function saveGasto(){const monto=parseFloat(document.getElementById('gasto-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:document.getElementById('gasto-cat').value||'General',subcat:document.getElementById('gasto-subcat').value||'',pago:document.getElementById('gasto-pago').value,date:new Date().toISOString()});save();closeModal('modal-gasto');renderAll();['gasto-monto','gasto-cat','gasto-subcat'].forEach(id=>document.getElementById(id).value='')}
-function saveIngreso(){const monto=parseFloat(document.getElementById('ingreso-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'income',amount:monto,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value,date:new Date().toISOString()});save();closeModal('modal-ingreso');renderAll();document.getElementById('ingreso-monto').value=''}
-function deleteTx(id){if(confirm('¿Eliminar?')){state.transactions=state.transactions.filter(t=>t.id!==id);save();renderAll()}}
+    // ==================== EXPORTACIÓN ====================
+    function exportarJSON() {
+      const data = {
+        version: '2.1',
+        fechaExportacion: new Date().toISOString(),
+        config: {
+          moneda: APP_CONFIG.moneda,
+          nombre: APP_CONFIG.nombre,
+          saldoInicial: APP_CONFIG.saldoInicial
+        },
+        movimientos: localStorage.getItem('movimientos'),
+        alertas: localStorage.getItem('alertas'),
+        metas: localStorage.getItem('metas'),
+        tarjetas: localStorage.getItem('tarjetas'),
+        prestamos: localStorage.getItem('prestamos')
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const filename = `mis-finanzas-${new Date().toISOString().slice(0,10)}.json`;
+      
+      // 📱 Web Share API para móviles
+      if (navigator.share && navigator.canShare?.({ files: [new File([blob], filename, { type: 'application/json' })] })) {
+        const file = new File([blob], filename, { type: 'application/json' });
+        navigator.share({
+          title: 'Respaldo Mis Finanzas HN',
+          text: 'Mi respaldo financiero',
+          files: [file]
+        }).catch(() => fallbackDownload(url, filename));
+      } else {
+        fallbackDownload(url, filename);
+      }
+    }
 
-function saveMeta(){const nombre=document.getElementById('meta-nombre').value;const objetivo=parseFloat(document.getElementById('meta-objetivo').value);if(!nombre||!objetivo)return alert('Completa nombre y monto');state.goals.push({id:Date.now(),nombre,objetivo,actual:parseFloat(document.getElementById('meta-actual').value)||0});save();closeModal('modal-meta');renderAll();['meta-nombre','meta-objetivo','meta-actual'].forEach(id=>document.getElementById(id).value=id==='meta-actual'?'0':'')}
-function openAbono(id){const g=state.goals.find(x=>x.id===id);if(!g)return;document.getElementById('abono-meta-nombre').textContent=g.nombre;document.getElementById('abono-meta-id').value=id;openModal('modal-abono')}
-function saveAbono(){const id=parseInt(document.getElementById('abono-meta-id').value);const monto=parseFloat(document.getElementById('abono-monto').value);if(!monto||monto<=0)return alert('Monto inválido');const g=state.goals.find(x=>x.id===id);if(g){g.actual+=monto;state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Ahorro',subcat:`Meta: ${g.nombre}`,date:new Date().toISOString()});save();closeModal('modal-abono');renderAll()}document.getElementById('abono-monto').value=''}
-function deleteMeta(id){if(confirm('¿Eliminar?')){state.goals=state.goals.filter(g=>g.id!==id);save();renderAll()}}
+    function fallbackDownload(url, filename) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
 
-function saveCobrar(){const persona=document.getElementById('cobrar-persona').value.trim();const monto=parseFloat(document.getElementById('cobrar-monto').value);if(!persona||!monto)return alert('Completa los campos');state.receivables.push({id:Date.now(),persona,monto,pagado:parseFloat(document.getElementById('cobrar-pagado').value)||0,fecha:document.getElementById('cobrar-fecha').value});const yaPagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;if(yaPagado>0){state.transactions.push({id:Date.now(),type:'income',amount:yaPagado,cat:'Cobro',subcat:`Cobro: ${persona}`,date:new Date().toISOString()})}save();closeModal('modal-cobrar');renderAll();['cobrar-persona','cobrar-monto','cobrar-pagado','cobrar-fecha'].forEach(id=>document.getElementById(id).value=id==='cobrar-pagado'?'0':'')}
-function renderCobrar(){const container=document.getElementById('cobrar-list');const total=state.receivables.reduce((a,r)=>a+(r.monto-(r.pagado||0)),0);document.getElementById('total-cobrar').textContent=fL(total);if(state.receivables.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Nadie te debe dinero aún</p>';return}container.innerHTML=state.receivables.map(r=>{const pendiente=r.monto-(r.pagado||0);const pct=r.monto>0?((r.pagado||0)/r.monto)*100:0;return `<div class="card card-receivable"><div class="debt-header"><div><div class="debt-title">${r.persona}</div><div class="debt-meta">Total: ${fL(r.monto)} • Pendiente: ${fL(pendiente)}</div></div><button onclick="deleteCobrar(${r.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${pct}%;background:${pct>=50?'var(--green)':(pct>=25?'var(--amber)':'var(--red)')}"></div></div><div class="debt-stats"><div class="debt-stat"><div style="color:var(--text2)">Pagado</div><div style="font-weight:700">${fL(r.pagado||0)}</div></div><div class="debt-stat"><div style="color:var(--text2)">Pendiente</div><div style="font-weight:700;color:var(--amber)">${fL(pendiente)}</div></div></div><div class="debt-actions"><button class="btn btn-primary" style="flex:1;padding:10px;font-size:12px" onclick="abonarCobrar(${r.id})">Registrar Pago</button></div></div>`}).join('')}
-function deleteCobrar(id){if(confirm('¿Eliminar?')){state.receivables=state.receivables.filter(r=>r.id!==id);save();renderAll()}}
-function abonarCobrar(id){const r=state.receivables.find(x=>x.id===id);if(!r)return;const monto=parseFloat(prompt(`Registrar pago de ${r.persona}:\n\nPendiente: ${fL(r.monto-(r.pagado||0))}\n\nMonto:`));if(monto&&!isNaN(monto)&&monto>0){r.pagado=(r.pagado||0)+monto;state.transactions.push({id:Date.now(),type:'income',amount:monto,cat:'Cobro',subcat:`Cobro: ${r.persona}`,date:new Date().toISOString()});save();renderAll()}}
+    function importarJSON() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            
+            if (data.config) {
+              localStorage.setItem('config_moneda', data.config.moneda || 'L');
+              localStorage.setItem('config_nombre', data.config.nombre || '');
+              localStorage.setItem('saldoInicial', data.config.saldoInicial?.toString() || '0');
+            }
+            if (data.movimientos) localStorage.setItem('movimientos', data.movimientos);
+            if (data.alertas) localStorage.setItem('alertas', data.alertas);
+            if (data.metas) localStorage.setItem('metas', data.metas);
+            if (data.tarjetas) localStorage.setItem('tarjetas', data.tarjetas);
+            if (data.prestamos) localStorage.setItem('prestamos', data.prestamos);
+            
+            // Recargar app
+            location.reload();
+            alert('✅ Datos importados exitosamente');
+          } catch (error) {
+            alert('❌ Error al importar: ' + error.message);
+          }
+        };
+        reader.readAsText(file);
+      };
+      
+      input.click();
+    }
 
-function savePagar(){const creditor=document.getElementById('pagar-creditor').value.trim();const monto=parseFloat(document.getElementById('pagar-monto').value);if(!creditor||!monto)return alert('Completa los campos');state.payables.push({id:Date.now(),creditor,monto,pagado:parseFloat(document.getElementById('pagar-pagado').value)||0,fecha:document.getElementById('pagar-fecha').value});const yaPagado=parseFloat(document.getElementById('pagar-pagado').value)||0;if(yaPagado>0){state.transactions.push({id:Date.now(),type:'expense',amount:yaPagado,cat:'Pago',subcat:`Pago: ${creditor}`,date:new Date().toISOString()})}save();closeModal('modal-pagar');renderAll();['pagar-creditor','pagar-monto','pagar-pagado','pagar-fecha'].forEach(id=>document.getElementById(id).value=id==='pagar-pagado'?'0':'')}
-function renderPagar(){const container=document.getElementById('pagar-list');const total=state.payables.reduce((a,p)=>a+(p.monto-(p.pagado||0)),0);document.getElementById('total-pagar').textContent=fL(total);if(state.payables.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">No tienes deudas pendientes</p>';return}container.innerHTML=state.payables.map(p=>{const pendiente=p.monto-(p.pagado||0);const pct=p.monto>0?((p.pagado||0)/p.monto)*100:0;return `<div class="card card-debt"><div class="debt-header"><div><div class="debt-title">${p.creditor}</div><div class="debt-meta">Total: ${fL(p.monto)} • Pendiente: ${fL(pendiente)}</div></div><button onclick="deletePagar(${p.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${pct}%;background:${pct>=50?'var(--green)':(pct>=25?'var(--amber)':'var(--red)')}"></div></div><div class="debt-stats"><div class="debt-stat"><div style="color:var(--text2)">Pagado</div><div style="font-weight:700">${fL(p.pagado||0)}</div></div><div class="debt-stat"><div style="color:var(--text2)">Pendiente</div><div style="font-weight:700;color:var(--amber)">${fL(pendiente)}</div></div></div><div class="debt-actions"><button class="btn btn-secondary" style="flex:1;padding:10px;font-size:12px" onclick="abonarPagar(${p.id})">Registrar Pago</button></div></div>`}).join('')}
-function deletePagar(id){if(confirm('¿Eliminar?')){state.payables=state.payables.filter(p=>p.id!==id);save();renderAll()}}
-function abonarPagar(id){const p=state.payables.find(x=>x.id===id);if(!p)return;const monto=parseFloat(prompt(`Registrar pago a ${p.creditor}:\n\nPendiente: ${fL(p.monto-(p.pagado||0))}\n\nMonto:`));if(monto&&!isNaN(monto)&&monto>0){p.pagado=(p.pagado||0)+monto;state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Pago',subcat:`Pago: ${p.creditor}`,date:new Date().toISOString()});save();renderAll()}}
+    function exportarExcel() {
+      const wb = XLSX.utils.book_new();
+      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+      const alertas = JSON.parse(localStorage.getItem('alertas') || '[]');
+      
+      // 📋 Hoja 1: Resumen Mensual (como tu plantilla)
+      const ingresos = movimientos.filter(m => m.tipo === 'ingreso');
+      const gastos = movimientos.filter(m => m.tipo === 'gasto');
+      const totalIngresos = ingresos.reduce((s, m) => s + m.monto, 0);
+      const totalGastos = gastos.reduce((s, m) => s + m.monto, 0);
+      const saldoReal = totalIngresos - totalGastos + APP_CONFIG.saldoInicial;
+      
+      const resumen = [
+        ['Presupuesto mensual personal'],
+        [],
+        ['INGRESOS MENSUALES REALES'],
+        ['Total de ingresos mensuales', '', `${APP_CONFIG.moneda} ${totalIngresos.toFixed(2)}`],
+        ['SALDO REAL', '', `${APP_CONFIG.moneda} ${saldoReal.toFixed(2)}`],
+        [],
+        ['GASTOS POR CATEGORÍA'],
+        ['Categoría', 'Previsto', 'Real', 'Diferencia']
+      ];
+      
+      // Agrupar gastos por categoría
+      const gastosPorCat = {};
+      gastos.forEach(g => {
+        gastosPorCat[g.categoria] = (gastosPorCat[g.categoria] || 0) + g.monto;
+      });
+      
+      Object.entries(gastosPorCat).forEach(([cat, total]) => {
+        resumen.push([cat, '-', `${APP_CONFIG.moneda} ${total.toFixed(2)}`, '-']);
+      });
+      
+      resumen.push(
+        [],
+        ['TOTAL DE COSTO REAL', '', `${APP_CONFIG.moneda} ${totalGastos.toFixed(2)}`],
+        ['DIFERENCIA DE TOTALES', '', `${APP_CONFIG.moneda} ${(totalIngresos - totalGastos).toFixed(2)}`]
+      );
+      
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumen);
+      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen Mensual');
+      
+      // 📋 Hoja 2: Movimientos Detallados
+      const wsMovimientos = XLSX.utils.json_to_sheet(
+        movimientos.map(m => ({
+          Fecha: new Date(m.fecha).toLocaleDateString('es-HN'),
+          Tipo: m.tipo === 'ingreso' ? '💰 Ingreso' : '💸 Gasto',
+          Categoría: m.categoria,
+          Descripción: m.descripcion,
+          Monto: `${APP_CONFIG.moneda} ${m.monto.toFixed(2)}`,
+          Método: m.metodoPago,
+          Ajuste: m.esAjuste ? 'Sí' : 'No'
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, wsMovimientos, 'Movimientos');
+      
+      // 📋 Hoja 3: Alertas
+      if (alertas.length > 0) {
+        const wsAlertas = XLSX.utils.json_to_sheet(
+          alertas.map(a => ({
+            Descripción: a.descripcion,
+            Tipo: a.tipo,
+            Monto: a.monto ? `${APP_CONFIG.moneda} ${a.monto.toFixed(2)}` : '-',
+            'Fecha Límite': new Date(a.fechaLimite).toLocaleDateString('es-HN'),
+            Activa: a.activa ? 'Sí' : 'No'
+          }))
+        );
+        XLSX.utils.book_append_sheet(wb, wsAlertas, 'Alertas');
+      }
+      
+      // 💾 Descargar
+      XLSX.writeFile(wb, `mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
 
-function savePrestamo(){const entidad=document.getElementById('prest-entidad').value.trim();const monto=parseFloat(document.getElementById('prest-monto').value);const tasa=parseFloat(document.getElementById('prest-tasa').value)||0;const cuotas=parseInt(document.getElementById('prest-cuotas').value)||1;const cuota=calculateLoan();const fechaPago=document.getElementById('prest-fecha-pago').value;if(!entidad||!monto||!cuota)return alert('Completa entidad, monto y cuotas');state.prestamos.push({id:Date.now(),entidad,monto,tasa,cuotas,cuota,fechaPago,pagado:parseFloat(document.getElementById('prest-pagado').value)||0,cuotasPagadas:0});save();closeModal('modal-prestamo');renderAll();['prest-entidad','prest-monto','prest-tasa','prest-cuotas','prest-cuota-calc','prest-fecha-pago','prest-pagado'].forEach(id=>document.getElementById(id).value=id==='prest-pagado'?'0':'');document.getElementById('prest-breakdown').classList.add('hidden')}
-function renderPrestamos(){const container=document.getElementById('prestamos-list');const total=state.prestamos.reduce((a,p)=>a+(p.monto-(p.pagado||0)),0);document.getElementById('total-prestamos').textContent=fL(total);if(state.prestamos.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin préstamos registrados</p>';return}container.innerHTML=state.prestamos.map(p=>{const pendiente=p.monto-(p.pagado||0);const pct=p.monto>0?((p.pagado||0)/p.monto)*100:0;const cuotasRestantes=p.cuotas-p.cuotasPagadas;const interesBadge=p.tasa>0?'<span class="interest-badge">Interés '+p.tasa+'%</span>':'<span class="no-interest-badge">Sin interés</span>';const totalIntereses=p.cuota*p.cuotas-p.monto;return `<div class="card card-debt"><div class="debt-header"><div><div class="debt-title">${p.entidad} ${interesBadge}</div><div class="debt-meta">Total: ${fL(p.monto)} • Cuota: ${fL(p.cuota)}</div></div><button onclick="deletePrestamo(${p.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${pct}%;background:${pct>=50?'var(--green)':(pct>=25?'var(--amber)':'var(--red)')}"></div></div><div class="debt-stats"><div class="debt-stat"><div style="color:var(--text2)">Pagado</div><div style="font-weight:700">${fL(p.pagado||0)}</div></div><div class="debt-stat"><div style="color:var(--text2)">Cuotas</div><div style="font-weight:700">${p.cuotasPagadas}/${p.cuotas}</div></div></div><div class="loan-breakdown"><div style="font-weight:600;margin-bottom:5px">Resumen:</div><div class="loan-breakdown-row"><span>Total intereses:</span><span style="color:var(--amber)">${fL(totalIntereses)}</span></div><div class="loan-breakdown-row"><span>Próximo pago:</span><span>${p.fechaPago||'No definido'}</span></div><div class="loan-breakdown-row"><span>Faltan:</span><span style="color:var(--red)">${cuotasRestantes} cuotas</span></div></div><div class="debt-actions"><button class="btn btn-primary" style="flex:1;padding:10px;font-size:12px" onclick="abonarPrestamo(${p.id})">Registrar Pago de Cuota</button></div></div>`}).join('')}
-function deletePrestamo(id){if(confirm('¿Eliminar?')){state.prestamos=state.prestamos.filter(p=>p.id!==id);save();renderAll()}}
-function abonarPrestamo(id){const p=state.prestamos.find(x=>x.id===id);if(!p)return;const monto=parseFloat(prompt(`Registrar pago de cuota a ${p.entidad}:\n\nCuota mensual: ${fL(p.cuota)}\n\nMonto a pagar:`))||p.cuota;if(monto>0){p.pagado=(p.pagado||0)+monto;if(p.cuota>0)p.cuotasPagadas=Math.min(p.cuotas,Math.floor(p.pagado/p.cuota));state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Préstamo',subcat:`Pago: ${p.entidad}`,date:new Date().toISOString()});save();renderAll()}}
+    function reiniciarApp() {
+      if (confirm('⚠️ ¿Seguro que deseas reiniciar la app? Se eliminarán todos tus datos locales.')) {
+        localStorage.clear();
+        location.reload();
+      }
+    }
 
-function saveTarjeta(){const nombre=document.getElementById('tc-nombre').value.trim();const corte=parseInt(document.getElementById('tc-corte').value);const pago=parseInt(document.getElementById('tc-pago').value);const limite=parseFloat(document.getElementById('tc-limite').value)||0;const saldo=parseFloat(document.getElementById('tc-saldo').value)||0;if(!nombre||!corte||!pago)return alert('Completa nombre, corte y pago');state.tarjetas.push({id:Date.now(),nombre,corte,pago,limite,saldo});save();closeModal('modal-tarjeta');renderAll();['tc-nombre','tc-corte','tc-pago','tc-limite','tc-saldo'].forEach(id=>document.getElementById(id).value=id==='tc-saldo'?'0':'')}
-function renderTarjetas(){const container=document.getElementById('tarjetas-list');const hoy=new Date().getDate();if(state.tarjetas.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin tarjetas registradas</p>';return}container.innerHTML=state.tarjetas.map(t=>{const faltanCorte=t.corte>=hoy?t.corte-hoy:(30-hoy)+t.corte;const faltanPago=t.pago>=hoy?t.pago-hoy:(30-hoy)+t.pago;const alertaCorte=faltanCorte<=3;const alertaPago=faltanPago<=5;const usado=t.limite>0?((t.saldo/t.limite)*100).toFixed(0):0;return `<div class="card card-credit"><div class="debt-header"><div><div class="debt-title">${t.nombre}</div><div class="debt-meta">Límite: ${fL(t.limite)} • Saldo: ${fL(t.saldo)} • Usado: ${usado}%</div></div><button onclick="deleteTarjeta(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${usado}%;background:${usado>=80?'var(--red)':(usado>=50?'var(--amber)':'var(--green)')}"></div></div>${alertaCorte||alertaPago?`<div class="alert-card ${alertaPago?'urgent':''}"><div class="alert-icon">${alertaPago?'🚨':''}</div><div class="alert-content"><div class="alert-title">${t.nombre}</div><div class="alert-detail">${alertaCorte?`📅 Corte en ${faltanCorte} día(s)`:''}${alertaPago?`<br>⚠️ Pagar en ${faltanPago} día(s)`:''}</div></div></div>`:''}<div style="font-size:11px;color:var(--text2);margin-top:10px">📅 Corte: Día ${t.corte} • 💳 Pago: Día ${t.pago}</div><div class="debt-actions"><button class="btn btn-secondary" style="flex:1;padding:10px;font-size:12px" onclick="actualizarSaldoTarjeta(${t.id})">Actualizar Saldo</button></div></div>`}).join('')}
-function deleteTarjeta(id){if(confirm('¿Eliminar?')){state.tarjetas=state.tarjetas.filter(t=>t.id!==id);save();renderAll()}}
-function actualizarSaldoTarjeta(id){const t=state.tarjetas.find(x=>x.id===id);if(!t)return;const nuevoSaldo=parseFloat(prompt(`Actualizar saldo de ${t.nombre}:\n\nSaldo actual: ${fL(t.saldo)}\n\nNuevo saldo:`));if(!isNaN(nuevoSaldo)){t.saldo=nuevoSaldo;save();renderAll()}}
-function renderCardAlerts(){const container=document.getElementById('card-alerts');const noAlerts=document.getElementById('no-card-alerts');container.innerHTML='';const hoy=new Date().getDate();let hay=false;state.tarjetas.forEach(t=>{const faltanCorte=t.corte>=hoy?t.corte-hoy:(30-hoy)+t.corte;const faltanPago=t.pago>=hoy?t.pago-hoy:(30-hoy)+t.pago;if(faltanCorte<=3||faltanPago<=5){hay=true;const urgente=faltanPago<=2;container.innerHTML+=`<div class="alert-card ${urgente?'urgent':''}"><div class="alert-icon">${urgente?'🚨':''}</div><div class="alert-content"><div class="alert-title">${t.nombre}</div><div class="alert-detail">${faltanCorte<=3?`📅 Corte en ${faltanCorte} día(s)`:''}${faltanPago<=5?`<br>⚠️ Pagar en ${faltanPago} día(s)`:''}</div></div></div>`}});noAlerts.style.display=hay?'none':'block'}
+    // ==================== CONFIGURACIÓN ====================
+    function guardarConfiguracion() {
+      const nombre = document.getElementById('config-nombre').value;
+      const moneda = document.getElementById('config-moneda').value;
+      
+      localStorage.setItem('config_nombre', nombre);
+      localStorage.setItem('config_moneda', moneda);
+      
+      APP_CONFIG.nombre = nombre;
+      APP_CONFIG.moneda = moneda;
+      
+      actualizarSimboloMoneda();
+      actualizarResumen();
+      
+      alert('✅ Configuración guardada');
+    }
 
-function savePagoRecurrente(){const servicio=document.getElementById('pago-servicio').value.trim();const monto=parseFloat(document.getElementById('pago-monto').value)||0;const dia=parseInt(document.getElementById('pago-dia').value)||1;const alertaDias=parseInt(document.getElementById('pago-alerta').value)||3;const notificacion=document.getElementById('pago-notificacion').checked;if(!servicio||!monto)return alert('Completa servicio y monto');state.pagosRecurrentes.push({id:Date.now(),servicio,monto,dia,alertaDias,notificacion,ultimoPago:null});if(notificacion) requestNotificationPermission();save();closeModal('modal-pago-recurrente');renderPagosRecurrentes();['pago-servicio','pago-monto','pago-dia'].forEach(id=>document.getElementById(id).value='')}
-function renderPagosRecurrentes(){const container=document.getElementById('pagos-list');const alertasContainer=document.getElementById('pagos-alertas');const hoy=new Date().getDate();const mes=new Date().getMonth();const anio=new Date().getFullYear();if(!state.pagosRecurrentes) state.pagosRecurrentes=[];if(state.pagosRecurrentes.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin pagos recurrentes registrados</p>';alertasContainer.innerHTML='';return}let alertasHTML='';container.innerHTML=state.pagosRecurrentes.map(p=>{const faltanDias=p.dia>=hoy?p.dia-hoy:(new Date(anio,mes+1,0).getDate()-hoy)+p.dia;const urgente=faltanDias<=p.alertaDias;const vencido=faltanDias===0;if(urgente&&!vencido){alertasHTML+=`<div class="alert-card ${faltanDias<=1?'urgent':''}"><div class="alert-icon">${faltanDias<=1?'🚨':''}</div><div class="alert-content"><div class="alert-title">${p.servicio}</div><div class="alert-detail">Vence en ${faltanDias} día(s) • Monto: ${fL(p.monto)}</div></div></div>`;if(p.notificacion&&Notification.permission==='granted'){sendNotification(`💳 ${p.servicio}`,`Tu pago de ${fL(p.monto)} vence en ${faltanDias} día(s)`)}}if(vencido){alertasHTML+=`<div class="alert-card urgent"><div class="alert-icon">⚠️</div><div class="alert-content"><div class="alert-title">${p.servicio}</div><div class="alert-detail" style="color:var(--red)">¡VENCE HOY! • Monto: ${fL(p.monto)}</div></div></div>`;if(p.notificacion&&Notification.permission==='granted'){sendNotification(`⚠️ ${p.servicio}`,`¡Tu pago de ${fL(p.monto)} VENCE HOY!`)}}return `<div class="card card-credit"><div class="debt-header"><div><div class="debt-title">${p.servicio}</div><div class="debt-meta">Monto: ${fL(p.monto)} • Día de pago: ${p.dia}</div></div><button onclick="deletePagoRecurrente(${p.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div style="font-size:11px;color:var(--text2);margin:10px 0">${urgente?`<span style="color:var(--red);font-weight:700">⚠️ Vence en ${faltanDias} día(s)</span>`:`✅ Próximo pago en ${faltanDias} día(s)`}</div><div class="debt-actions"><button class="btn btn-primary" style="flex:1;padding:10px;font-size:12px" onclick="marcarPagoRecurrente(${p.id})">Marcar como Pagado</button></div></div>`}).join('');alertasContainer.innerHTML=alertasHTML||'<p style="text-align:center;color:var(--text2);padding:15px">✅ No hay pagos próximos</p>'}
-function marcarPagoRecurrente(id){const pago=state.pagosRecurrentes.find(p=>p.id===id);if(!pago) return;if(confirm(`¿Marcar ${pago.servicio} (${fL(pago.monto)}) como pagado?`)){pago.ultimoPago=new Date().toISOString();state.transactions.push({id:Date.now(),type:'expense',amount:pago.monto,cat:'Servicios',subcat:pago.servicio,date:new Date().toISOString()});save();renderPagosRecurrentes();renderDashboard()}}
-function deletePagoRecurrente(id){if(confirm('¿Eliminar?')){state.pagosRecurrentes=state.pagosRecurrentes.filter(p=>p.id!==id);save();renderPagosRecurrentes()}}
-function checkRecurrentPayments(){if(state.pagosRecurrentes&&state.pagosRecurrentes.length>0){renderPagosRecurrentes()}}
-function initPaymentNotifications(){setInterval(checkRecurrentPayments,3600000);checkRecurrentPayments()}
-
-function renderDashboard(){const hoy=todayStr();const cobradoHoy=state.transactions.filter(t=>t.type==='income'&&t.date.startsWith(hoy)&&t.cat==='Cobro').reduce((a,b)=>a+b.amount,0);const pagadoHoy=state.transactions.filter(t=>t.type==='expense'&&t.date.startsWith(hoy)&&(t.cat==='Pago'||t.cat==='Préstamo')).reduce((a,b)=>a+b.amount,0);document.getElementById('cobrado-hoy').textContent=fL(cobradoHoy);document.getElementById('pagado-hoy').textContent=fL(pagadoHoy);const income=state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);const expense=state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);const extra=state.transactions.filter(t=>t.type==='income'&&t.subcat==='extra').reduce((a,b)=>a+b.amount,0);const balance=state.salario+income-expense;document.getElementById('balance-amount').textContent=fL(balance);document.getElementById('balance-amount').style.color=balance>=0?'var(--green)':'var(--red)';document.getElementById('balance-status').textContent=income>0?'Ingresos este mes':'Sin ingresos este mes';document.getElementById('total-income').textContent=fL(income);document.getElementById('total-expense').textContent=fL(expense);document.getElementById('total-extra').textContent=fL(extra);const maxVal=Math.max(income,expense,balance,1);document.getElementById('bar-income').style.height=((income/maxVal)*100)+'%';document.getElementById('bar-expense').style.height=((expense/maxVal)*100)+'%';document.getElementById('bar-saving').style.height=(balance>0?(balance/maxVal)*100:0)+'%';document.getElementById('val-income').textContent=fL(income);document.getElementById('val-expense').textContent=fL(expense);document.getElementById('val-saving').textContent=fL(balance>0?balance:0);const recent=state.transactions.slice().reverse().slice(0,5);document.getElementById('recent-history').innerHTML=recent.map(t=>`<div class="history-item"><div><div style="font-weight:600">${t.cat||'Sin categoría'}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} • ${new Date(t.date).toLocaleDateString()}</div></div><div style="display:flex;align-items:center;gap:10px"><span class="badge badge-${t.type==='income'?'income':'expense'}">${t.type==='income'?'Ingreso':'Gasto'}</span><span style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${fL(t.amount)}</span><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin movimientos</p>';if(state.goals.length>0){document.getElementById('goals-summary').innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><strong style="font-size:14px">${g.nombre}</strong><span style="color:var(--green);font-weight:700">${pct.toFixed(0)}%</span></div><div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:8px"><div style="width:${pct}%;height:100%;background:var(--green)"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>${fL(g.actual)}</span><span>${fL(g.objetivo)}</span></div><button class="btn btn-secondary" style="margin-top:8px;padding:8px;font-size:11px" onclick="openAbono(${g.id})">+ Abonar</button></div>`}).join('')}else{document.getElementById('goals-summary').innerHTML='<p style="text-align:center;color:var(--text2);padding:15px">Sin metas de ahorro creadas</p>'}renderCardAlerts()}
-function renderGastos(){const gastos=state.transactions.filter(t=>t.type==='expense');document.getElementById('gastos-mes').textContent=fL(gastos.reduce((a,b)=>a+b.amount,0));document.getElementById('gastos-list').innerHTML=gastos.slice().reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${t.cat||'Sin categoría'}</div><div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString()}</div></div><div style="text-align:right"><div style="color:var(--red);font-weight:700">-${fL(t.amount)}</div><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">×</button></div></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin gastos</p>'}
-function renderIngresos(){const ingresos=state.transactions.filter(t=>t.type==='income');document.getElementById('ingreso-salario').textContent=fL(ingresos.filter(t=>t.subcat==='salario').reduce((a,b)=>a+b.amount,0));document.getElementById('ingresos-list').innerHTML=ingresos.slice().reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${t.cat||'Ingreso'}</div><div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString()}</div></div><div style="text-align:right"><div style="color:var(--green);font-weight:700">+${fL(t.amount)}</div><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">×</button></div></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin ingresos</p>'}
-function renderMetas(){if(state.goals.length===0){document.getElementById('metas-list').innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin metas de ahorro creadas</p>';return}document.getElementById('metas-list').innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><strong style="font-size:15px">${g.nombre}</strong><span style="color:var(--green);font-weight:700">${pct.toFixed(0)}%</span></div><div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-bottom:10px"><div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--blue),var(--green))"></div></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>${fL(g.actual)}</span><span>${fL(g.objetivo)}</span></div><button class="btn btn-primary" style="margin-top:10px;padding:10px;font-size:12px" onclick="openAbono(${g.id})">+ Abonar</button></div>`}).join('')}
-
-function exportData(){const a=document.createElement('a');a.href='text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(state));a.download='MisFinanzas_Backup.json';document.body.appendChild(a);a.click();a.remove()}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=(ev)=>{try{const d=JSON.parse(ev.target.result);if(d.setup){if(confirm('¿Reemplazar todos los datos?')){state=d;save();alert('✅ Importado');location.reload()}}else alert('❌ Archivo inválido')}catch{alert('❌ Error')}};r.readAsText(f);e.target.value=''}
-function resetApp(){if(confirm('⚠️ ¿BORRAR TODO?')){if(confirm('🔄 Esta acción NO se puede deshacer')){localStorage.removeItem(LS_KEY);location.reload()}}}
-function switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-item').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');event.currentTarget.classList.add('active');document.getElementById('fab-menu').style.display='none';if(v==='gastos')renderGastos();if(v==='ingresos')renderIngresos();if(v==='metas')renderMetas();if(v==='cobrar')renderCobrar();if(v==='pagar')renderPagar();if(v==='prestamos')renderPrestamos();if(v==='tarjetas')renderTarjetas();if(v==='pagos')renderPagosRecurrentes()}
-function openModal(id){document.getElementById(id).style.display='flex';document.getElementById('fab-menu').style.display='none'}
-function closeModal(id){document.getElementById(id).style.display='none'}
-function closeModalIfBg(e,id){if(e.target.id===id)closeModal(id)}
-function renderAll(){renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetas();renderPagosRecurrentes()}
-window.onload=()=>{if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll();initPaymentNotifications()}};
-</script>
+    function actualizarSimboloMoneda() {
+      // Actualizar todos los placeholders y labels con la moneda seleccionada
+      document.querySelectorAll('[placeholder*="Ej:"]').forEach(el => {
+        el.placeholder = el.placeholder.replace(/^[^:]+:/, `Ej: ${APP_CONFIG.moneda} `);
+      });
+    }
+  </script>
 </body>
 </html>
