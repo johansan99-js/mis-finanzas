@@ -1,11 +1,13 @@
 {
-  "name": "Mis Finanzas HN Pro",
+  "name": "Mis Finanzas HN",
   "short_name": "FinanzasHN",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f1117",
   "theme_color": "#0f1117",
   "orientation": "portrait",
+  "description": "Administra tus finanzas personales con conciliación bancaria y alertas inteligentes",
+  "lang": "es-HN",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
@@ -19,5 +21,7 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "categories": ["finance", "productivity"],
+  "prefer_related_applications": false
 }
