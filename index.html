@@ -336,7 +336,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="tab-item" onclick="switchView('config')">⚙️ Config</div>
 </nav>
 
-<!-- MODALES (Gasto, Ingreso, Meta, Abono, Cobrar, Pagar, Préstamo, Tarjeta, Pago Recurrente) -->
+<!-- MODALES -->
 <div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')"><div class="modal-content"><h3>📉 Nuevo Gasto</h3><input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)"><input type="text" id="gasto-cat" class="input-field" placeholder="Categoría"><input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría"><select id="gasto-pago" class="input-field"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option></select><button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button><button class="btn btn-primary" onclick="saveGasto()">Guardar</button></div></div>
 
 <div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')"><div class="modal-content"><h3>💰 Nuevo Ingreso</h3><input type="number" id="ingreso-monto" class="input-field" placeholder="Monto (L)"><select id="ingreso-tipo" class="input-field"><option value="salario">Salario</option><option value="extra">Extra</option></select><button class="btn btn-secondary" onclick="closeModal('modal-ingreso')">Cancelar</button><button class="btn btn-primary" onclick="saveIngreso()">Registrar</button></div></div>
