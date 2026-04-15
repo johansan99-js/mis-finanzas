@@ -88,11 +88,11 @@
         </div><button class="btn btn-s" onclick="resetearMeta()" style="margin-top:8px;font-size:0.85rem">🔄 Cambiar/Reiniciar Meta</button></div>
     </div>
 
-    <!-- ✅ CUENTAS POR COBRAR (ABONOS PARCIALES) -->
+    <!-- CUENTAS POR COBRAR -->
     <div class="card"><div class="card-header"><span>💰 Dinero que me deben</span><button class="btn-s btn-sm" onclick="nav('cobrar')">+ Nuevo</button></div>
       <div id="listaCobrar"></div><div class="total-bar"><span>TOTAL POR COBRAR:</span><span id="totalCobrar" class="t-ok">L. 0.00</span></div></div>
 
-    <!-- ✅ CUENTAS POR PAGAR (ABONOS PARCIALES) -->
+    <!-- CUENTAS POR PAGAR -->
     <div class="card"><div class="card-header"><span>💸 Lo que debo pagar</span><button class="btn-s btn-sm" onclick="nav('pagar')">+ Nuevo</button></div>
       <div id="listaPagar"></div><div class="total-bar"><span>TOTAL POR PAGAR:</span><span id="totalPagar" class="t-err">L. 0.00</span></div></div>
 
@@ -249,42 +249,115 @@ function renderMov(){
 }
 function eliminarMov(id){ if(!confirm('¿Eliminar este movimiento?')) return; let lista=JSON.parse(localStorage.getItem('movimientos')||'[]'); lista=lista.filter(m=>m.id!==id); localStorage.setItem('movimientos',JSON.stringify(lista)); actualizar(); renderMov(); toast('✅ Movimiento eliminado','success'); }
 
-// ✅ META DE AHORRO MANUAL
+// META DE AHORRO MANUAL
 function definirMeta(){ const n=document.getElementById('metaNombre').value.trim(), m=parseMonto(document.getElementById('metaMonto').value); if(!n||m===null||m<=0){toast('⚠️ Datos inválidos','error');return;} meta={nombre:n,monto:m,abonado:0}; localStorage.setItem('metaAhorro',JSON.stringify(meta)); renderMetaAhorro(); actualizar(); toast('✅ Meta definida','success'); }
 function renderMetaAhorro(){ const f=document.getElementById('metaForm'), a=document.getElementById('metaActiva'); if(meta.nombre&&meta.monto>0){ f.classList.add('hidden'); a.classList.remove('hidden'); document.getElementById('metaTitulo').textContent=`🎯 ${meta.nombre}`; const pct=Math.min(100,Math.round((meta.abonado/meta.monto)*100)); document.getElementById('metaProgreso').textContent=`${pct}%`; document.getElementById('metaFalta').textContent=`${CFG.moneda} ${Math.max(0,meta.monto-meta.abonado).toFixed(2)}`; document.getElementById('metaBarra').style.width=`${pct}%`; } else { f.classList.remove('hidden'); a.classList.add('hidden'); } }
 function abonarAhorro(){ const m=parseMonto(document.getElementById('metaAbonoMonto').value); if(m===null||m<=0){toast('⚠️ Monto inválido','error');return;} if(m>calcSaldo()){toast('❌ Saldo insuficiente','error');return;} JSON.parse(localStorage.getItem('movimientos')||'[]').push({id:`ah_${Date.now()}`,tipo:'gasto',monto:m,cat:'ahorro',descripcion:`🎯 Abono: ${meta.nombre}`,fecha:new Date().toISOString(),metodoPago:'traspaso',tipoIngreso:'ninguno',esAjuste:false}); meta.abonado+=m; localStorage.setItem('metaAhorro',JSON.stringify(meta)); document.getElementById('metaAbonoMonto').value=''; renderMetaAhorro(); actualizar(); toast('✅ Abonado','success'); }
 function resetearMeta(){ if(!confirm('¿Reiniciar meta?')) return; meta={nombre:'',monto:0,abonado:0}; localStorage.setItem('metaAhorro',JSON.stringify(meta)); renderMetaAhorro(); actualizar(); }
 
-// ✅ CUENTAS POR COBRAR (ABONOS PARCIALES)
-function guardarCobrar(){ const n=document.getElementById('cobrarNombre').value.trim(), m=parseMonto(document.getElementById('cobrarMonto').value), d=document.getElementById('cobrarDesc').value||'Préstamo', f=document.getElementById('cobrarFecha').value; if(!n||m===null||!f){toast('⚠️ Completa todo','error');return;} const l=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'); l.push({id:`cob_${Date.now()}`,nombre:n,montoOriginal:m,montoPagado:0,descripcion:d,fechaLimite:f,fechaCreacion:new Date().toISOString(),abonos:[]}); localStorage.setItem('cuentasCobrar',JSON.stringify(l)); document.getElementById('cobrarNombre').value=''; document.getElementById('cobrarMonto').value=''; document.getElementById('cobrarDesc').value=''; document.getElementById('cobrarFecha').value=''; renderCobrar(); nav('home'); toast('✅ Cuenta registrada','success'); }
-
-function renderCobrar(){ const l=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'), c=document.getElementById('listaCobrar'); let total=0, html='';
-  l.forEach(x=>{ const rest=x.montoOriginal-x.montoPagado; if(rest>0) total+=rest; const pct=Math.min(100,Math.round((x.montoPagado/x.montoOriginal)*100)); const cls=rest<=0?'progress-ok':pct<50?'progress-err':'progress-warn';
-    html+=`<div class="cuenta-card"><div class="cuenta-header"><strong>${x.nombre}</strong><span class="btn-icon" onclick="eliminarCuenta('cobrar','${x.id}')">🗑️</span></div><div class="cuenta-info">${x.descripcion} • Vence: ${new Date(x.fechaLimite).toLocaleDateString('es-HN')}</div><div class="progress ${cls}"><div class="progress-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text2);margin:4px 0"><span>Pagado: ${CFG.moneda} ${x.montoPagado.toFixed(2)}</span><span>Restante: <b>${CFG.moneda} ${rest.toFixed(2)}</b></span></div><div class="abono-box"><input type="number" id="abono_cob_${x.id}" placeholder="Monto" step="0.01" min="0"><button class="btn btn-ok" style="width:auto;padding:8px 12px" onclick="abonarCuenta('cobrar','${x.id}')">Abonar</button></div>${x.abonos.length?`<div class="historial">${x.abonos.slice(-3).map(a=>`<div><span>${new Date(a.fecha).toLocaleDateString('es-HN')}</span><span>+${CFG.moneda} ${a.monto.toFixed(2)}</span></div>`).join('')}</div>`:''}</div>`;
-  });
-  c.innerHTML=html||'<p class="tc" style="color:var(--text2)">Sin cuentas por cobrar</p>';
-  document.getElementById('totalCobrar').textContent=`${CFG.moneda} ${total.toFixed(2)}`;
+// CUENTAS POR COBRAR - FUNCIONES CORREGIDAS
+function guardarCobrar(){
+  const nombre = document.getElementById('cobrarNombre').value.trim();
+  const monto = parseMonto(document.getElementById('cobrarMonto').value);
+  const desc = document.getElementById('cobrarDesc').value || 'Préstamo';
+  const fecha = document.getElementById('cobrarFecha').value;
+  if(!nombre || monto===null || monto<=0 || !fecha){ toast('⚠️ Completa nombre, monto válido y fecha','error'); return; }
+  const lista = JSON.parse(localStorage.getItem('cuentasCobrar') || '[]');
+  lista.push({ id:`cob_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, nombre, montoOriginal: monto, montoPagado: 0, descripcion: desc, fechaLimite: fecha, fechaCreacion: new Date().toISOString(), abonos: [] });
+  localStorage.setItem('cuentasCobrar', JSON.stringify(lista));
+  document.getElementById('cobrarNombre').value=''; document.getElementById('cobrarMonto').value=''; document.getElementById('cobrarDesc').value=''; document.getElementById('cobrarFecha').value='';
+  renderCobrar(); nav('home'); toast('✅ Cuenta por cobrar registrada','success');
 }
 
-function abonarCuenta(tipo, id){ const input=document.getElementById(tipo==='cobrar'?`abono_cob_${id}`:`abono_pag_${id}`); const m=parseMonto(input.value); if(m===null||m<=0){toast('⚠️ Ingresa un monto válido','error');return;} const key=tipo==='cobrar'?'cuentasCobrar':'cuentasPagar'; const l=JSON.parse(localStorage.getItem(key)||'[]'); const c=l.find(x=>x.id===id); if(!c)return; const rest=c.montoOriginal-c.montoPagado; const abono=Math.min(m, rest);
-  c.montoPagado+=abono; c.abonos.push({fecha:new Date().toISOString(),monto:abono});
-  localStorage.setItem(key,JSON.stringify(l));
-  // Registrar movimiento automático
-  const mov=JSON.parse(localStorage.getItem('movimientos')||'[]'); mov.push({id:`${tipo}_pago_${Date.now()}`,tipo:tipo==='cobrar'?'ingreso':'gasto',monto:abono,cat:tipo==='cobrar'?'cobro':'pago-deuda',descripcion:`${tipo==='cobrar'?'✅ Cobrado':'💸 Pagado'}: ${c.descripcion}`,fecha:new Date().toISOString(),metodoPago:'efectivo',tipoIngreso:'ninguno',esAjuste:false}); localStorage.setItem('movimientos',JSON.stringify(mov));
-  input.value=''; if(tipo==='cobrar'){renderCobrar();toast(`✅ Abonado ${CFG.moneda} ${abono.toFixed(2)}`,'success');} else {renderPagar();toast(`✅ Abonado ${CFG.moneda} ${abono.toFixed(2)}`,'success');} actualizar(); }
-function eliminarCuenta(tipo, id){ if(!confirm('¿Eliminar esta cuenta?')) return; const key=tipo==='cobrar'?'cuentasCobrar':'cuentasPagar'; let l=JSON.parse(localStorage.getItem(key)||'[]'); l=l.filter(x=>x.id!==id); localStorage.setItem(key,JSON.stringify(l)); if(tipo==='cobrar')renderCobrar();else renderPagar(); toast('✅ Eliminada','success'); }
-
-// ✅ CUENTAS POR PAGAR (ABONOS PARCIALES)
-function guardarPagar(){ const n=document.getElementById('pagarNombre').value.trim(), m=parseMonto(document.getElementById('pagarMonto').value), d=document.getElementById('pagarDesc').value||'Deuda', f=document.getElementById('pagarFecha').value; if(!n||m===null||!f){toast('⚠️ Completa todo','error');return;} const l=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'); l.push({id:`pag_${Date.now()}`,nombre:n,montoOriginal:m,montoPagado:0,descripcion:d,fechaLimite:f,fechaCreacion:new Date().toISOString(),abonos:[]}); localStorage.setItem('cuentasPagar',JSON.stringify(l)); document.getElementById('pagarNombre').value=''; document.getElementById('pagarMonto').value=''; document.getElementById('pagarDesc').value=''; document.getElementById('pagarFecha').value=''; renderPagar(); nav('home'); toast('✅ Cuenta registrada','success'); }
-function renderPagar(){ const l=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'), c=document.getElementById('listaPagar'); let total=0, html='';
-  l.forEach(x=>{ const rest=x.montoOriginal-x.montoPagado; if(rest>0) total+=rest; const pct=Math.min(100,Math.round((x.montoPagado/x.montoOriginal)*100)); const cls=rest<=0?'progress-ok':pct<50?'progress-err':'progress-warn';
-    html+=`<div class="cuenta-card"><div class="cuenta-header"><strong>${x.nombre}</strong><span class="btn-icon" onclick="eliminarCuenta('pagar','${x.id}')">🗑️</span></div><div class="cuenta-info">${x.descripcion} • Vence: ${new Date(x.fechaLimite).toLocaleDateString('es-HN')}</div><div class="progress ${cls}"><div class="progress-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text2);margin:4px 0"><span>Pagado: ${CFG.moneda} ${x.montoPagado.toFixed(2)}</span><span>Restante: <b>${CFG.moneda} ${rest.toFixed(2)}</b></span></div><div class="abono-box"><input type="number" id="abono_pag_${x.id}" placeholder="Monto" step="0.01" min="0"><button class="btn btn-err" style="width:auto;padding:8px 12px" onclick="abonarCuenta('pagar','${x.id}')">Abonar</button></div>${x.abonos.length?`<div class="historial">${x.abonos.slice(-3).map(a=>`<div><span>${new Date(a.fecha).toLocaleDateString('es-HN')}</span><span>+${CFG.moneda} ${a.monto.toFixed(2)}</span></div>`).join('')}</div>`:''}</div>`;
-  });
-  c.innerHTML=html||'<p class="tc" style="color:var(--text2)">Sin cuentas por pagar</p>';
-  document.getElementById('totalPagar').textContent=`${CFG.moneda} ${total.toFixed(2)}`;
+function renderCobrar(){
+  const lista = JSON.parse(localStorage.getItem('cuentasCobrar') || '[]');
+  const contenedor = document.getElementById('listaCobrar');
+  let totalPendiente = 0;
+  lista.forEach(c => { const restante = c.montoOriginal - c.montoPagado; if(restante > 0) totalPendiente += restante; });
+  document.getElementById('totalCobrar').textContent = `${CFG.moneda} ${totalPendiente.toFixed(2)}`;
+  if(lista.length === 0){ contenedor.innerHTML = '<p class="tc" style="color:var(--text2)">Sin cuentas por cobrar</p>'; return; }
+  contenedor.innerHTML = lista.map(c => {
+    const restante = c.montoOriginal - c.montoPagado;
+    const pct = Math.min(100, Math.round((c.montoPagado / c.montoOriginal) * 100));
+    const completada = restante <= 0.01;
+    const colorBarra = completada ? 'var(--ok)' : pct < 50 ? 'var(--err)' : 'var(--warn)';
+    return `<div class="cuenta-card"><div class="cuenta-header"><strong>${c.nombre}</strong><button class="btn-icon" onclick="eliminarCobrar('${c.id}')" title="Eliminar">🗑️</button></div><div class="cuenta-info">${c.descripcion} • 📅 ${new Date(c.fechaLimite).toLocaleDateString('es-HN')}</div><div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin:8px 0"><div style="height:100%;width:${pct}%;background:${colorBarra};transition:width 0.3s"></div></div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text2);margin:4px 0"><span>Pagado: ${CFG.moneda} ${c.montoPagado.toFixed(2)}</span><span>Restante: <b style="color:${completada?'var(--ok)':'var(--err)'}">${CFG.moneda} ${restante.toFixed(2)}</b></span></div>${!completada ? `<div class="abono-box"><input type="number" id="abono_cob_${c.id}" placeholder="Monto a abonar" step="0.01" min="0.01" max="${restante}" style="flex:1;padding:8px;font-size:0.9rem"><button class="btn btn-ok" style="width:auto;padding:8px 12px" onclick="abonarCobrar('${c.id}')">💰 Abonar</button></div>` : `<div style="margin-top:8px;color:var(--ok);font-weight:600">✅ Completada</div>`}${c.abonos && c.abonos.length > 0 ? `<div class="historial">${c.abonos.slice(-3).reverse().map(a => `<div>• ${new Date(a.fecha).toLocaleDateString('es-HN')}: +${CFG.moneda} ${a.monto.toFixed(2)}</div>`).join('')}</div>` : ''}</div>`;
+  }).join('');
 }
 
-// ✅ ALERTAS
+function abonarCobrar(id){
+  const input = document.getElementById(`abono_cob_${id}`);
+  const montoAbono = parseMonto(input?.value);
+  if(montoAbono === null || montoAbono <= 0){ toast('⚠️ Ingresa un monto válido para abonar','error'); return; }
+  const lista = JSON.parse(localStorage.getItem('cuentasCobrar') || '[]');
+  const cuenta = lista.find(c => c.id === id);
+  if(!cuenta){ toast('❌ Cuenta no encontrada','error'); return; }
+  const restante = cuenta.montoOriginal - cuenta.montoPagado;
+  const abonoReal = Math.min(montoAbono, restante);
+  cuenta.montoPagado += abonoReal;
+  cuenta.abonos.push({ fecha: new Date().toISOString(), monto: abonoReal, nota: `Abono parcial` });
+  localStorage.setItem('cuentasCobrar', JSON.stringify(lista));
+  const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+  movimientos.push({ id:`cob_pago_${Date.now()}`, tipo:'ingreso', monto:abonoReal, cat:'cobro', descripcion:`✅ Cobrado: ${cuenta.descripcion} (${cuenta.nombre})`, fecha:new Date().toISOString(), metodoPago:'efectivo', tipoIngreso:'cobro', esAjuste:false, cuentaRelacionada:id });
+  localStorage.setItem('movimientos', JSON.stringify(movimientos));
+  if(input) input.value = '';
+  renderCobrar(); actualizar(); toast(`✅ Abonado ${CFG.moneda} ${abonoReal.toFixed(2)} • Tu saldo aumentó`,'success');
+}
+
+function eliminarCobrar(id){ if(!confirm('¿Eliminar esta cuenta por cobrar?')) return; let lista=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'); lista=lista.filter(c=>c.id!==id); localStorage.setItem('cuentasCobrar',JSON.stringify(lista)); renderCobrar(); toast('✅ Cuenta eliminada','success'); }
+
+// CUENTAS POR PAGAR - FUNCIONES CORREGIDAS
+function guardarPagar(){
+  const nombre = document.getElementById('pagarNombre').value.trim();
+  const monto = parseMonto(document.getElementById('pagarMonto').value);
+  const desc = document.getElementById('pagarDesc').value || 'Deuda';
+  const fecha = document.getElementById('pagarFecha').value;
+  if(!nombre || monto===null || monto<=0 || !fecha){ toast('⚠️ Completa nombre, monto válido y fecha','error'); return; }
+  const lista = JSON.parse(localStorage.getItem('cuentasPagar') || '[]');
+  lista.push({ id:`pag_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, nombre, montoOriginal: monto, montoPagado: 0, descripcion: desc, fechaLimite: fecha, fechaCreacion: new Date().toISOString(), abonos: [] });
+  localStorage.setItem('cuentasPagar', JSON.stringify(lista));
+  document.getElementById('pagarNombre').value=''; document.getElementById('pagarMonto').value=''; document.getElementById('pagarDesc').value=''; document.getElementById('pagarFecha').value='';
+  renderPagar(); nav('home'); toast('✅ Cuenta por pagar registrada','success');
+}
+
+function renderPagar(){
+  const lista = JSON.parse(localStorage.getItem('cuentasPagar') || '[]');
+  const contenedor = document.getElementById('listaPagar');
+  let totalPendiente = 0;
+  lista.forEach(c => { const restante = c.montoOriginal - c.montoPagado; if(restante > 0) totalPendiente += restante; });
+  document.getElementById('totalPagar').textContent = `${CFG.moneda} ${totalPendiente.toFixed(2)}`;
+  if(lista.length === 0){ contenedor.innerHTML = '<p class="tc" style="color:var(--text2)">Sin cuentas por pagar</p>'; return; }
+  contenedor.innerHTML = lista.map(c => {
+    const restante = c.montoOriginal - c.montoPagado;
+    const pct = Math.min(100, Math.round((c.montoPagado / c.montoOriginal) * 100));
+    const completada = restante <= 0.01;
+    const colorBarra = completada ? 'var(--ok)' : pct < 50 ? 'var(--err)' : 'var(--warn)';
+    return `<div class="cuenta-card"><div class="cuenta-header"><strong>${c.nombre}</strong><button class="btn-icon" onclick="eliminarPagar('${c.id}')" title="Eliminar">🗑️</button></div><div class="cuenta-info">${c.descripcion} • 📅 ${new Date(c.fechaLimite).toLocaleDateString('es-HN')}</div><div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin:8px 0"><div style="height:100%;width:${pct}%;background:${colorBarra};transition:width 0.3s"></div></div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text2);margin:4px 0"><span>Pagado: ${CFG.moneda} ${c.montoPagado.toFixed(2)}</span><span>Restante: <b style="color:${completada?'var(--ok)':'var(--err)'}">${CFG.moneda} ${restante.toFixed(2)}</b></span></div>${!completada ? `<div class="abono-box"><input type="number" id="abono_pag_${c.id}" placeholder="Monto a abonar" step="0.01" min="0.01" max="${restante}" style="flex:1;padding:8px;font-size:0.9rem"><button class="btn btn-err" style="width:auto;padding:8px 12px" onclick="abonarPagar('${c.id}')">💸 Abonar</button></div>` : `<div style="margin-top:8px;color:var(--ok);font-weight:600">✅ Completada</div>`}${c.abonos && c.abonos.length > 0 ? `<div class="historial">${c.abonos.slice(-3).reverse().map(a => `<div>• ${new Date(a.fecha).toLocaleDateString('es-HN')}: +${CFG.moneda} ${a.monto.toFixed(2)}</div>`).join('')}</div>` : ''}</div>`;
+  }).join('');
+}
+
+function abonarPagar(id){
+  const input = document.getElementById(`abono_pag_${id}`);
+  const montoAbono = parseMonto(input?.value);
+  if(montoAbono === null || montoAbono <= 0){ toast('⚠️ Ingresa un monto válido para abonar','error'); return; }
+  const lista = JSON.parse(localStorage.getItem('cuentasPagar') || '[]');
+  const cuenta = lista.find(c => c.id === id);
+  if(!cuenta){ toast('❌ Cuenta no encontrada','error'); return; }
+  const restante = cuenta.montoOriginal - cuenta.montoPagado;
+  const abonoReal = Math.min(montoAbono, restante);
+  cuenta.montoPagado += abonoReal;
+  cuenta.abonos.push({ fecha: new Date().toISOString(), monto: abonoReal, nota: `Abono parcial` });
+  localStorage.setItem('cuentasPagar', JSON.stringify(lista));
+  const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+  movimientos.push({ id:`pag_pago_${Date.now()}`, tipo:'gasto', monto:abonoReal, cat:'pago-deuda', descripcion:`💸 Pagado: ${cuenta.descripcion} (${cuenta.nombre})`, fecha:new Date().toISOString(), metodoPago:'efectivo', tipoIngreso:'ninguno', esAjuste:false, cuentaRelacionada:id });
+  localStorage.setItem('movimientos', JSON.stringify(movimientos));
+  if(input) input.value = '';
+  renderPagar(); actualizar(); toast(`✅ Abonado ${CFG.moneda} ${abonoReal.toFixed(2)} • Tu saldo disminuyó`,'success');
+}
+
+function eliminarPagar(id){ if(!confirm('¿Eliminar esta cuenta por pagar?')) return; let lista=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'); lista=lista.filter(c=>c.id!==id); localStorage.setItem('cuentasPagar',JSON.stringify(lista)); renderPagar(); toast('✅ Cuenta eliminada','success'); }
+
+// ALERTAS
 function guardarAlerta(){ try{ const t=document.getElementById('tipoAlerta').value, d=document.getElementById('descAlerta').value||'Alerta', m=parseMonto(document.getElementById('montoAlerta').value), f=document.getElementById('fechaAlerta').value; if(!t||!f) throw new Error('Tipo y fecha requeridos'); const l=JSON.parse(localStorage.getItem('alertas')||'[]'); l.push({id:`a_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,tipo:t,descripcion:d,monto:m,fechaLimite:f,fechaCreacion:new Date().toISOString(),activa:true,notificada:false}); localStorage.setItem('alertas',JSON.stringify(l)); toast('✅ Alerta guardada','success'); document.getElementById('descAlerta').value=''; document.getElementById('montoAlerta').value=''; document.getElementById('fechaAlerta').value=''; renderAlertas(); return{success:true}; }catch(e){ console.error(e); toast('❌ '+e.message,'error'); return{success:false}; } }
 function renderAlertas(){ const l=JSON.parse(localStorage.getItem('alertas')||'[]').filter(a=>a.activa), c=document.getElementById('listaAlertas'); if(!l.length){c.innerHTML='<p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p>';return;} c.innerHTML=l.map(a=>{const dias=Math.ceil((new Date(a.fechaLimite)-new Date())/86400000);const urg=dias<=2;return `<div class="alert ${urg?'urgent':''}"><strong>${a.descripcion}</strong><br><small style="color:var(--text2)">📅 ${new Date(a.fechaLimite).toLocaleDateString('es-HN')}${a.monto!==null?' | '+CFG.moneda+' '+a.monto.toFixed(2):''}${dias>=0?' | ⏰ '+dias+' días':' ⚠️ Vencida'}</small><div style="margin-top:8px"><button class="btn-sm btn-s" onclick="eliminarAlerta('${a.id}')">🗑️ Eliminar</button></div></div>`;}).join('');}
 function eliminarAlerta(id){ if(!confirm('¿Eliminar alerta?')) return; let l=JSON.parse(localStorage.getItem('alertas')||'[]'); l=l.filter(a=>a.id!==id); localStorage.setItem('alertas',JSON.stringify(l)); renderAlertas(); toast('✅ Alerta eliminada','success'); }
@@ -292,20 +365,112 @@ function verifAlertasCriticas(){ const l=JSON.parse(localStorage.getItem('alerta
 function notifPush(d){if('serviceWorker' in navigator)navigator.serviceWorker.ready.then(r=>r.showNotification(d.title,{body:d.body,icon:'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',tag:d.tag}));else toast(d.title+': '+d.body,'info');}
 function pedirNotif(){if(!('Notification' in window))return;Notification.requestPermission().then(p=>{if(p==='granted')toast('✅ Notificaciones activadas','success');else toast('❌ Actívalo en configuración','error');});}
 
-// ✅ CONCILIACIÓN
+// CONCILIACIÓN
 function cfgConc(){document.getElementById('btnCalcConc')?.addEventListener('click',calcConc);document.getElementById('btnAjustConc')?.addEventListener('click',ajustConc);}
 function calcConc(){const sApp=calcSaldo(),sBanco=parseMonto(document.getElementById('saldoBanco').value);if(sBanco===null){toast('⚠️ Ingresa saldo válido','error');return;}const diff=sBanco-sApp;document.getElementById('resConc').classList.remove('hidden');const elD=document.getElementById('diffConc'),elS=document.getElementById('sugConc');elD.textContent=CFG.moneda+' '+diff.toFixed(2);elD.className=diff>=0?'t-ok':'t-err';if(Math.abs(diff)<0.01)elS.textContent='✅ ¡Coinciden!';else if(diff>0)elS.textContent='🟢 Dinero en banco no registrado.';else elS.textContent='🔴 Gastos no reflejados en banco.';window._conc={sApp,sBanco,diff};}
 function ajustConc(){if(!window._conc)return;const{diff}=window._conc;if(Math.abs(diff)<0.01){toast('✅ Sin diferencia','success');return;}if(!confirm(`¿Registrar ajuste de ${CFG.moneda} ${Math.abs(diff).toFixed(2)}?`))return;const l=JSON.parse(localStorage.getItem('movimientos')||'[]');l.push({id:`conc_${Date.now()}`,tipo:diff>0?'ingreso':'gasto',monto:Math.abs(diff),cat:'conciliacion',descripcion:`⚖️ Ajuste banco ${new Date().toLocaleDateString('es-HN')}`,fecha:new Date().toISOString(),metodoPago:'ajuste',tipoIngreso:'ninguno',esAjuste:true});localStorage.setItem('movimientos',JSON.stringify(l));actualizar();renderMov();document.getElementById('resConc').classList.add('hidden');document.getElementById('saldoBanco').value='';toast('✅ Ajuste registrado','success');delete window._conc;}
 
-// ✅ CONFIG
+// CONFIG
 function cfgAutoCampos(){document.getElementById('catMov')?.addEventListener('change',e=>{const desc=document.getElementById('descMov'),met=document.getElementById('metMov');const map={'combustible':'Gasolina - ','peajes':'Peaje - ','mantenimiento':'Mantenimiento - ','educacion':'Mensualidad - ','alimentacion':'Supermercado - '};if(map[e.target.value]){desc.placeholder=map[e.target.value];desc.focus();}if(['combustible','peajes','alimentacion'].includes(e.target.value)){met.value='efectivo';}});}
 function guardarCfg(){localStorage.setItem('cfg_nombre',document.getElementById('cfgNombre').value);localStorage.setItem('cfg_moneda',document.getElementById('cfgMoneda').value);CFG.nombre=document.getElementById('cfgNombre').value;CFG.moneda=document.getElementById('cfgMoneda').value;actualizar();toast('✅ Configuración guardada','success');}
 
-// ✅ RESPALDO
-function exportarJSON(){const d={v:'3.5',fecha:new Date().toISOString(),cfg:{moneda:CFG.moneda,nombre:CFG.nombre,saldoIni:CFG.saldoIni},movimientos:localStorage.getItem('movimientos'),alertas:localStorage.getItem('alertas'),cobrar:localStorage.getItem('cuentasCobrar'),pagar:localStorage.getItem('cuentasPagar'),meta:localStorage.getItem('metaAhorro')};const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),f=`mis-finanzas-${new Date().toISOString().slice(0,10)}.json`;if(navigator.share&&navigator.canShare?.({files:[new File([b],f,{type:'application/json'})]}))navigator.share({title:'Respaldo',files:[new File([b],f)]}).catch(()=>dl(u,f));else dl(u,f);}
+// RESPALDO Y EXPORTACIÓN EXCEL (ESTRUCTURA DE TU PLANTILLA)
+function exportarJSON(){const d={v:'3.6',fecha:new Date().toISOString(),cfg:{moneda:CFG.moneda,nombre:CFG.nombre,saldoIni:CFG.saldoIni},movimientos:localStorage.getItem('movimientos'),alertas:localStorage.getItem('alertas'),cobrar:localStorage.getItem('cuentasCobrar'),pagar:localStorage.getItem('cuentasPagar'),meta:localStorage.getItem('metaAhorro')};const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),f=`mis-finanzas-${new Date().toISOString().slice(0,10)}.json`;if(navigator.share&&navigator.canShare?.({files:[new File([b],f,{type:'application/json'})]}))navigator.share({title:'Respaldo',files:[new File([b],f)]}).catch(()=>dl(u,f));else dl(u,f);}
 function dl(u,f){const a=document.createElement('a');a.href=u;a.download=f;a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),100);}
 function importarJSON(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.cfg&&!d.movimientos)throw new Error('Estructura inválida');if(d.cfg){localStorage.setItem('cfg_moneda',d.cfg.moneda||'L');localStorage.setItem('cfg_nombre',d.cfg.nombre||'');localStorage.setItem('saldoIni',d.cfg.saldoIni?.toString()||'0');}if(d.movimientos)localStorage.setItem('movimientos',d.movimientos);if(d.alertas)localStorage.setItem('alertas',d.alertas);if(d.cobrar)localStorage.setItem('cuentasCobrar',d.cobrar);if(d.pagar)localStorage.setItem('cuentasPagar',d.pagar);if(d.meta)localStorage.setItem('metaAhorro',d.meta);meta=JSON.parse(localStorage.getItem('metaAhorro')||'{"nombre":"","monto":0,"abonado":0}');toast('✅ Importado','success');setTimeout(()=>location.reload(),1000);}catch(err){toast('❌ '+err.message,'error');}};r.readAsText(f);};i.click();}
-function exportarExcel(){const wb=XLSX.utils.book_new();const mov=JSON.parse(localStorage.getItem('movimientos')||'[]');const alertas=JSON.parse(localStorage.getItem('alertas')||'[]');const cobrar=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]');const pagar=JSON.parse(localStorage.getItem('cuentasPagar')||'[]');const ing=mov.filter(m=>m.tipo==='ingreso'),gas=mov.filter(m=>m.tipo==='gasto'),tI=ing.reduce((s,m)=>s+m.monto,0),tG=gas.reduce((s,m)=>s+m.monto,0),saldo=tI-tG+CFG.saldoIni;const res=[['Presupuesto mensual personal'],[],['INGRESOS MENSUALES REALES'],['Total ingresos','',CFG.moneda+' '+tI.toFixed(2)],['SALDO REAL','',CFG.moneda+' '+saldo.toFixed(2)],[],['GASTOS POR CATEGORÍA'],['Categoría','Previsto','Real','Diferencia']];const pc={};gas.forEach(g=>pc[g.cat]=(pc[g.cat]||0)+g.monto);Object.entries(pc).forEach(([c,t])=>res.push([c,'-',CFG.moneda+' '+t.toFixed(2),'-']));res.push([],['TOTAL GASTOS','',CFG.moneda+' '+tG.toFixed(2)],['DIFERENCIA','',CFG.moneda+' '+(tI-tG).toFixed(2)]);XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(res),'Resumen');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mov.map(m=>({Fecha:new Date(m.fecha).toLocaleDateString('es-HN'),Tipo:m.tipo==='ingreso'?'💰 Ingreso':'💸 Gasto',Categoría:m.cat,Descripción:m.descripcion,Monto:CFG.moneda+' '+m.monto.toFixed(2),Método:m.metodoPago}))),'Movimientos');if(alertas.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alertas.map(a=>({Descripción:a.descripcion,Tipo:a.tipo,Monto:a.monto!==null?CFG.moneda+' '+a.monto.toFixed(2):'-','Fecha Límite':new Date(a.fechaLimite).toLocaleDateString('es-HN')}))), 'Alertas');if(cobrar.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cobrar.map(c=>({Nombre:c.nombre,Original:CFG.moneda+' '+c.montoOriginal.toFixed(2),Pagado:CFG.moneda+' '+c.montoPagado.toFixed(2),Restante:CFG.moneda+' '+(c.montoOriginal-c.montoPagado).toFixed(2),Estado:c.montoOriginal<=c.montoPagado?'✅ Completada':'⏳ Pendiente'}))),'Por Cobrar');if(pagar.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pagar.map(p=>({Nombre:p.nombre,Original:CFG.moneda+' '+p.montoOriginal.toFixed(2),Pagado:CFG.moneda+' '+p.montoPagado.toFixed(2),Restante:CFG.moneda+' '+(p.montoOriginal-p.montoPagado).toFixed(2),Estado:p.montoOriginal<=p.montoPagado?'✅ Completada':'⏳ Pendiente'}))),'Por Pagar');if(meta.nombre)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Meta:meta.nombre,Objetivo:CFG.moneda+' '+meta.monto.toFixed(2),Acumulado:CFG.moneda+' '+meta.abonado.toFixed(2),Progreso:Math.min(100,Math.round((meta.abonado/meta.monto)*100))+'%'}]),'Meta');XLSX.writeFile(wb,`mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`);}
+
+function exportarExcel(){
+  const wb = XLSX.utils.book_new();
+  const mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
+  const ing = mov.filter(m=>m.tipo==='ingreso'), gas = mov.filter(m=>m.tipo==='gasto');
+  const tIng = ing.reduce((s,m)=>s+m.monto,0), tGas = gas.reduce((s,m)=>s+m.monto,0), saldoReal = tIng - tGas + CFG.saldoIni;
+  
+  // === HOJA 1: RESUMEN (como tu plantilla) ===
+  const resumen = [
+    ['Presupuesto mensual personal'], [],
+    ['INGRESOS MENSUALES PREVISTOS'],
+    ['Ingresos 1', '', '', `${CFG.moneda} 0.00`],
+    ['Ingresos adicionales', '', '', `${CFG.moneda} 0.00`],
+    ['Total de ingresos mensuales', '', '', `${CFG.moneda} ${tIng.toFixed(2)}`], [],
+    ['SALDO PREVISTO (Ingresos previstos menos gastos)', '', '', `${CFG.moneda} 0.00`], [],
+    ['INGRESOS MENSUALES REALES'],
+    ['Ingresos 1', '', '', `${CFG.moneda} ${tIng.toFixed(2)}`],
+    ['Ingresos adicionales', '', '', `${CFG.moneda} 0.00`],
+    ['Total de ingresos mensuales', '', '', `${CFG.moneda} ${tIng.toFixed(2)}`], [],
+    ['SALDO REAL (Ingresos reales menos gastos)', '', '', `${CFG.moneda} ${saldoReal.toFixed(2)}`],
+    ['DIFERENCIA (Real menos previsto)', '', '', `${CFG.moneda} ${(saldoReal).toFixed(2)}`], [],
+    ['GASTOS POR CATEGORÍA'],
+    ['Categoría', 'Costo previsto', 'Costo real', 'Diferencia']
+  ];
+  
+  // Agrupar gastos por categoría (como tu plantilla)
+  const categorias = {
+    'vivienda': 'VIVIENDA', 'alimentacion': 'ALIMENTACIÓN', 'combustible': 'TRANSPORTE',
+    'peajes': 'TRANSPORTE', 'mantenimiento': 'TRANSPORTE', 'transporte_pub': 'TRANSPORTE',
+    'educacion': 'EDUCACIÓN', 'tecnologia': 'TECNOLOGÍA', 'salud': 'SALUD', 'ocio': 'OCIO',
+    'familia': 'FAMILIA', 'impuestos': 'IMPUESTOS', 'ahorro': 'AHORROS', 'otros': 'OTROS',
+    'cobro': 'COBROS', 'pago-deuda': 'PRÉSTAMOS', 'conciliacion': 'AJUSTES'
+  };
+  
+  const porCat = {};
+  gas.forEach(g => {
+    const cat = categorias[g.cat] || g.cat.toUpperCase();
+    porCat[cat] = (porCat[cat] || 0) + g.monto;
+  });
+  
+  Object.entries(porCat).forEach(([cat, total]) => {
+    resumen.push([cat, `${CFG.moneda} 0.00`, `${CFG.moneda} ${total.toFixed(2)}`, `-${CFG.moneda} ${total.toFixed(2)}`]);
+  });
+  
+  resumen.push([], ['TOTAL DE COSTO PREVISTO', '', `${CFG.moneda} 0.00`], ['TOTAL DE COSTO REAL', '', `${CFG.moneda} ${tGas.toFixed(2)}`], ['DIFERENCIA DE TOTALES', '', `${CFG.moneda} ${(tIng - tGas).toFixed(2)}`]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen Mensual');
+  
+  // === HOJA 2: MOVIMIENTOS ===
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mov.map(m => ({
+    Fecha: new Date(m.fecha).toLocaleDateString('es-HN'),
+    Tipo: m.tipo === 'ingreso' ? '💰 Ingreso' : '💸 Gasto',
+    Categoría: m.cat,
+    Descripción: m.descripcion,
+    Monto: `${CFG.moneda} ${m.monto.toFixed(2)}`,
+    Método: m.metodoPago
+  }))), 'Movimientos');
+  
+  // === HOJA 3: POR COBRAR (con abonos) ===
+  const cobrar = JSON.parse(localStorage.getItem('cuentasCobrar')||'[]');
+  if(cobrar.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cobrar.map(c => ({
+    Nombre: c.nombre,
+    Descripción: c.descripcion,
+    'Monto Original': `${CFG.moneda} ${c.montoOriginal.toFixed(2)}`,
+    'Total Abonado': `${CFG.moneda} ${c.montoPagado.toFixed(2)}`,
+    'Restante por Cobrar': `${CFG.moneda} ${(c.montoOriginal - c.montoPagado).toFixed(2)}`,
+    'Fecha Límite': new Date(c.fechaLimite).toLocaleDateString('es-HN'),
+    Estado: (c.montoOriginal - c.montoPagado) <= 0.01 ? '✅ Completada' : '⏳ Pendiente'
+  }))), 'Por Cobrar');
+  
+  // === HOJA 4: POR PAGAR (con abonos) ===
+  const pagar = JSON.parse(localStorage.getItem('cuentasPagar')||'[]');
+  if(pagar.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pagar.map(p => ({
+    Nombre: p.nombre,
+    Descripción: p.descripcion,
+    'Monto Original': `${CFG.moneda} ${p.montoOriginal.toFixed(2)}`,
+    'Total Abonado': `${CFG.moneda} ${p.montoPagado.toFixed(2)}`,
+    'Restante por Pagar': `${CFG.moneda} ${(p.montoOriginal - p.montoPagado).toFixed(2)}`,
+    'Fecha Límite': new Date(p.fechaLimite).toLocaleDateString('es-HN'),
+    Estado: (p.montoOriginal - p.montoPagado) <= 0.01 ? '✅ Completada' : '⏳ Pendiente'
+  }))), 'Por Pagar');
+  
+  // === HOJA 5: META DE AHORRO ===
+  if(meta.nombre) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
+    Meta: meta.nombre,
+    Objetivo: `${CFG.moneda} ${meta.monto.toFixed(2)}`,
+    Acumulado: `${CFG.moneda} ${meta.abonado.toFixed(2)}`,
+    Progreso: `${Math.min(100, Math.round((meta.abonado/meta.monto)*100))}%`,
+    Faltante: `${CFG.moneda} ${Math.max(0, meta.monto - meta.abonado).toFixed(2)}`
+  }]), 'Meta de Ahorro');
+  
+  XLSX.writeFile(wb, `mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 function reiniciarApp(){if(confirm('⚠️ ¿Borrar todos los datos?')){localStorage.clear();location.reload();}}
 </script>
 </body>
