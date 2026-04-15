@@ -1,10 +1,5 @@
 const CACHE_NAME = 'finanzas-hn-v3';
-const ASSETS = [
-  './index.html',
-  './manifest.json',
-  './offline.html',
-  'https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js'
-];
+const ASSETS = ['./index.html', './manifest.json', './offline.html', 'https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
