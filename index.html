@@ -2,1096 +2,254 @@
 <html lang="es-HN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#0f1117">
-  <meta name="description" content="Administra tus finanzas personales con conciliación bancaria">
+  <meta name="description" content="Administra tus finanzas con conciliación bancaria">
   <title>Mis Finanzas HN - Pro</title>
-  
-  <!-- PWA -->
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
-  
-  <!-- SheetJS para exportar Excel -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-  
   <style>
-    :root {
-      --bg-primary: #0f1117;
-      --bg-secondary: #1a1d2d;
-      --bg-card: #1e2337;
-      --text-primary: #f1f5f9;
-      --text-secondary: #94a3b8;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --success: #22c55e;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --border: rgba(255,255,255,0.1);
-    }
-    
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      min-height: 100vh;
-      padding-bottom: 80px;
-      line-height: 1.5;
-    }
-    
-    .container { max-width: 600px; margin: 0 auto; padding: 16px; }
-    
-    /* Header */
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 20px;
-    }
-    
-    .app-title { font-size: 1.3rem; font-weight: 700; }
-    
-    .install-btn {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 10px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      display: none;
-    }
-    .install-btn.show { display: block; }
-    
-    /* Cards */
-    .card {
-      background: var(--bg-card);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 12px;
-      border: 1px solid var(--border);
-    }
-    
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-    
-    /* Balance display */
-    .balance {
-      font-size: 2rem;
-      font-weight: 700;
-      text-align: center;
-      padding: 20px 0;
-      color: var(--success);
-    }
-    
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin: 16px 0;
-    }
-    
-    .stat-item {
-      text-align: center;
-      padding: 12px 8px;
-      background: var(--bg-secondary);
-      border-radius: 12px;
-    }
-    
-    .stat-value { font-size: 1.1rem; font-weight: 600; display: block; }
-    .stat-label { font-size: 0.75rem; color: var(--text-secondary); }
-    
-    /* Forms */
-    .form-group { margin-bottom: 16px; }
-    .form-group label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: 500;
-      font-size: 0.95rem;
-    }
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: 12px 14px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text-primary);
-      font-size: 1rem;
-    }
-    .form-group input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-    .form-hint {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-    
-    /* Buttons */
-    .btn {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-primary:hover { background: var(--accent-hover); }
-    .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); }
-    .btn-success { background: var(--success); color: white; }
-    .btn-danger { background: var(--danger); color: white; }
-    
-    .btn-group { display: flex; gap: 8px; }
-    .btn-group .btn { flex: 1; }
-    
-    /* Sections */
-    section { display: none; animation: fadeIn 0.3s ease; }
-    section.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* Alerts */
-    .alert {
-      padding: 12px 16px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      background: var(--bg-secondary);
-      border-left: 4px solid var(--warning);
-    }
-    .alert.urgent { border-left-color: var(--danger); }
-    
-    /* Bottom Nav */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--bg-secondary);
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-around;
-      padding: 8px 0;
-      z-index: 100;
-    }
-    .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 8px 12px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 0.75rem;
-      cursor: pointer;
-    }
-    .nav-item.active { color: var(--accent); }
-    .nav-icon { font-size: 1.3rem; }
-    
-    /* FAB */
-    .fab {
-      position: fixed;
-      bottom: 70px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: white;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
-      z-index: 90;
-    }
-    
-    /* Conciliación */
-    .conciliacion-result {
-      padding: 12px;
-      background: var(--bg-secondary);
-      border-radius: 10px;
-      margin: 12px 0;
-    }
-    .diff-positive { color: var(--success); }
-    .diff-negative { color: var(--danger); }
-    
-    /* Utility */
-    .text-center { text-align: center; }
-    .mt-2 { margin-top: 16px; }
-    .hidden { display: none !important; }
-    .text-success { color: var(--success); }
-    .text-danger { color: var(--danger); }
+    :root{--bg:#0f1117;--bg2:#1a1d2d;--card:#1e2337;--text:#f1f5f9;--text2:#94a3b8;--accent:#3b82f6;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--border:rgba(255,255,255,0.1)}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px;line-height:1.5}
+    .container{max-width:600px;margin:0 auto;padding:16px}
+    header{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:20px}
+    .app-title{font-size:1.3rem;font-weight:700}
+    .install-btn{background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:10px;font-size:0.85rem;cursor:pointer;display:none}
+    .install-btn.show{display:block}
+    .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid var(--border)}
+    .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-weight:600}
+    .balance{font-size:2rem;font-weight:700;text-align:center;padding:20px 0;color:var(--ok)}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+    .stat{text-align:center;padding:12px 8px;background:var(--bg2);border-radius:12px}
+    .stat-v{font-size:1.1rem;font-weight:600;display:block}.stat-l{font-size:0.75rem;color:var(--text2)}
+    .form-g{margin-bottom:16px}.form-g label{display:block;margin-bottom:6px;font-weight:500;font-size:0.95rem}
+    .form-g input,.form-g select{width:100%;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:1rem}
+    .form-g input:focus{outline:none;border-color:var(--accent)}
+    .hint{font-size:0.8rem;color:var(--text2);margin-top:4px}
+    .btn{width:100%;padding:14px;border:none;border-radius:12px;font-weight:600;font-size:1rem;cursor:pointer;transition:transform 0.1s}
+    .btn:active{transform:scale(0.98)}.btn-p{background:var(--accent);color:#fff}.btn-s{background:var(--bg2);color:var(--text)}.btn-ok{background:var(--ok);color:#fff}.btn-err{background:var(--err);color:#fff}
+    .btn-g{display:flex;gap:8px}.btn-g .btn{flex:1}
+    section{display:none;animation:fade 0.3s}section.active{display:block}
+    @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .alert{padding:12px 16px;border-radius:10px;margin-bottom:10px;background:var(--bg2);border-left:4px solid var(--warn)}.alert.urgent{border-left-color:var(--err)}
+    .nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:8px 0;z-index:100}
+    .nav-i{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;color:var(--text2);text-decoration:none;font-size:0.75rem;cursor:pointer}.nav-i.active{color:var(--accent)}.nav-ic{font-size:1.3rem}
+    .fab{position:fixed;bottom:70px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:1.5rem;cursor:pointer;box-shadow:0 4px 20px rgba(59,130,246,0.5);z-index:90}
+    .conc-res{padding:12px;background:var(--bg2);border-radius:10px;margin:12px 0}.diff-p{color:var(--ok)}.diff-n{color:var(--err)}
+    .tc{text-align:center}.mt2{margin-top:16px}.hidden{display:none!important}.t-ok{color:var(--ok)}.t-err{color:var(--err)}
+    .mov-item{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+    .mov-item:last-child{border-bottom:none}
+    .badge{font-size:0.7rem;padding:2px 6px;border-radius:4px;background:var(--warn);color:#000;margin-right:6px}
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <header>
-      <div class="app-title">💰 Mis Finanzas HN</div>
-      <button class="install-btn" id="installBtn">📱 Instalar</button>
-    </header>
+<div class="container">
+  <header><div class="app-title">💰 Mis Finanzas HN</div><button class="install-btn" id="instBtn">📱 Instalar</button></header>
 
-    <!-- Sección: Inicio -->
-    <section id="home" class="active">
-      <!-- Saldo Actual -->
-      <div class="card">
-        <div class="form-group">
-          <label for="saldo-inicial">¿Cuánto dinero tienes actualmente?</label>
-          <input type="number" id="saldo-inicial" placeholder="Ej: 5000" step="0.01">
-          <small class="form-hint">Este será tu punto de partida para administrar tus finanzas</small>
-        </div>
-        <button class="btn btn-primary" onclick="iniciarAdministracion()">Comenzar →</button>
+  <!-- ONBOARDING -->
+  <section id="onboarding" class="active">
+    <div class="card">
+      <h3 style="margin-bottom:12px">👋 Bienvenido</h3>
+      <p style="color:var(--text2);margin-bottom:16px">Para comenzar tu administración financiera:</p>
+      <div class="form-g"><label for="saldoInicio">¿Cuánto dinero tienes actualmente?</label>
+        <input type="number" id="saldoInicio" placeholder="Ej: 5000" step="0.01">
+        <small class="hint">Este será tu punto de partida para administrar tus finanzas</small>
       </div>
-
-      <!-- Resumen -->
-      <div class="card">
-        <div class="balance" id="display-saldo">L. 0.00</div>
-        <div class="stats-grid">
-          <div class="stat-item">
-            <span class="stat-value text-success" id="display-ingresos">L. 0</span>
-            <span class="stat-label">Ingresos</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value text-danger" id="display-gastos">L. 0</span>
-            <span class="stat-label">Gastos</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value" id="display-extra">L. 0</span>
-            <span class="stat-label">Extra</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Alertas -->
-      <div class="card">
-        <div class="card-header">
-          <span>🔔 Alertas</span>
-          <button class="btn-secondary" style="padding:4px 10px;font-size:0.8rem" onclick="mostrarFormularioAlerta()">+ Nueva</button>
-        </div>
-        <div id="lista-alertas">
-          <p class="text-center" style="color:var(--text-secondary)">✅ Sin alertas próximas</p>
-        </div>
-      </div>
-
-      <!-- Conciliación Bancaria -->
-      <div class="card">
-        <div class="card-header">
-          <span>🏦 Conciliación Bancaria</span>
-        </div>
-        <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:12px">
-          Ajusta tus registros al saldo real de tu banco
-        </p>
-        
-        <div class="form-group">
-          <label>Saldo en la app</label>
-          <div id="saldo-app-display" style="font-size:1.3rem;font-weight:600">L. 0.00</div>
-        </div>
-        
-        <div class="form-group">
-          <label>Saldo real en tu banco</label>
-          <input type="number" id="saldo-banco-input" placeholder="Ej: 4850.50" step="0.01">
-        </div>
-        
-        <button class="btn btn-secondary" id="btn-calcular-conciliacion">🔍 Calcular diferencia</button>
-        
-        <div id="resultado-conciliacion" class="hidden">
-          <div class="conciliacion-result">
-            <p><strong>Diferencia:</strong> <span id="diferencia-conciliacion">L. 0.00</span></p>
-            <p id="sugerencia-conciliacion" style="font-size:0.85rem;color:var(--text-secondary)"></p>
-          </div>
-          <button class="btn btn-success" id="btn-ajustar-conciliacion">✅ Ajustar automáticamente</button>
-        </div>
-      </div>
-
-      <!-- Respaldo -->
-      <div class="card">
-        <div class="card-header"><span>💾 Respaldo</span></div>
-        <div class="btn-group">
-          <button class="btn btn-secondary" onclick="exportarJSON()">📥 Exportar JSON</button>
-          <button class="btn btn-secondary" onclick="exportarExcel()">📊 Exportar Excel</button>
-        </div>
-        <button class="btn btn-secondary mt-2" onclick="importarJSON()">📤 Importar</button>
-        <button class="btn btn-danger mt-2" onclick="reiniciarApp()">🗑 Reiniciar app</button>
-      </div>
-    </section>
-
-    <!-- Sección: Nuevo Movimiento (Gasto/Ingreso) -->
-    <section id="nuevo-movimiento">
-      <div class="card">
-        <div class="card-header">
-          <span id="titulo-movimiento">📉 Nuevo Gasto</span>
-          <button class="btn-secondary" style="padding:4px 10px" onclick="cambiarTipoMovimiento()">💰/📉</button>
-        </div>
-        
-        <div class="form-group">
-          <label>Monto</label>
-          <input type="number" id="monto-movimiento" placeholder="Ej: 250.00" step="0.01">
-        </div>
-        
-        <div class="form-group">
-          <label>Categoría</label>
-          <select id="categoria-movimiento">
-            <option value="vivienda">🏠 Vivienda</option>
-            <option value="alimentacion">🍽 Alimentación</option>
-            <option value="transporte">🚗 Transporte</option>
-            <option value="ocio">🎬 Ocio</option>
-            <option value="salud">🏥 Salud</option>
-            <option value="otros">📦 Otros</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Descripción</label>
-          <input type="text" id="descripcion-movimiento" placeholder="Ej: Supermercado">
-        </div>
-        
-        <div class="form-group">
-          <label>Método de pago</label>
-          <select id="metodo-movimiento">
-            <option value="efectivo">Efectivo</option>
-            <option value="debito">Débito</option>
-            <option value="credito">Crédito</option>
-          </select>
-        </div>
-        
-        <div class="btn-group">
-          <button class="btn btn-secondary" onclick="navegar('home')">Cancelar</button>
-          <button class="btn btn-primary" onclick="guardarMovimiento()">Guardar</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Sección: Alertas -->
-    <section id="alertas-section">
-      <div class="card">
-        <div class="card-header">
-          <span>🔔 Nueva Alerta</span>
-        </div>
-        
-        <div class="form-group">
-          <label>Tipo de alerta</label>
-          <select id="tipo-alerta">
-            <option value="vencimiento">📅 Vencimiento de pago</option>
-            <option value="limite">⚠️ Límite de gasto</option>
-            <option value="meta">🎯 Meta de ahorro</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Descripción</label>
-          <input type="text" id="descripcion-alerta" placeholder="Ej: Pago de tarjeta">
-        </div>
-        
-        <div class="form-group">
-          <label>Monto (opcional)</label>
-          <input type="number" id="monto-alerta" placeholder="Ej: 500" step="0.01">
-        </div>
-        
-        <div class="form-group">
-          <label>Fecha límite</label>
-          <input type="date" id="fecha-alerta">
-        </div>
-        
-        <div class="btn-group">
-          <button class="btn btn-secondary" onclick="navegar('home')">Cancelar</button>
-          <button class="btn btn-primary" onclick="guardarAlerta()">Guardar Alerta</button>
-        </div>
-      </div>
-      
-      <div class="card">
-        <div class="card-header"><span>Alertas Activas</span></div>
-        <div id="lista-alertas-detallada"></div>
-      </div>
-    </section>
-
-    <!-- Sección: Configuración -->
-    <section id="config">
-      <div class="card">
-        <div class="card-header"><span>⚙️ Configuración</span></div>
-        
-        <div class="form-group">
-          <label>Nombre del usuario</label>
-          <input type="text" id="config-nombre" placeholder="Tu nombre">
-        </div>
-        
-        <div class="form-group">
-          <label>Moneda</label>
-          <select id="config-moneda">
-            <option value="L">Lempiras (L)</option>
-            <option value="$">Dólares ($)</option>
-            <option value="€">Euros (€)</option>
-          </select>
-        </div>
-        
-        <button class="btn btn-primary" onclick="guardarConfiguracion()">Guardar Configuración</button>
-      </div>
-      
-      <div class="card">
-        <div class="card-header"><span>🔔 Notificaciones</span></div>
-        <button class="btn btn-secondary" onclick="solicitarPermisoNotificaciones()">
-          Activar notificaciones push
-        </button>
-        <small class="form-hint">Recibe alertas incluso con la app cerrada</small>
-      </div>
-    </section>
-  </div>
-
-  <!-- Bottom Navigation -->
-  <nav class="bottom-nav">
-    <div class="nav-item active" onclick="navegar('home')">
-      <span class="nav-icon">🏠</span>
-      <span>Inicio</span>
+      <button class="btn btn-p" onclick="iniciarApp()">Comenzar →</button>
+      <p class="tc hint mt2">🔒 Tus datos se guardan solo en este dispositivo</p>
     </div>
-    <div class="nav-item" onclick="navegar('nuevo-movimiento')">
-      <span class="nav-icon">➕</span>
-      <span>Nuevo</span>
+  </section>
+
+  <!-- HOME -->
+  <section id="home">
+    <div class="card"><div class="balance" id="saldoDisplay">L. 0.00</div>
+      <div class="stats"><div class="stat"><span class="stat-v t-ok" id="ingDisplay">L. 0</span><span class="stat-l">Ingresos</span></div>
+        <div class="stat"><span class="stat-v t-err" id="gasDisplay">L. 0</span><span class="stat-l">Gastos</span></div>
+        <div class="stat"><span class="stat-v" id="extDisplay">L. 0</span><span class="stat-l">Disponible</span></div></div>
     </div>
-    <div class="nav-item" onclick="navegar('alertas-section')">
-      <span class="nav-icon">🔔</span>
-      <span>Alertas</span>
+
+    <div class="card"><div class="card-header"><span>🔔 Alertas</span><button class="btn-s" style="padding:4px 10px;font-size:0.8rem" onclick="nav('alertas')">+ Nueva</button></div>
+      <div id="listaAlertas"><p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p></div></div>
+
+    <div class="card"><div class="card-header"><span>📜 Movimientos Recientes</span></div><div id="listaMovimientos"><p class="tc" style="color:var(--text2)">Sin movimientos aún</p></div></div>
+
+    <div class="card"><div class="card-header"><span>🏦 Conciliación Bancaria</span></div>
+      <p style="font-size:0.85rem;color:var(--text2);margin-bottom:12px">Ajusta tus registros al saldo real de tu banco</p>
+      <div class="form-g"><label>Saldo en la app</label><div id="saldoAppDisplay" style="font-size:1.2rem;font-weight:600">L. 0.00</div></div>
+      <div class="form-g"><label>Saldo real en tu banco</label><input type="number" id="saldoBanco" placeholder="Ej: 4850.50" step="0.01"></div>
+      <button class="btn btn-s" id="btnCalcConc">🔍 Calcular diferencia</button>
+      <div id="resConc" class="hidden"><div class="conc-res"><p><strong>Diferencia:</strong> <span id="diffConc">L. 0.00</span></p><p id="sugConc" style="font-size:0.85rem;color:var(--text2)"></p></div>
+        <button class="btn btn-ok" id="btnAjustConc">✅ Ajustar automáticamente</button></div>
     </div>
-    <div class="nav-item" onclick="navegar('config')">
-      <span class="nav-icon">⚙️</span>
-      <span>Config</span>
+  </section>
+
+  <!-- ALERTAS -->
+  <section id="alertas">
+    <div class="card"><div class="card-header"><span>🔔 Nueva Alerta</span></div>
+      <div class="form-g"><label>Tipo</label><select id="tipoAlerta"><option value="vencimiento">📅 Vencimiento</option><option value="limite">⚠️ Límite gasto</option><option value="meta">🎯 Meta ahorro</option></select></div>
+      <div class="form-g"><label>Descripción</label><input type="text" id="descAlerta" placeholder="Ej: Pago tarjeta"></div>
+      <div class="form-g"><label>Monto (opcional)</label><input type="number" id="montoAlerta" placeholder="Ej: 500" step="0.01"></div>
+      <div class="form-g"><label>Fecha límite</label><input type="date" id="fechaAlerta"></div>
+      <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarAlerta()">Guardar</button></div>
     </div>
-  </nav>
+  </section>
 
-  <!-- Floating Action Button -->
-  <button class="fab" onclick="navegar('nuevo-movimiento')">+</button>
+  <!-- CONFIGURACIÓN -->
+  <section id="config">
+    <div class="card"><div class="card-header"><span>⚙️ Configuración</span></div>
+      <div class="form-g"><label>Nombre</label><input type="text" id="cfgNombre" placeholder="Tu nombre"></div>
+      <div class="form-g"><label>Moneda</label><select id="cfgMoneda"><option value="L">Lempiras (L)</option><option value="$">Dólares ($)</option><option value="€">Euros (€)</option></select></div>
+      <button class="btn btn-p" onclick="guardarCfg()">Guardar</button>
+    </div>
+    <div class="card"><div class="card-header"><span>🎯 Ahorro Automático (Regla 15%)</span></div>
+      <div class="form-g"><label>Porcentaje de ahorro</label><input type="number" id="ahorroPct" value="15" min="0" max="50" step="1"></div>
+      <div class="form-g"><label>Destino</label><select id="ahorroDest"><option value="emergencia">🚨 Emergencia</option><option value="meta">🎯 Meta</option><option value="inversion">📈 Inversión</option></select></div>
+      <button class="btn btn-ok" onclick="activarAhorro()">✅ Activar</button>
+      <small id="ahorroStatus" class="hint" style="display:none;color:var(--ok)">✅ Activo</small>
+    </div>
+    <div class="card"><div class="card-header"><span>🔔 Notificaciones</span></div>
+      <button class="btn btn-s" onclick="pedirNotif()">Activar notificaciones</button>
+      <small class="hint">Solo alertas críticas (vencimientos o 80% límite)</small>
+    </div>
+  </section>
 
-  <script>
-    // ==================== CONFIGURACIÓN GLOBAL ====================
-    const APP_CONFIG = {
-      moneda: localStorage.getItem('config_moneda') || 'L',
-      nombre: localStorage.getItem('config_nombre') || '',
-      saldoInicial: parseFloat(localStorage.getItem('saldoInicial') || 0)
-    };
+  <!-- RESPALDO -->
+  <section id="respaldo">
+    <div class="card"><div class="card-header"><span>💾 Respaldo</span></div>
+      <div class="btn-g"><button class="btn btn-s" onclick="exportarJSON()">📥 JSON</button><button class="btn btn-s" onclick="exportarExcel()">📊 Excel</button></div>
+      <button class="btn btn-s mt2" onclick="importarJSON()">📤 Importar</button>
+      <button class="btn btn-err mt2" onclick="reiniciarApp()">🗑 Reiniciar app</button>
+    </div>
+  </section>
 
-    // ==================== INICIALIZACIÓN ====================
-    document.addEventListener('DOMContentLoaded', () => {
-      inicializarApp();
-      registrarServiceWorker();
-      configurarPWAInstall();
-      cargarDatosIniciales();
-      configurarConciliacion();
-    });
+  <!-- FORMULARIOS FLOTANTES -->
+  <section id="formMov">
+    <div class="card"><div class="card-header"><span id="titMov">📉 Nuevo Gasto</span><button class="btn-s" style="padding:4px 10px" onclick="toggleTipoMov()">💰/📉</button></div>
+      <div class="form-g"><label>Monto</label><input type="number" id="montoMov" placeholder="Ej: 250.00" step="0.01"></div>
+      <div class="form-g"><label>Categoría</label><select id="catMov">
+        <option value="vivienda">🏠 Vivienda</option><option value="alimentacion">🍽 Alimentación</option>
+        <option value="combustible">⛽ Combustible</option><option value="peajes">🛣 Peajes</option>
+        <option value="mantenimiento">🔧 Mantenimiento Vehículo</option><option value="transporte_pub">🚌 Transporte Público</option>
+        <option value="educacion">🎓 Educación</option><option value="tecnologia">💻 Tecnología</option>
+        <option value="salud">🏥 Salud</option><option value="ocio">🎬 Ocio</option><option value="otros">📦 Otros</option>
+      </select></div>
+      <div class="form-g"><label>Descripción</label><input type="text" id="descMov" placeholder="Ej: Supermercado"></div>
+      <div class="form-g"><label>Tipo de ingreso</label><select id="tipoIngreso" style="display:none"><option value="salario">💼 Salario</option><option value="extra">✨ Extra</option><option value="emprendimiento">🚀 Emprendimiento</option><option value="inversion">📈 Inversión</option></select></div>
+      <div class="form-g"><label>Método</label><select id="metMov"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option></select></div>
+      <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarMov()">Guardar</button></div>
+    </div>
+  </section>
+</div>
 
-    function inicializarApp() {
-      // Cargar configuración guardada
-      document.getElementById('config-nombre').value = APP_CONFIG.nombre;
-      document.getElementById('config-moneda').value = APP_CONFIG.moneda;
-      
-      // Actualizar UI con moneda
-      actualizarSimboloMoneda();
-      
-      // Solicitar permiso de notificaciones
-      if ('Notification' in window && Notification.permission === 'default') {
-        // No molestar al inicio, esperar interacción del usuario
-      }
-    }
+<nav class="nav">
+  <div class="nav-i active" onclick="nav('home')"><span class="nav-ic">🏠</span><span>Inicio</span></div>
+  <div class="nav-i" onclick="nav('formMov')"><span class="nav-ic">➕</span><span>Nuevo</span></div>
+  <div class="nav-i" onclick="nav('alertas')"><span class="nav-ic">🔔</span><span>Alertas</span></div>
+  <div class="nav-i" onclick="nav('config')"><span class="nav-ic">⚙️</span><span>Config</span></div>
+  <div class="nav-i" onclick="nav('respaldo')"><span class="nav-ic">💾</span><span>Respaldo</span></div>
+</nav>
+<button class="fab" onclick="nav('formMov')">+</button>
 
-    function registrarServiceWorker() {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => {
-            console.log('✅ SW registrado:', reg.scope);
-            // Notificar al SW que puede activarse
-            if (reg.waiting) {
-              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-          })
-          .catch(err => console.error('❌ Error SW:', err));
-      }
-    }
+<script>
+const CFG={moneda:localStorage.getItem('cfg_moneda')||'L',nombre:localStorage.getItem('cfg_nombre')||'',saldoIni:parseFloat(localStorage.getItem('saldoIni')||0)};
+let movTipo='gasto';
 
-    function configurarPWAInstall() {
-      let deferredPrompt;
-      const installBtn = document.getElementById('installBtn');
-      
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBtn.classList.add('show');
-      });
-      
-      installBtn.addEventListener('click', async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          console.log(`Instalación ${outcome}`);
-          deferredPrompt = null;
-          installBtn.classList.remove('show');
-        }
-      });
-      
-      // Ocultar botón si ya está instalada
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        installBtn.classList.remove('show');
-      }
-    }
+document.addEventListener('DOMContentLoaded',()=>{init();regSW();cfgPWA();cargar();cfgConc();cfgAutoCampos();});
+function init(){document.getElementById('cfgNombre').value=CFG.nombre;document.getElementById('cfgMoneda').value=CFG.moneda;
+  if(localStorage.getItem('appIniciada')==='true'){document.getElementById('onboarding').classList.remove('active');document.getElementById('home').classList.add('active');actualizar();renderAlertas();renderMov();}
+}
+function regSW(){if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').then(r=>{if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});}).catch(console.error);}}
+function cfgPWA(){let d;const b=document.getElementById('instBtn');window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();d=e;b.classList.add('show');});b.onclick=async()=>{if(d){d.prompt();await d.userChoice;d=null;b.classList.remove('show');}};}
+function cargar(){actualizar();renderAlertas();renderMov();}
+function nav(id){document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-i').forEach(n=>n.classList.toggle('active',n.querySelector('span:last-child').textContent.toLowerCase().includes(id==='home'?'inicio':id==='formMov'?'nuevo':id==='alertas'?'alertas':id==='config'?'config':'respaldo')));
+  if(id==='formMov') document.getElementById('tipoIngreso').style.display=movTipo==='ingreso'?'block':'none';
+}
 
-    function cargarDatosIniciales() {
-      actualizarResumen();
-      renderizarAlertas();
-    }
+function iniciarApp(){const s=parseFloat(document.getElementById('saldoInicio').value)||0;if(s<0){alert('Monto inválido');return;}
+  localStorage.setItem('saldoIni',s);CFG.saldoIni=s;localStorage.setItem('appIniciada','true');
+  const m=JSON.parse(localStorage.getItem('movimientos')||'[]');m.push({id:`ini_${Date.now()}`,tipo:'ingreso',monto:s,categoria:'inicio',descripcion:'Saldo inicial',fecha:new Date().toISOString(),metodoPago:'efectivo',tipoIngreso:'inicio'});
+  localStorage.setItem('movimientos',JSON.stringify(m));document.getElementById('onboarding').classList.remove('active');document.getElementById('home').classList.add('active');
+  actualizar();alert('✅ Comienzas con '+CFG.moneda+' '+s.toFixed(2));
+}
 
-    // ==================== NAVEGACIÓN ====================
-    function navegar(seccionId) {
-      // Ocultar todas las secciones
-      document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-      // Mostrar la seleccionada
-      document.getElementById(seccionId).classList.add('active');
-      
-      // Actualizar nav
-      document.querySelectorAll('.nav-item').forEach((item, i) => {
-        item.classList.toggle('active', item.querySelector('span:last-child').textContent.toLowerCase().includes(
-          seccionId === 'home' ? 'inicio' : 
-          seccionId === 'nuevo-movimiento' ? 'nuevo' :
-          seccionId === 'alertas-section' ? 'alertas' : 'config'
-        ));
-      });
-    }
+function calcSaldo(){return JSON.parse(localStorage.getItem('movimientos')||'[]').reduce((sum,m)=>m.tipo==='ingreso'?sum+m.monto:sum-m.monto,CFG.saldoIni);}
+function actualizar(){const saldo=calcSaldo(),m=JSON.parse(localStorage.getItem('movimientos')||'[]');
+  const ing=m.filter(x=>x.tipo==='ingreso').reduce((s,x)=>s+x.monto,0),gas=m.filter(x=>x.tipo==='gasto').reduce((s,x)=>s+x.monto,0);
+  document.getElementById('saldoDisplay').textContent=CFG.moneda+' '+saldo.toFixed(2);
+  document.getElementById('ingDisplay').textContent=CFG.moneda+' '+ing.toFixed(0);
+  document.getElementById('gasDisplay').textContent=CFG.moneda+' '+gas.toFixed(0);
+  document.getElementById('extDisplay').textContent=CFG.moneda+' '+(saldo-ing).toFixed(0);
+  const d=document.getElementById('saldoAppDisplay');if(d)d.textContent=CFG.moneda+' '+saldo.toFixed(2);
+}
+function toggleTipoMov(){movTipo=movTipo==='gasto'?'ingreso':'gasto';document.getElementById('titMov').textContent=movTipo==='gasto'?'📉 Nuevo Gasto':'💰 Nuevo Ingreso';document.getElementById('tipoIngreso').style.display=movTipo==='ingreso'?'block':'none';}
+function guardarMov(){const monto=parseFloat(document.getElementById('montoMov').value),cat=document.getElementById('catMov').value,desc=document.getElementById('descMov').value||'Movimiento',met=document.getElementById('metMov').value;
+  if(!monto||monto<=0){alert('Monto inválido');return;}
+  const mov={id:`m_${Date.now()}`,tipo:movTipo,monto,cat,descripcion:desc,fecha:new Date().toISOString(),metodoPago:met,tipoIngreso:movTipo==='ingreso'?document.getElementById('tipoIngreso').value:'ninguno'};
+  const lista=JSON.parse(localStorage.getItem('movimientos')||'[]');lista.push(mov);
+  if(movTipo==='ingreso'&&localStorage.getItem('ahorro_pct')){const pct=parseFloat(localStorage.getItem('ahorro_pct')),dest=localStorage.getItem('ahorro_dest')||'emergencia',ah=monto*(pct/100);
+    lista.push({id:`ah_${Date.now()}`,tipo:'gasto',monto:ah,cat:'ahorro',descripcion:`🎯 Ahorro ${pct}% → ${dest}`,fecha:new Date().toISOString(),metodoPago:'traspaso',tipoIngreso:'ninguno'});
+  }
+  localStorage.setItem('movimientos',JSON.stringify(lista));actualizar();renderMov();nav('home');document.getElementById('montoMov').value='';document.getElementById('descMov').value='';alert('✅ Guardado');verifAlertasCriticas();
+}
+function renderMov(){const lista=JSON.parse(localStorage.getItem('movimientos')||'[]').slice(-10).reverse();
+  const c=document.getElementById('listaMovimientos');if(!lista.length){c.innerHTML='<p class="tc" style="color:var(--text2)">Sin movimientos aún</p>';return;}
+  c.innerHTML=lista.map(m=>`<div class="mov-item"><div><strong>${m.descripcion}</strong><br><small style="color:var(--text2)">${new Date(m.fecha).toLocaleDateString('es-HN')} • ${m.cat}</small></div><span style="font-weight:600;color:${m.tipo==='ingreso'?'var(--ok)':'var(--err)'}">${m.tipo==='ingreso'?'+':'-'}${CFG.moneda} ${m.monto.toFixed(2)}</span></div>`).join('');
+}
 
-    // ==================== SALDO Y MOVIMIENTOS ====================
-    function iniciarAdministracion() {
-      const saldoInput = document.getElementById('saldo-inicial');
-      const saldo = parseFloat(saldoInput.value) || 0;
-      
-      if (saldo < 0) {
-        alert('Por favor ingresa un monto válido');
-        return;
-      }
-      
-      // Guardar como saldo inicial
-      localStorage.setItem('saldoInicial', saldo.toString());
-      APP_CONFIG.saldoInicial = saldo;
-      
-      // Registrar movimiento inicial
-      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
-      movimientos.push({
-        id: `inicio_${Date.now()}`,
-        tipo: 'ingreso',
-        monto: saldo,
-        categoria: 'saldo-inicial',
-        descripcion: 'Saldo inicial de administración',
-        fecha: new Date().toISOString(),
-        metodoPago: 'efectivo',
-        esInicial: true
-      });
-      localStorage.setItem('movimientos', JSON.stringify(movimientos));
-      
-      actualizarResumen();
-      alert('✅ ¡Listo! Tu administración comienza con L. ' + saldo.toFixed(2));
-    }
+function guardarAlerta(){try{const tipo=document.getElementById('tipoAlerta').value,desc=document.getElementById('descAlerta').value||'Alerta',monto=parseFloat(document.getElementById('montoAlerta').value)||null,fecha=document.getElementById('fechaAlerta').value;
+  if(!tipo||!fecha)throw new Error('Tipo y fecha requeridos');
+  const lista=JSON.parse(localStorage.getItem('alertas')||'[]');lista.push({id:`a_${Date.now()}`,tipo,descripcion:desc,monto,fechaLimite:fecha,fechaCreacion:new Date().toISOString(),activa:true,notificada:false});
+  localStorage.setItem('alertas',JSON.stringify(lista));notifLocal('✅ Alerta guardada',desc);document.getElementById('descAlerta').value='';document.getElementById('montoAlerta').value='';document.getElementById('fechaAlerta').value='';
+  renderAlertas();alert('✅ Guardada');return{success:true};}catch(e){console.error(e);alert('❌ '+e.message);return{success:false};}}
+function renderAlertas(){const lista=JSON.parse(localStorage.getItem('alertas')||'[]').filter(a=>a.activa),c=document.getElementById('listaAlertas');
+  if(!lista.length){c.innerHTML='<p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p>';return;}
+  c.innerHTML=lista.map(a=>{const dias=Math.ceil((new Date(a.fechaLimite)-new Date())/86400000);return `<div class="alert ${dias<=2?'urgent':''}"><strong>${a.descripcion}</strong><br><small style="color:var(--text2)">📅 ${new Date(a.fechaLimite).toLocaleDateString('es-HN')}${a.monto?' | '+CFG.moneda+' '+a.monto.toFixed(2):''}${dias>=0?' | ⏰ '+dias+' días':' ⚠️ Vencida'}</small></div>`}).join('');
+}
+function verifAlertasCriticas(){const lista=JSON.parse(localStorage.getItem('alertas')||'[]'),hoy=new Date();lista.forEach(a=>{if(!a.activa||a.notificada)return;
+  const dias=Math.ceil((new Date(a.fechaLimite)-hoy)/86400000);if(dias===1){notifPush({title:'📅 Vence mañana',body:a.descripcion,tag:a.id});a.notificada=true;localStorage.setItem('alertas',JSON.stringify(lista));}});}
+function notifLocal(t,b){if('Notification' in window&&Notification.permission==='granted')new Notification(t,{body:b,icon:'https://cdn-icons-png.flaticon.com/512/2489/2489756.png'});console.log(`🔔 ${t}: ${b}`);}
+function notifPush(d){if('serviceWorker' in navigator)navigator.serviceWorker.ready.then(r=>r.showNotification(d.title,{body:d.body,icon:'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',tag:d.tag}));else notifLocal(d.title,d.body);}
+function pedirNotif(){if(!('Notification' in window))return;Notification.requestPermission().then(p=>{if(p==='granted')alert('✅ Activadas');else alert('❌ Actívalo en configuración del navegador.');});}
 
-    function calcularSaldoActual() {
-      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
-      return movimientos.reduce((saldo, m) => {
-        return m.tipo === 'ingreso' ? saldo + m.monto : saldo - m.monto;
-      }, APP_CONFIG.saldoInicial);
-    }
+function cfgConc(){document.getElementById('btnCalcConc')?.addEventListener('click',calcConc);document.getElementById('btnAjustConc')?.addEventListener('click',ajustConc);}
+function calcConc(){const sApp=calcSaldo(),sBanco=parseFloat(document.getElementById('saldoBanco').value);if(isNaN(sBanco)){alert('Ingresa saldo del banco');return;}
+  const diff=sBanco-sApp;document.getElementById('resConc').classList.remove('hidden');const elD=document.getElementById('diffConc'),elS=document.getElementById('sugConc');
+  elD.textContent=CFG.moneda+' '+diff.toFixed(2);elD.className=diff>=0?'diff-p':'diff-n';
+  if(Math.abs(diff)<0.01)elS.textContent='✅ ¡Coinciden!';else if(diff>0)elS.textContent='🟢 Dinero en banco no registrado.';else elS.textContent='🔴 Gastos no reflejados en banco.';
+  window._conc={sApp,sBanco,diff};}
+function ajustConc(){if(!window._conc)return;const{diff}=window._conc;if(Math.abs(diff)<0.01){alert('✅ Sin diferencia');return;}
+  if(!confirm(`¿Registrar ajuste de ${CFG.moneda} ${Math.abs(diff).toFixed(2)}? Quedará visible en el historial.`))return;
+  const lista=JSON.parse(localStorage.getItem('movimientos')||'[]');lista.push({id:`conc_${Date.now()}`,tipo:diff>0?'ingreso':'gasto',monto:Math.abs(diff),cat:'conciliacion',descripcion:`⚖️ Ajuste banco ${new Date().toLocaleDateString('es-HN')}`,fecha:new Date().toISOString(),metodoPago:'ajuste',tipoIngreso:'ninguno'});
+  localStorage.setItem('movimientos',JSON.stringify(lista));actualizar();renderMov();document.getElementById('resConc').classList.add('hidden');document.getElementById('saldoBanco').value='';alert('✅ Ajuste registrado');delete window._conc;}
 
-    function actualizarResumen() {
-      const saldo = calcularSaldoActual();
-      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
-      const ingresos = movimientos.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0);
-      const gastos = movimientos.filter(m => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0);
-      
-      document.getElementById('display-saldo').textContent = `${APP_CONFIG.moneda} ${saldo.toFixed(2)}`;
-      document.getElementById('display-ingresos').textContent = `${APP_CONFIG.moneda} ${ingresos.toFixed(0)}`;
-      document.getElementById('display-gastos').textContent = `${APP_CONFIG.moneda} ${gastos.toFixed(0)}`;
-      document.getElementById('display-extra').textContent = `${APP_CONFIG.moneda} ${(ingresos - gastos).toFixed(0)}`;
-      
-      // Actualizar display de conciliación si está visible
-      const saldoAppDisplay = document.getElementById('saldo-app-display');
-      if (saldoAppDisplay) {
-        saldoAppDisplay.textContent = `${APP_CONFIG.moneda} ${saldo.toFixed(2)}`;
-      }
-    }
+function activarAhorro(){const pct=parseFloat(document.getElementById('ahorroPct').value)||15,dest=document.getElementById('ahorroDest').value;
+  localStorage.setItem('ahorro_pct',pct.toString());localStorage.setItem('ahorro_dest',dest);document.getElementById('ahorroStatus').style.display='block';alert(`✅ Ahorro ${pct}% activado → ${dest}`);}
+function cfgAutoCampos(){document.getElementById('catMov')?.addEventListener('change',e=>{const desc=document.getElementById('descMov'),met=document.getElementById('metMov');
+  const map={'combustible':'Gasolina - ','peajes':'Peaje ruta - ','mantenimiento':'Cambio aceite/filtros - ','educacion':'Mensualidad - ','alimentacion':'Supermercado/Mercado - '};
+  if(map[e.target.value]){desc.placeholder=map[e.target.value];desc.focus();}if(['combustible','peajes','alimentacion'].includes(e.target.value)){met.value='efectivo';}});}
+function guardarCfg(){localStorage.setItem('cfg_nombre',document.getElementById('cfgNombre').value);localStorage.setItem('cfg_moneda',document.getElementById('cfgMoneda').value);
+  CFG.nombre=document.getElementById('cfgNombre').value;CFG.moneda=document.getElementById('cfgMoneda').value;actualizar();alert('✅ Guardado');}
 
-    function guardarMovimiento() {
-      const monto = parseFloat(document.getElementById('monto-movimiento').value);
-      const categoria = document.getElementById('categoria-movimiento').value;
-      const descripcion = document.getElementById('descripcion-movimiento').value;
-      const metodoPago = document.getElementById('metodo-movimiento').value;
-      const tipo = document.getElementById('titulo-movimiento').textContent.includes('Gasto') ? 'gasto' : 'ingreso';
-      
-      if (!monto || monto <= 0) {
-        alert('Ingresa un monto válido');
-        return;
-      }
-      
-      const movimiento = {
-        id: `mov_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
-        tipo,
-        monto,
-        categoria,
-        descripcion: descripcion || (tipo === 'ingreso' ? 'Ingreso' : 'Gasto'),
-        fecha: new Date().toISOString(),
-        metodoPago,
-        esAjuste: false
-      };
-      
-      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
-      movimientos.push(movimiento);
-      localStorage.setItem('movimientos', JSON.stringify(movimientos));
-      
-      actualizarResumen();
-      navegar('home');
-      
-      // Limpiar formulario
-      document.getElementById('monto-movimiento').value = '';
-      document.getElementById('descripcion-movimiento').value = '';
-      
-      alert('✅ Movimiento guardado');
-    }
-
-    function cambiarTipoMovimiento() {
-      const titulo = document.getElementById('titulo-movimiento');
-      const esGasto = titulo.textContent.includes('Gasto');
-      titulo.textContent = esGasto ? '💰 Nuevo Ingreso' : '📉 Nuevo Gasto';
-    }
-
-    // ==================== ALERTAS (CORRECCIÓN CRÍTICA) ====================
-    function mostrarFormularioAlerta() {
-      navegar('alertas-section');
-    }
-
-    function guardarAlerta() {
-      try {
-        const tipo = document.getElementById('tipo-alerta').value;
-        const descripcion = document.getElementById('descripcion-alerta').value;
-        const monto = parseFloat(document.getElementById('monto-alerta').value) || null;
-        const fechaLimite = document.getElementById('fecha-alerta').value;
-        
-        // Validaciones mínimas
-        if (!tipo || !fechaLimite) {
-          throw new Error('Tipo y fecha son requeridos');
-        }
-        
-        const alertas = JSON.parse(localStorage.getItem('alertas') || '[]');
-        
-        const nuevaAlerta = {
-          id: `alerta_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
-          tipo,
-          descripcion: descripcion || `Alerta de ${tipo}`,
-          monto,
-          fechaLimite,
-          fechaCreacion: new Date().toISOString(),
-          activa: true,
-          notificada: false
-        };
-        
-        alertas.push(nuevaAlerta);
-        localStorage.setItem('alertas', JSON.stringify(alertas));
-        
-        // Notificación local inmediata
-        notificarLocalmente('✅ Alerta guardada', `Recordatorio: ${nuevaAlerta.descripcion}`);
-        
-        // Limpiar y regresar
-        document.getElementById('descripcion-alerta').value = '';
-        document.getElementById('monto-alerta').value = '';
-        document.getElementById('fecha-alerta').value = '';
-        
-        renderizarAlertas();
-        alert('✅ Alerta guardada exitosamente');
-        
-        return { success: true, id: nuevaAlerta.id };
-        
-      } catch (error) {
-        console.error('❌ Error guardando alerta:', error);
-        alert('❌ No se pudo guardar la alerta: ' + error.message);
-        return { success: false, error: error.message };
-      }
-    }
-
-    function renderizarAlertas() {
-      const alertas = JSON.parse(localStorage.getItem('alertas') || '[]');
-      const contenedor = document.getElementById('lista-alertas');
-      const contenedorDetallado = document.getElementById('lista-alertas-detallada');
-      
-      const alertasActivas = alertas.filter(a => a.activa);
-      
-      if (alertasActivas.length === 0) {
-        if (contenedor) contenedor.innerHTML = '<p class="text-center" style="color:var(--text-secondary)">✅ Sin alertas próximas</p>';
-        if (contenedorDetallado) contenedorDetallado.innerHTML = '<p class="text-center" style="color:var(--text-secondary)">No hay alertas activas</p>';
-        return;
-      }
-      
-      const html = alertasActivas.map(alerta => {
-        const diasRestantes = Math.ceil((new Date(alerta.fechaLimite) - new Date()) / (1000*60*60*24));
-        const urgente = diasRestantes <= 2;
-        
-        return `
-          <div class="alert ${urgente ? 'urgent' : ''}">
-            <strong>${alerta.descripcion}</strong><br>
-            <small style="color:var(--text-secondary)">
-              📅 ${new Date(alerta.fechaLimite).toLocaleDateString('es-HN')} 
-              ${alerta.monto ? `| ${APP_CONFIG.moneda} ${alerta.monto.toFixed(2)}` : ''}
-              ${diasRestantes >= 0 ? `| ⏰ ${diasRestantes} días` : '⚠️ Vencida'}
-            </small>
-          </div>
-        `;
-      }).join('');
-      
-      if (contenedor) contenedor.innerHTML = html;
-      if (contenedorDetallado) contenedorDetallado.innerHTML = html;
-      
-      // Verificar alertas vencidas para notificar
-      verificarAlertasVencidas(alertasActivas);
-    }
-
-    function verificarAlertasVencidas(alertas) {
-      const ahora = new Date();
-      
-      alertas.forEach(alerta => {
-        if (!alerta.notificada && new Date(alerta.fechaLimite) <= ahora && alerta.activa) {
-          // Enviar notificación push si es posible
-          enviarNotificacionPush({
-            title: '⚠️ Alerta vencida',
-            body: alerta.descripcion,
-            tag: alerta.id
-          });
-          
-          // Marcar como notificada
-          alerta.notificada = true;
-          localStorage.setItem('alertas', JSON.stringify(
-            JSON.parse(localStorage.getItem('alertas') || '[]')
-          ));
-        }
-      });
-    }
-
-    function notificarLocalmente(title, body) {
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-          body,
-          icon: 'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',
-          requireInteraction: false
-        });
-      }
-      // Fallback: mensaje en consola para debug
-      console.log(`🔔 ${title}: ${body}`);
-    }
-
-    function enviarNotificacionPush(data) {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        navigator.serviceWorker.ready.then(registration => {
-          registration.showNotification(data.title, {
-            body: data.body,
-            icon: 'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',
-            tag: data.tag,
-            requireInteraction: true
-          });
-        });
-      } else {
-        notificarLocalmente(data.title, data.body);
-      }
-    }
-
-    function solicitarPermisoNotificaciones() {
-      if (!('Notification' in window)) {
-        alert('Tu navegador no soporta notificaciones');
-        return;
-      }
-      
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          alert('✅ Notificaciones activadas. Recibirás alertas de vencimientos.');
-          // Registrar para push (requiere backend con VAPID)
-          registrarPushSubscription();
-        } else if (permission === 'denied') {
-          alert('❌ Permiso denegado. Puedes activarlo en la configuración del navegador.');
-        }
-      });
-    }
-
-    async function registrarPushSubscription() {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        // Nota: Para push real necesitas un backend con claves VAPID
-        // Esto es un placeholder para la estructura
-        console.log('🔔 Listo para suscripción push (requiere backend)');
-      } catch (error) {
-        console.error('❌ Error en suscripción push:', error);
-      }
-    }
-
-    // ==================== CONCILIACIÓN BANCARIA ====================
-    function configurarConciliacion() {
-      document.getElementById('btn-calcular-conciliacion')?.addEventListener('click', calcularConciliacion);
-      document.getElementById('btn-ajustar-conciliacion')?.addEventListener('click', aplicarAjusteConciliacion);
-    }
-
-    function calcularConciliacion() {
-      const saldoApp = calcularSaldoActual();
-      const saldoBanco = parseFloat(document.getElementById('saldo-banco-input').value);
-      
-      if (isNaN(saldoBanco)) {
-        alert('Ingresa el saldo real de tu banco');
-        return;
-      }
-      
-      const diferencia = saldoBanco - saldoApp;
-      
-      // Mostrar resultados
-      document.getElementById('resultado-conciliacion').classList.remove('hidden');
-      
-      const elemDiferencia = document.getElementById('diferencia-conciliacion');
-      const elemSugerencia = document.getElementById('sugerencia-conciliacion');
-      
-      elemDiferencia.textContent = `${APP_CONFIG.moneda} ${diferencia.toFixed(2)}`;
-      elemDiferencia.className = diferencia >= 0 ? 'diff-positive' : 'diff-negative';
-      
-      if (Math.abs(diferencia) < 0.01) {
-        elemSugerencia.textContent = '✅ ¡Tus registros coinciden perfectamente con el banco!';
-      } else if (diferencia > 0) {
-        elemSugerencia.textContent = '🟢 Hay dinero en el banco no registrado en la app. ¿Olvidaste anotar un ingreso?';
-      } else {
-        elemSugerencia.textContent = '🔴 Hay gastos registrados que no aparecen en el banco. ¿Pagos pendientes o errores de registro?';
-      }
-      
-      // Guardar para ajuste posterior
-      window._conciliacionData = { saldoApp, saldoBanco, diferencia };
-    }
-
-    function aplicarAjusteConciliacion() {
-      if (!window._conciliacionData) return;
-      const { diferencia } = window._conciliacionData;
-      
-      if (Math.abs(diferencia) < 0.01) {
-        alert('✅ No hay diferencia que ajustar');
-        return;
-      }
-      
-      if (!confirm(`¿Aplicar ajuste de ${APP_CONFIG.moneda} ${Math.abs(diferencia).toFixed(2)}? Esto creará un movimiento de conciliación.`)) {
-        return;
-      }
-      
-      const ajuste = {
-        id: `ajuste_${Date.now()}`,
-        tipo: diferencia > 0 ? 'ingreso' : 'gasto',
-        monto: Math.abs(diferencia),
-        categoria: '⚖️ Conciliación bancaria',
-        descripcion: `Ajuste automático - Diferencia con banco al ${new Date().toLocaleDateString('es-HN')}`,
-        fecha: new Date().toISOString(),
-        metodoPago: 'ajuste',
-        esAjuste: true
-      };
-      
-      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
-      movimientos.push(ajuste);
-      localStorage.setItem('movimientos', JSON.stringify(movimientos));
-      
-      // Actualizar UI
-      actualizarResumen();
-      document.getElementById('resultado-conciliacion').classList.add('hidden');
-      document.getElementById('saldo-banco-input').value = '';
-      
-      alert('✅ Ajuste aplicado. Tu saldo ahora coincide con el banco.');
-      
-      // Limpiar datos temporales
-      delete window._conciliacionData;
-    }
-
-    // ==================== EXPORTACIÓN ====================
-    function exportarJSON() {
-      const data = {
-        version: '2.1',
-        fechaExportacion: new Date().toISOString(),
-        config: {
-          moneda: APP_CONFIG.moneda,
-          nombre: APP_CONFIG.nombre,
-          saldoInicial: APP_CONFIG.saldoInicial
-        },
-        movimientos: localStorage.getItem('movimientos'),
-        alertas: localStorage.getItem('alertas'),
-        metas: localStorage.getItem('metas'),
-        tarjetas: localStorage.getItem('tarjetas'),
-        prestamos: localStorage.getItem('prestamos')
-      };
-      
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const filename = `mis-finanzas-${new Date().toISOString().slice(0,10)}.json`;
-      
-      // 📱 Web Share API para móviles
-      if (navigator.share && navigator.canShare?.({ files: [new File([blob], filename, { type: 'application/json' })] })) {
-        const file = new File([blob], filename, { type: 'application/json' });
-        navigator.share({
-          title: 'Respaldo Mis Finanzas HN',
-          text: 'Mi respaldo financiero',
-          files: [file]
-        }).catch(() => fallbackDownload(url, filename));
-      } else {
-        fallbackDownload(url, filename);
-      }
-    }
-
-    function fallbackDownload(url, filename) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 100);
-    }
-
-    function importarJSON() {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json';
-      
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const data = JSON.parse(event.target.result);
-            
-            if (data.config) {
-              localStorage.setItem('config_moneda', data.config.moneda || 'L');
-              localStorage.setItem('config_nombre', data.config.nombre || '');
-              localStorage.setItem('saldoInicial', data.config.saldoInicial?.toString() || '0');
-            }
-            if (data.movimientos) localStorage.setItem('movimientos', data.movimientos);
-            if (data.alertas) localStorage.setItem('alertas', data.alertas);
-            if (data.metas) localStorage.setItem('metas', data.metas);
-            if (data.tarjetas) localStorage.setItem('tarjetas', data.tarjetas);
-            if (data.prestamos) localStorage.setItem('prestamos', data.prestamos);
-            
-            // Recargar app
-            location.reload();
-            alert('✅ Datos importados exitosamente');
-          } catch (error) {
-            alert('❌ Error al importar: ' + error.message);
-          }
-        };
-        reader.readAsText(file);
-      };
-      
-      input.click();
-    }
-
-    function exportarExcel() {
-      const wb = XLSX.utils.book_new();
-      const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
-      const alertas = JSON.parse(localStorage.getItem('alertas') || '[]');
-      
-      // 📋 Hoja 1: Resumen Mensual (como tu plantilla)
-      const ingresos = movimientos.filter(m => m.tipo === 'ingreso');
-      const gastos = movimientos.filter(m => m.tipo === 'gasto');
-      const totalIngresos = ingresos.reduce((s, m) => s + m.monto, 0);
-      const totalGastos = gastos.reduce((s, m) => s + m.monto, 0);
-      const saldoReal = totalIngresos - totalGastos + APP_CONFIG.saldoInicial;
-      
-      const resumen = [
-        ['Presupuesto mensual personal'],
-        [],
-        ['INGRESOS MENSUALES REALES'],
-        ['Total de ingresos mensuales', '', `${APP_CONFIG.moneda} ${totalIngresos.toFixed(2)}`],
-        ['SALDO REAL', '', `${APP_CONFIG.moneda} ${saldoReal.toFixed(2)}`],
-        [],
-        ['GASTOS POR CATEGORÍA'],
-        ['Categoría', 'Previsto', 'Real', 'Diferencia']
-      ];
-      
-      // Agrupar gastos por categoría
-      const gastosPorCat = {};
-      gastos.forEach(g => {
-        gastosPorCat[g.categoria] = (gastosPorCat[g.categoria] || 0) + g.monto;
-      });
-      
-      Object.entries(gastosPorCat).forEach(([cat, total]) => {
-        resumen.push([cat, '-', `${APP_CONFIG.moneda} ${total.toFixed(2)}`, '-']);
-      });
-      
-      resumen.push(
-        [],
-        ['TOTAL DE COSTO REAL', '', `${APP_CONFIG.moneda} ${totalGastos.toFixed(2)}`],
-        ['DIFERENCIA DE TOTALES', '', `${APP_CONFIG.moneda} ${(totalIngresos - totalGastos).toFixed(2)}`]
-      );
-      
-      const wsResumen = XLSX.utils.aoa_to_sheet(resumen);
-      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen Mensual');
-      
-      // 📋 Hoja 2: Movimientos Detallados
-      const wsMovimientos = XLSX.utils.json_to_sheet(
-        movimientos.map(m => ({
-          Fecha: new Date(m.fecha).toLocaleDateString('es-HN'),
-          Tipo: m.tipo === 'ingreso' ? '💰 Ingreso' : '💸 Gasto',
-          Categoría: m.categoria,
-          Descripción: m.descripcion,
-          Monto: `${APP_CONFIG.moneda} ${m.monto.toFixed(2)}`,
-          Método: m.metodoPago,
-          Ajuste: m.esAjuste ? 'Sí' : 'No'
-        }))
-      );
-      XLSX.utils.book_append_sheet(wb, wsMovimientos, 'Movimientos');
-      
-      // 📋 Hoja 3: Alertas
-      if (alertas.length > 0) {
-        const wsAlertas = XLSX.utils.json_to_sheet(
-          alertas.map(a => ({
-            Descripción: a.descripcion,
-            Tipo: a.tipo,
-            Monto: a.monto ? `${APP_CONFIG.moneda} ${a.monto.toFixed(2)}` : '-',
-            'Fecha Límite': new Date(a.fechaLimite).toLocaleDateString('es-HN'),
-            Activa: a.activa ? 'Sí' : 'No'
-          }))
-        );
-        XLSX.utils.book_append_sheet(wb, wsAlertas, 'Alertas');
-      }
-      
-      // 💾 Descargar
-      XLSX.writeFile(wb, `mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`);
-    }
-
-    function reiniciarApp() {
-      if (confirm('⚠️ ¿Seguro que deseas reiniciar la app? Se eliminarán todos tus datos locales.')) {
-        localStorage.clear();
-        location.reload();
-      }
-    }
-
-    // ==================== CONFIGURACIÓN ====================
-    function guardarConfiguracion() {
-      const nombre = document.getElementById('config-nombre').value;
-      const moneda = document.getElementById('config-moneda').value;
-      
-      localStorage.setItem('config_nombre', nombre);
-      localStorage.setItem('config_moneda', moneda);
-      
-      APP_CONFIG.nombre = nombre;
-      APP_CONFIG.moneda = moneda;
-      
-      actualizarSimboloMoneda();
-      actualizarResumen();
-      
-      alert('✅ Configuración guardada');
-    }
-
-    function actualizarSimboloMoneda() {
-      // Actualizar todos los placeholders y labels con la moneda seleccionada
-      document.querySelectorAll('[placeholder*="Ej:"]').forEach(el => {
-        el.placeholder = el.placeholder.replace(/^[^:]+:/, `Ej: ${APP_CONFIG.moneda} `);
-      });
-    }
-  </script>
+function exportarJSON(){const d={v:'3.0',fecha:new Date().toISOString(),cfg:{moneda:CFG.moneda,nombre:CFG.nombre,saldoIni:CFG.saldoIni},movimientos:localStorage.getItem('movimientos'),alertas:localStorage.getItem('alertas')};
+  const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),f=`mis-finanzas-${new Date().toISOString().slice(0,10)}.json`;
+  if(navigator.share&&navigator.canShare?.({files:[new File([b],f,{type:'application/json'})]}))navigator.share({title:'Respaldo',files:[new File([b],f)]}).catch(()=>dl(u,f));else dl(u,f);}
+function dl(u,f){const a=document.createElement('a');a.href=u;a.download=f;a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),100);}
+function importarJSON(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);
+  if(d.cfg){localStorage.setItem('cfg_moneda',d.cfg.moneda||'L');localStorage.setItem('cfg_nombre',d.cfg.nombre||'');localStorage.setItem('saldoIni',d.cfg.saldoIni?.toString()||'0');}
+  if(d.movimientos)localStorage.setItem('movimientos',d.movimientos);if(d.alertas)localStorage.setItem('alertas',d.alertas);location.reload();}catch(err){alert('❌ '+err.message);}};r.readAsText(f);};i.click();}
+function exportarExcel(){const wb=XLSX.utils.book_new(),mov=JSON.parse(localStorage.getItem('movimientos')||'[]'),alertas=JSON.parse(localStorage.getItem('alertas')||'[]');
+  const ing=mov.filter(m=>m.tipo==='ingreso'),gas=mov.filter(m=>m.tipo==='gasto'),tI=ing.reduce((s,m)=>s+m.monto,0),tG=gas.reduce((s,m)=>s+m.monto,0),saldo=tI-tG+CFG.saldoIni;
+  const r=[['Presupuesto mensual personal'],[],['INGRESOS MENSUALES REALES'],['Total de ingresos mensuales','',CFG.moneda+' '+tI.toFixed(2)],['SALDO REAL','',CFG.moneda+' '+saldo.toFixed(2)],[],['GASTOS POR CATEGORÍA'],['Categoría','Previsto','Real','Diferencia']];
+  const pc={};gas.forEach(g=>pc[g.cat]=(pc[g.cat]||0)+g.monto);Object.entries(pc).forEach(([c,t])=>r.push([c,'-',CFG.moneda+' '+t.toFixed(2),'-']));
+  r.push([],['TOTAL DE COSTO REAL','',CFG.moneda+' '+tG.toFixed(2)],['DIFERENCIA DE TOTALES','',CFG.moneda+' '+(tI-tG).toFixed(2)]);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r),'Resumen Mensual');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mov.map(m=>({Fecha:new Date(m.fecha).toLocaleDateString('es-HN'),Tipo:m.tipo==='ingreso'?'💰 Ingreso':'💸 Gasto',Categoría:m.cat,Descripción:m.descripcion,Monto:CFG.moneda+' '+m.monto.toFixed(2),Método:m.metodoPago}))), 'Movimientos');
+  if(alertas.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alertas.map(a=>({Descripción:a.descripcion,Tipo:a.tipo,Monto:a.monto?CFG.moneda+' '+a.monto.toFixed(2):'-','Fecha Límite':new Date(a.fechaLimite).toLocaleDateString('es-HN'),Activa:a.activa?'Sí':'No'}))), 'Alertas');
+  XLSX.writeFile(wb,`mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`);}
+function reiniciarApp(){if(confirm('⚠️ ¿Borrar todos los datos?')){localStorage.clear();location.reload();}}
+</script>
 </body>
 </html>
