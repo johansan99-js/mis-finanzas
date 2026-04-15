@@ -41,21 +41,22 @@
     .tc{text-align:center}.mt2{margin-top:16px}.hidden{display:none!important}.t-ok{color:var(--ok)}.t-err{color:var(--err)}
     .mov-item{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}.mov-item:last-child{border-bottom:none}
     .badge{font-size:0.7rem;padding:2px 6px;border-radius:4px;background:var(--warn);color:#000;margin-right:6px}
-    /* 🔔 TOAST SYSTEM */
     .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-20px);padding:12px 20px;border-radius:12px;color:#fff;font-weight:500;font-size:0.95rem;z-index:1000;opacity:0;transition:all 0.3s;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,0.4);max-width:90%;text-align:center}
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
-    .toast.success{background:linear-gradient(135deg,#16a34a,#22c55e)}
-    .toast.error{background:linear-gradient(135deg,#dc2626,#ef4444)}
-    .toast.info{background:linear-gradient(135deg,#2563eb,#3b82f6)}
+    .toast.success{background:linear-gradient(135deg,#16a34a,#22c55e)}.toast.error{background:linear-gradient(135deg,#dc2626,#ef4444)}.toast.info{background:linear-gradient(135deg,#2563eb,#3b82f6)}
   </style>
 </head>
 <body>
 <div class="container">
   <header><div class="app-title">💰 Mis Finanzas HN</div><button class="install-btn" id="instBtn">📱 Instalar</button></header>
 
+  <!-- ONBOARDING: Saldo inicial (CORREGIDO: sin duplicación) -->
   <section id="onboarding" class="active">
-    <div class="card"><h3 style="margin-bottom:12px">👋 Bienvenido</h3><p style="color:var(--text2);margin-bottom:16px">Para comenzar tu administración financiera:</p>
-      <div class="form-g"><label for="saldoInicio">¿Cuánto dinero tienes actualmente?</label>
+    <div class="card">
+      <h3 style="margin-bottom:12px">👋 Bienvenido</h3>
+      <p style="color:var(--text2);margin-bottom:16px">Para comenzar tu administración financiera:</p>
+      <div class="form-g">
+        <label for="saldoInicio">¿Cuánto dinero tienes actualmente?</label>
         <input type="number" id="saldoInicio" placeholder="Ej: 5000" step="0.01" min="0" required>
         <small class="hint">Este será tu punto de partida para administrar tus finanzas</small>
       </div>
@@ -64,27 +65,48 @@
     </div>
   </section>
 
+  <!-- HOME -->
   <section id="home">
-    <div class="card"><div class="balance" id="saldoDisplay">L. 0.00</div>
-      <div class="stats"><div class="stat"><span class="stat-v t-ok" id="ingDisplay">L. 0</span><span class="stat-l">Ingresos</span></div>
+    <div class="card">
+      <div class="balance" id="saldoDisplay">L. 0.00</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-v t-ok" id="ingDisplay">L. 0</span><span class="stat-l">Ingresos</span></div>
         <div class="stat"><span class="stat-v t-err" id="gasDisplay">L. 0</span><span class="stat-l">Gastos</span></div>
-        <div class="stat"><span class="stat-v" id="extDisplay">L. 0</span><span class="stat-l">Disponible</span></div></div>
+        <div class="stat"><span class="stat-v" id="extDisplay">L. 0</span><span class="stat-l">Disponible</span></div>
+      </div>
     </div>
-    <div class="card"><div class="card-header"><span>🔔 Alertas</span><button class="btn-s" style="padding:4px 10px;font-size:0.8rem" onclick="nav('alertas')">+ Nueva</button></div>
-      <div id="listaAlertas"><p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p></div></div>
-    <div class="card"><div class="card-header"><span>📜 Movimientos Recientes</span></div><div id="listaMovimientos"><p class="tc" style="color:var(--text2)">Sin movimientos aún</p></div></div>
-    <div class="card"><div class="card-header"><span>🏦 Conciliación Bancaria</span></div>
+
+    <div class="card">
+      <div class="card-header"><span>🔔 Alertas</span><button class="btn-s" style="padding:4px 10px;font-size:0.8rem" onclick="nav('alertas')">+ Nueva</button></div>
+      <div id="listaAlertas"><p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span>📜 Movimientos Recientes</span></div>
+      <div id="listaMovimientos"><p class="tc" style="color:var(--text2)">Sin movimientos aún</p></div>
+    </div>
+
+    <!-- Conciliación Bancaria (Auditable) -->
+    <div class="card">
+      <div class="card-header"><span>🏦 Conciliación Bancaria</span></div>
       <p style="font-size:0.85rem;color:var(--text2);margin-bottom:12px">Ajusta tus registros al saldo real de tu banco</p>
       <div class="form-g"><label>Saldo en la app</label><div id="saldoAppDisplay" style="font-size:1.2rem;font-weight:600">L. 0.00</div></div>
       <div class="form-g"><label>Saldo real en tu banco</label><input type="number" id="saldoBanco" placeholder="Ej: 4850.50" step="0.01" min="0"></div>
       <button class="btn btn-s" id="btnCalcConc">🔍 Calcular diferencia</button>
-      <div id="resConc" class="hidden"><div class="conc-res"><p><strong>Diferencia:</strong> <span id="diffConc">L. 0.00</span></p><p id="sugConc" style="font-size:0.85rem;color:var(--text2)"></p></div>
-        <button class="btn btn-ok" id="btnAjustConc">✅ Ajustar automáticamente</button></div>
+      <div id="resConc" class="hidden">
+        <div class="conc-res">
+          <p><strong>Diferencia:</strong> <span id="diffConc">L. 0.00</span></p>
+          <p id="sugConc" style="font-size:0.85rem;color:var(--text2)"></p>
+        </div>
+        <button class="btn btn-ok" id="btnAjustConc">✅ Ajustar automáticamente</button>
+      </div>
     </div>
   </section>
 
+  <!-- ALERTAS -->
   <section id="alertas">
-    <div class="card"><div class="card-header"><span>🔔 Nueva Alerta</span></div>
+    <div class="card">
+      <div class="card-header"><span>🔔 Nueva Alerta</span></div>
       <div class="form-g"><label>Tipo</label><select id="tipoAlerta"><option value="vencimiento">📅 Vencimiento</option><option value="limite">⚠️ Límite gasto</option><option value="meta">🎯 Meta ahorro</option></select></div>
       <div class="form-g"><label>Descripción</label><input type="text" id="descAlerta" placeholder="Ej: Pago tarjeta"></div>
       <div class="form-g"><label>Monto (opcional)</label><input type="number" id="montoAlerta" placeholder="Ej: 500" step="0.01" min="0"></div>
@@ -93,50 +115,88 @@
     </div>
   </section>
 
+  <!-- CONFIGURACIÓN -->
   <section id="config">
-    <div class="card"><div class="card-header"><span>⚙️ Configuración</span></div>
+    <div class="card">
+      <div class="card-header"><span>⚙️ Configuración</span></div>
       <div class="form-g"><label>Nombre</label><input type="text" id="cfgNombre" placeholder="Tu nombre"></div>
       <div class="form-g"><label>Moneda</label><select id="cfgMoneda"><option value="L">Lempiras (L)</option><option value="$">Dólares ($)</option><option value="€">Euros (€)</option></select></div>
       <button class="btn btn-p" onclick="guardarCfg()">Guardar</button>
     </div>
-    <div class="card"><div class="card-header"><span>🎯 Ahorro Automático</span></div>
+    <div class="card">
+      <div class="card-header"><span>🎯 Ahorro Automático</span></div>
       <div class="form-g"><label>Porcentaje</label><input type="number" id="ahorroPct" value="15" min="0" max="50" step="1"></div>
       <div class="form-g"><label>Destino</label><select id="ahorroDest"><option value="emergencia">🚨 Emergencia</option><option value="meta">🎯 Meta</option><option value="inversion">📈 Inversión</option></select></div>
       <button class="btn btn-ok" onclick="activarAhorro()">✅ Activar</button>
       <small id="ahorroStatus" class="hint" style="display:none;color:var(--ok)">✅ Activo</small>
     </div>
-    <div class="card"><div class="card-header"><span>🔔 Notificaciones</span></div>
+    <div class="card">
+      <div class="card-header"><span>🔔 Notificaciones</span></div>
       <button class="btn btn-s" onclick="pedirNotif()">Activar notificaciones</button>
       <small class="hint">Solo alertas críticas (vencimientos o 80% límite)</small>
     </div>
   </section>
 
+  <!-- RESPALDO -->
   <section id="respaldo">
-    <div class="card"><div class="card-header"><span>💾 Respaldo</span></div>
-      <div class="btn-g"><button class="btn btn-s" onclick="exportarJSON()">📥 JSON</button><button class="btn btn-s" onclick="exportarExcel()">📊 Excel</button></div>
+    <div class="card">
+      <div class="card-header"><span>💾 Respaldo</span></div>
+      <div class="btn-g">
+        <button class="btn btn-s" onclick="exportarJSON()">📥 JSON</button>
+        <button class="btn btn-s" onclick="exportarExcel()">📊 Excel</button>
+      </div>
       <button class="btn btn-s mt2" onclick="importarJSON()">📤 Importar</button>
       <button class="btn btn-err mt2" onclick="reiniciarApp()">🗑 Reiniciar app</button>
     </div>
   </section>
 
+  <!-- FORMULARIO MOVIMIENTO -->
   <section id="formMov">
-    <div class="card"><div class="card-header"><span id="titMov">📉 Nuevo Gasto</span><button class="btn-s" style="padding:4px 10px" onclick="toggleTipoMov()">💰/📉</button></div>
+    <div class="card">
+      <div class="card-header">
+        <span id="titMov">📉 Nuevo Gasto</span>
+        <button class="btn-s" style="padding:4px 10px" onclick="toggleTipoMov()">💰/📉</button>
+      </div>
       <div class="form-g"><label>Monto</label><input type="number" id="montoMov" placeholder="Ej: 250.00" step="0.01" min="0" required></div>
-      <div class="form-g"><label>Categoría</label><select id="catMov">
-        <option value="vivienda">🏠 Vivienda</option><option value="alimentacion">🍽 Alimentación</option>
-        <option value="combustible">⛽ Combustible</option><option value="peajes">🛣 Peajes</option>
-        <option value="mantenimiento">🔧 Mantenimiento Vehículo</option><option value="transporte_pub">🚌 Transporte Público</option>
-        <option value="educacion">🎓 Educación</option><option value="tecnologia">💻 Tecnología</option>
-        <option value="salud">🏥 Salud</option><option value="ocio">🎬 Ocio</option><option value="otros">📦 Otros</option>
-      </select></div>
+      <div class="form-g">
+        <label>Categoría</label>
+        <select id="catMov">
+          <option value="vivienda">🏠 Vivienda</option>
+          <option value="alimentacion">🍽 Alimentación</option>
+          <option value="combustible">⛽ Combustible</option>
+          <option value="peajes">🛣 Peajes</option>
+          <option value="mantenimiento">🔧 Mantenimiento Vehículo</option>
+          <option value="transporte_pub">🚌 Transporte Público</option>
+          <option value="educacion">🎓 Educación</option>
+          <option value="tecnologia">💻 Tecnología</option>
+          <option value="salud">🏥 Salud</option>
+          <option value="ocio">🎬 Ocio</option>
+          <option value="familia">👨‍👩‍👧‍👦 Familia</option>
+          <option value="impuestos">📄 Impuestos</option>
+          <option value="ahorro">🎯 Ahorro Manual</option>
+          <option value="otros">📦 Otros</option>
+        </select>
+      </div>
       <div class="form-g"><label>Descripción</label><input type="text" id="descMov" placeholder="Ej: Supermercado"></div>
-      <div class="form-g" id="ingresoTipoDiv" style="display:none"><label>Tipo de ingreso</label><select id="tipoIngreso"><option value="salario">💼 Salario</option><option value="extra">✨ Extra</option><option value="emprendimiento">🚀 Emprendimiento</option><option value="inversion">📈 Inversión</option></select></div>
+      <div class="form-g" id="ingresoTipoDiv" style="display:none">
+        <label>Tipo de ingreso</label>
+        <select id="tipoIngreso">
+          <option value="salario">💼 Salario</option>
+          <option value="extra">✨ Extra</option>
+          <option value="emprendimiento">🚀 Emprendimiento</option>
+          <option value="inversion">📈 Inversión</option>
+        </select>
+      </div>
       <div class="form-g"><label>Método</label><select id="metMov"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option></select></div>
-      <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarMov()">Guardar</button></div>
+      <div class="btn-g">
+        <button class="btn btn-s" onclick="nav('home')">Cancelar</button>
+        <button class="btn btn-p" onclick="guardarMov()">Guardar</button>
+      </div>
     </div>
   </section>
 </div>
 
+<!-- Navegación inferior con safe-area iOS -->
 <nav class="nav">
   <div class="nav-i active" onclick="nav('home')"><span class="nav-ic">🏠</span><span>Inicio</span></div>
   <div class="nav-i" onclick="nav('formMov')"><span class="nav-ic">➕</span><span>Nuevo</span></div>
@@ -148,150 +208,536 @@
 
 <script>
 // ==================== CONFIG & UTILS ====================
-const CFG={moneda:localStorage.getItem('cfg_moneda')||'L',nombre:localStorage.getItem('cfg_nombre')||'',saldoIni:parseFloat(localStorage.getItem('saldoIni')||0)};
-let movTipo='gasto';
+const CFG = {
+  moneda: localStorage.getItem('cfg_moneda') || 'L',
+  nombre: localStorage.getItem('cfg_nombre') || '',
+  saldoIni: parseFloat(localStorage.getItem('saldoIni') || '0')
+};
+let movTipo = 'gasto';
 
-// 🔔 Toast Notifications (Reemplaza alert())
-function toast(msg, type='info', duration=3000){
-  let el=document.getElementById('toast');
-  if(!el){el=document.createElement('div');el.id='toast';el.className='toast';document.body.appendChild(el);}
-  el.textContent=msg;el.className=`toast ${type} show`;
-  setTimeout(()=>el.classList.remove('show'),duration);
-}
-
-// 🔍 Sanitización y Validación Estricta de Montos
-function parseMonto(val){
-  if(val===null||val===undefined||val==='') return null;
-  let clean=String(val).replace(/,/g,'.').trim();
-  let num=parseFloat(clean);
-  return (isNaN(num)||num<0) ? null : num;
-}
-
-// ==================== INIT ====================
-document.addEventListener('DOMContentLoaded',()=>{init();regSW();cfgPWA();cargar();cfgConc();cfgAutoCampos();});
-function init(){document.getElementById('cfgNombre').value=CFG.nombre;document.getElementById('cfgMoneda').value=CFG.moneda;
-  if(localStorage.getItem('appIniciada')==='true'){document.getElementById('onboarding').classList.remove('active');document.getElementById('home').classList.add('active');actualizar();renderAlertas();renderMov();}
-}
-function regSW(){if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').then(r=>{if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});}).catch(console.error);}}
-function cfgPWA(){let d;const b=document.getElementById('instBtn');window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();d=e;b.classList.add('show');});b.onclick=async()=>{if(d){d.prompt();await d.userChoice;d=null;b.classList.remove('show');}};}
-function cargar(){actualizar();renderAlertas();renderMov();}
-function nav(id){document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');
-  document.querySelectorAll('.nav-i').forEach(n=>n.classList.toggle('active',n.querySelector('span:last-child').textContent.toLowerCase().includes(id==='home'?'inicio':id==='formMov'?'nuevo':id==='alertas'?'alertas':id==='config'?'config':'respaldo')));
-  if(id==='formMov') document.getElementById('ingresoTipoDiv').style.display=movTipo==='ingreso'?'block':'none';
-}
-
-// ==================== SALDO & MOVIMIENTOS ====================
-function iniciarApp(){
-  const s=parseMonto(document.getElementById('saldoInicio').value);
-  if(s===null){toast('⚠️ Ingresa un monto válido mayor a 0','error');return;}
-  localStorage.setItem('saldoIni',s.toString());CFG.saldoIni=s;localStorage.setItem('appIniciada','true');
-  const m=JSON.parse(localStorage.getItem('movimientos')||'[]');m.push({id:`ini_${Date.now()}`,tipo:'ingreso',monto:s,cat:'inicio',descripcion:'Saldo inicial',fecha:new Date().toISOString(),metodoPago:'efectivo',tipoIngreso:'inicio'});
-  localStorage.setItem('movimientos',JSON.stringify(m));document.getElementById('onboarding').classList.remove('active');document.getElementById('home').classList.add('active');
-  actualizar();toast(`✅ Comienzas con ${CFG.moneda} ${s.toFixed(2)}`,'success');
-}
-
-function calcSaldo(){return JSON.parse(localStorage.getItem('movimientos')||'[]').reduce((sum,m)=>m.tipo==='ingreso'?sum+m.monto:sum-m.monto,CFG.saldoIni);}
-function actualizar(){const saldo=calcSaldo(),m=JSON.parse(localStorage.getItem('movimientos')||'[]');
-  const ing=m.filter(x=>x.tipo==='ingreso').reduce((s,x)=>s+x.monto,0),gas=m.filter(x=>x.tipo==='gasto').reduce((s,x)=>s+x.monto,0);
-  document.getElementById('saldoDisplay').textContent=CFG.moneda+' '+saldo.toFixed(2);
-  document.getElementById('ingDisplay').textContent=CFG.moneda+' '+ing.toFixed(0);
-  document.getElementById('gasDisplay').textContent=CFG.moneda+' '+gas.toFixed(0);
-  document.getElementById('extDisplay').textContent=CFG.moneda+' '+(saldo-ing).toFixed(0);
-  const d=document.getElementById('saldoAppDisplay');if(d)d.textContent=CFG.moneda+' '+saldo.toFixed(2);
-}
-function toggleTipoMov(){movTipo=movTipo==='gasto'?'ingreso':'gasto';document.getElementById('titMov').textContent=movTipo==='gasto'?'📉 Nuevo Gasto':'💰 Nuevo Ingreso';document.getElementById('ingresoTipoDiv').style.display=movTipo==='ingreso'?'block':'none';}
-function guardarMov(){
-  const monto=parseMonto(document.getElementById('montoMov').value),cat=document.getElementById('catMov').value,desc=document.getElementById('descMov').value||'Movimiento',met=document.getElementById('metMov').value;
-  if(monto===null||monto<=0){toast('⚠️ Monto inválido. Ingresa un número positivo.','error');return;}
-  const mov={id:`m_${Date.now()}`,tipo:movTipo,monto,cat,descripcion:desc,fecha:new Date().toISOString(),metodoPago:met,tipoIngreso:movTipo==='ingreso'?document.getElementById('tipoIngreso').value:'ninguno'};
-  const lista=JSON.parse(localStorage.getItem('movimientos')||'[]');lista.push(mov);
-  if(movTipo==='ingreso'&&localStorage.getItem('ahorro_pct')){
-    const pct=parseFloat(localStorage.getItem('ahorro_pct')),dest=localStorage.getItem('ahorro_dest')||'emergencia',ah=monto*(pct/100);
-    lista.push({id:`ah_${Date.now()}`,tipo:'gasto',monto:ah,cat:'ahorro',descripcion:`🎯 Ahorro ${pct}% → ${dest}`,fecha:new Date().toISOString(),metodoPago:'traspaso',tipoIngreso:'ninguno',esAjuste:false});
+// 🔔 Toast Notifications (reemplaza alert())
+function toast(msg, type = 'info', duration = 3000) {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
   }
-  localStorage.setItem('movimientos',JSON.stringify(lista));actualizar();renderMov();nav('home');document.getElementById('montoMov').value='';document.getElementById('descMov').value='';toast('✅ Movimiento guardado','success');verifAlertasCriticas();
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), duration);
 }
-function renderMov(){const lista=JSON.parse(localStorage.getItem('movimientos')||'[]').slice(-10).reverse();
-  const c=document.getElementById('listaMovimientos');if(!lista.length){c.innerHTML='<p class="tc" style="color:var(--text2)">Sin movimientos aún</p>';return;}
-  c.innerHTML=lista.map(m=>`<div class="mov-item"><div>${m.esAjuste?'<span class="badge">⚖️ Ajuste</span>':''}<strong>${m.descripcion}</strong><br><small style="color:var(--text2)">${new Date(m.fecha).toLocaleDateString('es-HN')} • ${m.cat}</small></div><span style="font-weight:600;color:${m.tipo==='ingreso'?'var(--ok)':'var(--err)'}">${m.tipo==='ingreso'?'+':'-'}${CFG.moneda} ${m.monto.toFixed(2)}</span></div>`).join('');
+
+// 🔍 Sanitización y validación estricta de montos (previene NaN)
+function parseMonto(val) {
+  if (val === null || val === undefined || val === '') return null;
+  let clean = String(val).replace(/,/g, '.').trim();
+  let num = parseFloat(clean);
+  return (isNaN(num) || num < 0) ? null : num;
+}
+
+// ==================== INICIALIZACIÓN ====================
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  regSW();
+  cfgPWA();
+  cargar();
+  cfgConc();
+  cfgAutoCampos();
+});
+
+function init() {
+  document.getElementById('cfgNombre').value = CFG.nombre;
+  document.getElementById('cfgMoneda').value = CFG.moneda;
+  if (localStorage.getItem('appIniciada') === 'true') {
+    document.getElementById('onboarding').classList.remove('active');
+    document.getElementById('home').classList.add('active');
+    actualizar();
+    renderAlertas();
+    renderMov();
+  }
+}
+
+function regSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => { if (r.waiting) r.waiting.postMessage({ type: 'SKIP_WAITING' }); })
+      .catch(console.error);
+  }
+}
+
+function cfgPWA() {
+  let deferredPrompt;
+  const installBtn = document.getElementById('instBtn');
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.classList.add('show');
+  });
+  installBtn.onclick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installBtn.classList.remove('show');
+    }
+  };
+}
+
+function cargar() {
+  actualizar();
+  renderAlertas();
+  renderMov();
+}
+
+function nav(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-i').forEach(n => {
+    const txt = n.querySelector('span:last-child').textContent.toLowerCase();
+    const match = (id === 'home' && txt.includes('inicio')) ||
+                  (id === 'formMov' && txt.includes('nuevo')) ||
+                  (id === 'alertas' && txt.includes('alertas')) ||
+                  (id === 'config' && txt.includes('config')) ||
+                  (id === 'respaldo' && txt.includes('respaldo'));
+    n.classList.toggle('active', match);
+  });
+  if (id === 'formMov') {
+    document.getElementById('ingresoTipoDiv').style.display = movTipo === 'ingreso' ? 'block' : 'none';
+  }
+}
+
+// ==================== SALDO Y MOVIMIENTOS (BUG DUPLICADO CORREGIDO) ====================
+
+// ✅ FUNCIÓN CORREGIDA: El saldo inicial SOLO es base, NO se agrega como movimiento
+function iniciarApp() {
+  const s = parseMonto(document.getElementById('saldoInicio').value);
+  if (s === null) { toast('⚠️ Ingresa un monto válido mayor a 0', 'error'); return; }
+  
+  // Guardar como base de cálculo (única fuente de verdad)
+  localStorage.setItem('saldoIni', s.toString());
+  CFG.saldoIni = s;
+  localStorage.setItem('appIniciada', 'true');
+  
+  // ✅ NO agregamos movimiento de "saldo inicial" para evitar duplicación
+  // El saldo se calcula como: CFG.saldoIni + Σ(ingresos reales) - Σ(gastos reales)
+  
+  document.getElementById('onboarding').classList.remove('active');
+  document.getElementById('home').classList.add('active');
+  actualizar();
+  toast(`✅ Comienzas con ${CFG.moneda} ${s.toFixed(2)}`, 'success');
+}
+
+// ✅ Cálculo de saldo: base + movimientos reales (sin duplicar inicio)
+function calcSaldo() {
+  const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+  return movimientos.reduce((sum, m) => {
+    return m.tipo === 'ingreso' ? sum + m.monto : sum - m.monto;
+  }, CFG.saldoIni); // ← CFG.saldoIni es la ÚNICA fuente del saldo inicial
+}
+
+function actualizar() {
+  const saldo = calcSaldo();
+  const movimientos = JSON.parse(localStorage.getItem('movimientos') || '[]');
+  const ing = movimientos.filter(x => x.tipo === 'ingreso').reduce((s, x) => s + x.monto, 0);
+  const gas = movimientos.filter(x => x.tipo === 'gasto').reduce((s, x) => s + x.monto, 0);
+  
+  document.getElementById('saldoDisplay').textContent = `${CFG.moneda} ${saldo.toFixed(2)}`;
+  document.getElementById('ingDisplay').textContent = `${CFG.moneda} ${ing.toFixed(0)}`;
+  document.getElementById('gasDisplay').textContent = `${CFG.moneda} ${gas.toFixed(0)}`;
+  document.getElementById('extDisplay').textContent = `${CFG.moneda} ${(saldo - CFG.saldoIni).toFixed(0)}`;
+  
+  const d = document.getElementById('saldoAppDisplay');
+  if (d) d.textContent = `${CFG.moneda} ${saldo.toFixed(2)}`;
+}
+
+function toggleTipoMov() {
+  movTipo = movTipo === 'gasto' ? 'ingreso' : 'gasto';
+  document.getElementById('titMov').textContent = movTipo === 'gasto' ? '📉 Nuevo Gasto' : '💰 Nuevo Ingreso';
+  document.getElementById('ingresoTipoDiv').style.display = movTipo === 'ingreso' ? 'block' : 'none';
+}
+
+function guardarMov() {
+  const monto = parseMonto(document.getElementById('montoMov').value);
+  const cat = document.getElementById('catMov').value;
+  const desc = document.getElementById('descMov').value || 'Movimiento';
+  const met = document.getElementById('metMov').value;
+  
+  if (monto === null || monto <= 0) { toast('⚠️ Monto inválido. Ingresa un número positivo.', 'error'); return; }
+  
+  const mov = {
+    id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    tipo: movTipo,
+    monto,
+    cat,
+    descripcion: desc,
+    fecha: new Date().toISOString(),
+    metodoPago: met,
+    tipoIngreso: movTipo === 'ingreso' ? document.getElementById('tipoIngreso').value : 'ninguno',
+    esAjuste: false
+  };
+  
+  const lista = JSON.parse(localStorage.getItem('movimientos') || '[]');
+  lista.push(mov);
+  
+  // 🎯 Ahorro automático (solo en ingresos)
+  if (movTipo === 'ingreso' && localStorage.getItem('ahorro_pct')) {
+    const pct = parseFloat(localStorage.getItem('ahorro_pct'));
+    const dest = localStorage.getItem('ahorro_dest') || 'emergencia';
+    const ah = monto * (pct / 100);
+    lista.push({
+      id: `ah_${Date.now()}`,
+      tipo: 'gasto',
+      monto: ah,
+      cat: 'ahorro',
+      descripcion: `🎯 Ahorro ${pct}% → ${dest}`,
+      fecha: new Date().toISOString(),
+      metodoPago: 'traspaso',
+      tipoIngreso: 'ninguno',
+      esAjuste: false,
+      esAhorroAuto: true
+    });
+  }
+  
+  localStorage.setItem('movimientos', JSON.stringify(lista));
+  actualizar();
+  renderMov();
+  nav('home');
+  document.getElementById('montoMov').value = '';
+  document.getElementById('descMov').value = '';
+  toast('✅ Movimiento guardado', 'success');
+  verifAlertasCriticas();
+}
+
+function renderMov() {
+  const lista = JSON.parse(localStorage.getItem('movimientos') || '[]').slice(-10).reverse();
+  const c = document.getElementById('listaMovimientos');
+  if (!lista.length) { c.innerHTML = '<p class="tc" style="color:var(--text2)">Sin movimientos aún</p>'; return; }
+  c.innerHTML = lista.map(m => `
+    <div class="mov-item">
+      <div>
+        ${m.esAjuste ? '<span class="badge">⚖️ Ajuste</span>' : ''}
+        ${m.esAhorroAuto ? '<span class="badge" style="background:var(--ok);color:#fff">🎯 Ahorro</span>' : ''}
+        <strong>${m.descripcion}</strong><br>
+        <small style="color:var(--text2)">${new Date(m.fecha).toLocaleDateString('es-HN')} • ${m.cat}</small>
+      </div>
+      <span style="font-weight:600;color:${m.tipo === 'ingreso' ? 'var(--ok)' : 'var(--err)'}">
+        ${m.tipo === 'ingreso' ? '+' : '-'}${CFG.moneda} ${m.monto.toFixed(2)}
+      </span>
+    </div>
+  `).join('');
 }
 
 // ==================== ALERTAS ====================
-function guardarAlerta(){
-  try{
-    const tipo=document.getElementById('tipoAlerta').value,desc=document.getElementById('descAlerta').value||'Alerta',monto=parseMonto(document.getElementById('montoAlerta').value),fecha=document.getElementById('fechaAlerta').value;
-    if(!tipo||!fecha) throw new Error('Tipo y fecha son requeridos');
-    const lista=JSON.parse(localStorage.getItem('alertas')||'[]');lista.push({id:`a_${Date.now()}`,tipo,descripcion:desc,monto,fechaLimite:fecha,fechaCreacion:new Date().toISOString(),activa:true,notificada:false});
-    localStorage.setItem('alertas',JSON.stringify(lista));toast('✅ Alerta guardada','success');document.getElementById('descAlerta').value='';document.getElementById('montoAlerta').value='';document.getElementById('fechaAlerta').value='';
-    renderAlertas();return{success:true};
-  }catch(e){console.error(e);toast('❌ '+e.message,'error');return{success:false};}
+function guardarAlerta() {
+  try {
+    const tipo = document.getElementById('tipoAlerta').value;
+    const desc = document.getElementById('descAlerta').value || 'Alerta';
+    const monto = parseMonto(document.getElementById('montoAlerta').value);
+    const fecha = document.getElementById('fechaAlerta').value;
+    
+    if (!tipo || !fecha) throw new Error('Tipo y fecha son requeridos');
+    
+    const lista = JSON.parse(localStorage.getItem('alertas') || '[]');
+    lista.push({
+      id: `a_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      tipo,
+      descripcion: desc,
+      monto,
+      fechaLimite: fecha,
+      fechaCreacion: new Date().toISOString(),
+      activa: true,
+      notificada: false
+    });
+    localStorage.setItem('alertas', JSON.stringify(lista));
+    
+    toast('✅ Alerta guardada', 'success');
+    document.getElementById('descAlerta').value = '';
+    document.getElementById('montoAlerta').value = '';
+    document.getElementById('fechaAlerta').value = '';
+    renderAlertas();
+    return { success: true };
+  } catch (e) {
+    console.error(e);
+    toast('❌ ' + e.message, 'error');
+    return { success: false };
+  }
 }
-function renderAlertas(){const lista=JSON.parse(localStorage.getItem('alertas')||'[]').filter(a=>a.activa),c=document.getElementById('listaAlertas');
-  if(!lista.length){c.innerHTML='<p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p>';return;}
-  c.innerHTML=lista.map(a=>{const dias=Math.ceil((new Date(a.fechaLimite)-new Date())/86400000);return `<div class="alert ${dias<=2?'urgent':''}"><strong>${a.descripcion}</strong><br><small style="color:var(--text2)">📅 ${new Date(a.fechaLimite).toLocaleDateString('es-HN')}${a.monto!==null?' | '+CFG.moneda+' '+a.monto.toFixed(2):''}${dias>=0?' | ⏰ '+dias+' días':' ⚠️ Vencida'}</small></div>`}).join('');
-}
-function verifAlertasCriticas(){const lista=JSON.parse(localStorage.getItem('alertas')||'[]'),hoy=new Date();lista.forEach(a=>{if(!a.activa||a.notificada)return;const dias=Math.ceil((new Date(a.fechaLimite)-hoy)/86400000);if(dias===1){notifPush({title:'📅 Vence mañana',body:a.descripcion,tag:a.id});a.notificada=true;localStorage.setItem('alertas',JSON.stringify(lista));}});}
-function notifPush(d){if('serviceWorker' in navigator)navigator.serviceWorker.ready.then(r=>r.showNotification(d.title,{body:d.body,icon:'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',tag:d.tag}));else toast(d.title+' '+d.body,'info');}
-function pedirNotif(){if(!('Notification' in window))return;Notification.requestPermission().then(p=>{if(p==='granted')toast('✅ Notificaciones activadas','success');else toast('❌ Actívalo en configuración del navegador','error');});}
 
-// ==================== CONCILIACIÓN (AUDITABLE) ====================
-function cfgConc(){document.getElementById('btnCalcConc')?.addEventListener('click',calcConc);document.getElementById('btnAjustConc')?.addEventListener('click',ajustConc);}
-function calcConc(){
-  const sApp=calcSaldo(),sBanco=parseMonto(document.getElementById('saldoBanco').value);
-  if(sBanco===null){toast('⚠️ Ingresa un saldo válido del banco','error');return;}
-  const diff=sBanco-sApp;document.getElementById('resConc').classList.remove('hidden');const elD=document.getElementById('diffConc'),elS=document.getElementById('sugConc');
-  elD.textContent=CFG.moneda+' '+diff.toFixed(2);elD.className=diff>=0?'diff-p':'diff-n';
-  if(Math.abs(diff)<0.01)elS.textContent='✅ ¡Coinciden perfectamente!';else if(diff>0)elS.textContent='🟢 Dinero en banco no registrado en la app.';else elS.textContent='🔴 Gastos registrados que no aparecen en banco.';
-  window._conc={sApp,sBanco,diff};
+function renderAlertas() {
+  const lista = JSON.parse(localStorage.getItem('alertas') || '[]').filter(a => a.activa);
+  const c = document.getElementById('listaAlertas');
+  if (!lista.length) { c.innerHTML = '<p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p>'; return; }
+  c.innerHTML = lista.map(a => {
+    const dias = Math.ceil((new Date(a.fechaLimite) - new Date()) / 86400000);
+    const urgente = dias <= 2;
+    return `<div class="alert ${urgente ? 'urgent' : ''}">
+      <strong>${a.descripcion}</strong><br>
+      <small style="color:var(--text2)">
+        📅 ${new Date(a.fechaLimite).toLocaleDateString('es-HN')}
+        ${a.monto !== null ? ` | ${CFG.moneda} ${a.monto.toFixed(2)}` : ''}
+        ${dias >= 0 ? ` | ⏰ ${dias} días` : ' ⚠️ Vencida'}
+      </small>
+    </div>`;
+  }).join('');
 }
-function ajustConc(){
-  if(!window._conc)return;const{diff}=window._conc;if(Math.abs(diff)<0.01){toast('✅ Sin diferencia que ajustar','success');return;}
-  if(!confirm(`¿Registrar ajuste de ${CFG.moneda} ${Math.abs(diff).toFixed(2)}? Se creará un movimiento visible para mantener trazabilidad.`))return;
-  const lista=JSON.parse(localStorage.getItem('movimientos')||'[]');lista.push({id:`conc_${Date.now()}`,tipo:diff>0?'ingreso':'gasto',monto:Math.abs(diff),cat:'conciliacion',descripcion:`⚖️ Ajuste banco ${new Date().toLocaleDateString('es-HN')}`,fecha:new Date().toISOString(),metodoPago:'ajuste',tipoIngreso:'ninguno',esAjuste:true});
-  localStorage.setItem('movimientos',JSON.stringify(lista));actualizar();renderMov();document.getElementById('resConc').classList.add('hidden');document.getElementById('saldoBanco').value='';toast('✅ Ajuste registrado en historial','success');delete window._conc;
+
+function verifAlertasCriticas() {
+  const lista = JSON.parse(localStorage.getItem('alertas') || '[]');
+  const hoy = new Date();
+  lista.forEach(a => {
+    if (!a.activa || a.notificada) return;
+    const dias = Math.ceil((new Date(a.fechaLimite) - hoy) / 86400000);
+    if (dias === 1) {
+      notifPush({ title: '📅 Vence mañana', body: a.descripcion, tag: a.id });
+      a.notificada = true;
+      localStorage.setItem('alertas', JSON.stringify(lista));
+    }
+  });
+}
+
+function notifPush(d) {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(r => 
+      r.showNotification(d.title, { body: d.body, icon: 'https://cdn-icons-png.flaticon.com/512/2489/2489756.png', tag: d.tag })
+    );
+  } else {
+    toast(d.title + ': ' + d.body, 'info');
+  }
+}
+
+function pedirNotif() {
+  if (!('Notification' in window)) return;
+  Notification.requestPermission().then(p => {
+    if (p === 'granted') toast('✅ Notificaciones activadas', 'success');
+    else toast('❌ Actívalo en configuración del navegador', 'error');
+  });
+}
+
+// ==================== CONCILIACIÓN BANCARIA (AUDITABLE) ====================
+function cfgConc() {
+  document.getElementById('btnCalcConc')?.addEventListener('click', calcConc);
+  document.getElementById('btnAjustConc')?.addEventListener('click', ajustConc);
+}
+
+function calcConc() {
+  const sApp = calcSaldo();
+  const sBanco = parseMonto(document.getElementById('saldoBanco').value);
+  if (sBanco === null) { toast('⚠️ Ingresa un saldo válido del banco', 'error'); return; }
+  
+  const diff = sBanco - sApp;
+  document.getElementById('resConc').classList.remove('hidden');
+  
+  const elD = document.getElementById('diffConc');
+  const elS = document.getElementById('sugConc');
+  elD.textContent = `${CFG.moneda} ${diff.toFixed(2)}`;
+  elD.className = diff >= 0 ? 'diff-p' : 'diff-n';
+  
+  if (Math.abs(diff) < 0.01) {
+    elS.textContent = '✅ ¡Coinciden perfectamente!';
+  } else if (diff > 0) {
+    elS.textContent = '🟢 Dinero en banco no registrado en la app.';
+  } else {
+    elS.textContent = '🔴 Gastos registrados que no aparecen en banco.';
+  }
+  window._conc = { sApp, sBanco, diff };
+}
+
+function ajustConc() {
+  if (!window._conc) return;
+  const { diff } = window._conc;
+  
+  if (Math.abs(diff) < 0.01) { toast('✅ Sin diferencia que ajustar', 'success'); return; }
+  if (!confirm(`¿Registrar ajuste de ${CFG.moneda} ${Math.abs(diff).toFixed(2)}? Se creará un movimiento visible para mantener trazabilidad.`)) return;
+  
+  const lista = JSON.parse(localStorage.getItem('movimientos') || '[]');
+  lista.push({
+    id: `conc_${Date.now()}`,
+    tipo: diff > 0 ? 'ingreso' : 'gasto',
+    monto: Math.abs(diff),
+    cat: 'conciliacion',
+    descripcion: `⚖️ Ajuste banco ${new Date().toLocaleDateString('es-HN')}`,
+    fecha: new Date().toISOString(),
+    metodoPago: 'ajuste',
+    tipoIngreso: 'ninguno',
+    esAjuste: true  // ← Flag para identificar en reportes
+  });
+  localStorage.setItem('movimientos', JSON.stringify(lista));
+  
+  actualizar();
+  renderMov();
+  document.getElementById('resConc').classList.add('hidden');
+  document.getElementById('saldoBanco').value = '';
+  toast('✅ Ajuste registrado en historial', 'success');
+  delete window._conc;
 }
 
 // ==================== AHORRO & CONFIG ====================
-function activarAhorro(){const pct=parseFloat(document.getElementById('ahorroPct').value)||15,dest=document.getElementById('ahorroDest').value;
-  localStorage.setItem('ahorro_pct',pct.toString());localStorage.setItem('ahorro_dest',dest);document.getElementById('ahorroStatus').style.display='block';toast(`✅ Ahorro ${pct}% activado → ${dest}`,'success');}
-function cfgAutoCampos(){document.getElementById('catMov')?.addEventListener('change',e=>{const desc=document.getElementById('descMov'),met=document.getElementById('metMov');
-  const map={'combustible':'Gasolina - ','peajes':'Peaje ruta - ','mantenimiento':'Cambio aceite/filtros - ','educacion':'Mensualidad - ','alimentacion':'Supermercado/Mercado - '};
-  if(map[e.target.value]){desc.placeholder=map[e.target.value];desc.focus();}if(['combustible','peajes','alimentacion'].includes(e.target.value)){met.value='efectivo';}});}
-function guardarCfg(){localStorage.setItem('cfg_nombre',document.getElementById('cfgNombre').value);localStorage.setItem('cfg_moneda',document.getElementById('cfgMoneda').value);
-  CFG.nombre=document.getElementById('cfgNombre').value;CFG.moneda=document.getElementById('cfgMoneda').value;actualizar();toast('✅ Configuración guardada','success');}
-
-// ==================== RESPALDO SEGURO ====================
-function exportarJSON(){const d={v:'3.0',fecha:new Date().toISOString(),cfg:{moneda:CFG.moneda,nombre:CFG.nombre,saldoIni:CFG.saldoIni},movimientos:localStorage.getItem('movimientos'),alertas:localStorage.getItem('alertas')};
-  const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),f=`mis-finanzas-${new Date().toISOString().slice(0,10)}.json`;
-  if(navigator.share&&navigator.canShare?.({files:[new File([b],f,{type:'application/json'})]}))navigator.share({title:'Respaldo',files:[new File([b],f)]}).catch(()=>dl(u,f));else dl(u,f);}
-function dl(u,f){const a=document.createElement('a');a.href=u;a.download=f;a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),100);}
-
-function importarJSON(){
-  const input=document.createElement('input');input.type='file';input.accept='.json';
-  input.onchange=e=>{const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();r.onload=ev=>{
-      try{
-        const data=JSON.parse(ev.target.result);
-        // 🛡️ Validación estructural estricta
-        if(!data.cfg&&!data.movimientos&&!data.alertas) throw new Error('Estructura no reconocida');
-        if(data.cfg){localStorage.setItem('cfg_moneda',data.cfg.moneda||'L');localStorage.setItem('cfg_nombre',data.cfg.nombre||'');localStorage.setItem('saldoIni',data.cfg.saldoIni?.toString()||'0');}
-        if(data.movimientos)localStorage.setItem('movimientos',data.movimientos);
-        if(data.alertas)localStorage.setItem('alertas',data.alertas);
-        toast('✅ Datos importados correctamente','success');setTimeout(()=>location.reload(),1000);
-      }catch(err){toast('❌ Archivo dañado o incompatible: '+err.message,'error');}
-    };r.readAsText(f);};input.click();
+function activarAhorro() {
+  const pct = parseFloat(document.getElementById('ahorroPct').value) || 15;
+  const dest = document.getElementById('ahorroDest').value;
+  localStorage.setItem('ahorro_pct', pct.toString());
+  localStorage.setItem('ahorro_dest', dest);
+  document.getElementById('ahorroStatus').style.display = 'block';
+  toast(`✅ Ahorro ${pct}% activado → ${dest}`, 'success');
 }
 
-function exportarExcel(){const wb=XLSX.utils.book_new(),mov=JSON.parse(localStorage.getItem('movimientos')||'[]'),alertas=JSON.parse(localStorage.getItem('alertas')||'[]');
-  const ing=mov.filter(m=>m.tipo==='ingreso'),gas=mov.filter(m=>m.tipo==='gasto'),tI=ing.reduce((s,m)=>s+m.monto,0),tG=gas.reduce((s,m)=>s+m.monto,0),saldo=tI-tG+CFG.saldoIni;
-  const r=[['Presupuesto mensual personal'],[],['INGRESOS MENSUALES REALES'],['Total de ingresos mensuales','',CFG.moneda+' '+tI.toFixed(2)],['SALDO REAL','',CFG.moneda+' '+saldo.toFixed(2)],[],['GASTOS POR CATEGORÍA'],['Categoría','Previsto','Real','Diferencia']];
-  const pc={};gas.forEach(g=>pc[g.cat]=(pc[g.cat]||0)+g.monto);Object.entries(pc).forEach(([c,t])=>r.push([c,'-',CFG.moneda+' '+t.toFixed(2),'-']));
-  r.push([],['TOTAL DE COSTO REAL','',CFG.moneda+' '+tG.toFixed(2)],['DIFERENCIA DE TOTALES','',CFG.moneda+' '+(tI-tG).toFixed(2)]);
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r),'Resumen Mensual');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mov.map(m=>({Fecha:new Date(m.fecha).toLocaleDateString('es-HN'),Tipo:m.tipo==='ingreso'?'💰 Ingreso':'💸 Gasto',Categoría:m.cat,Descripción:m.descripcion,Monto:CFG.moneda+' '+m.monto.toFixed(2),Método:m.metodoPago,Ajuste:m.esAjuste?'Sí':'No'}))), 'Movimientos');
-  if(alertas.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alertas.map(a=>({Descripción:a.descripcion,Tipo:a.tipo,Monto:a.monto!==null?CFG.moneda+' '+a.monto.toFixed(2):'-','Fecha Límite':new Date(a.fechaLimite).toLocaleDateString('es-HN'),Activa:a.activa?'Sí':'No'}))), 'Alertas');
-  XLSX.writeFile(wb,`mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`);}
-function reiniciarApp(){if(confirm('⚠️ ¿Borrar todos los datos?')){localStorage.clear();location.reload();}}
+function cfgAutoCampos() {
+  document.getElementById('catMov')?.addEventListener('change', e => {
+    const desc = document.getElementById('descMov');
+    const met = document.getElementById('metMov');
+    const map = {
+      'combustible': 'Gasolina - ',
+      'peajes': 'Peaje ruta - ',
+      'mantenimiento': 'Cambio aceite/filtros - ',
+      'educacion': 'Mensualidad - ',
+      'alimentacion': 'Supermercado/Mercado - '
+    };
+    if (map[e.target.value]) {
+      desc.placeholder = map[e.target.value];
+      desc.focus();
+    }
+    if (['combustible', 'peajes', 'alimentacion'].includes(e.target.value)) {
+      met.value = 'efectivo';
+    }
+  });
+}
+
+function guardarCfg() {
+  localStorage.setItem('cfg_nombre', document.getElementById('cfgNombre').value);
+  localStorage.setItem('cfg_moneda', document.getElementById('cfgMoneda').value);
+  CFG.nombre = document.getElementById('cfgNombre').value;
+  CFG.moneda = document.getElementById('cfgMoneda').value;
+  actualizar();
+  toast('✅ Configuración guardada', 'success');
+}
+
+// ==================== RESPALDO SEGURO ====================
+function exportarJSON() {
+  const d = {
+    v: '3.2',
+    fecha: new Date().toISOString(),
+    cfg: { moneda: CFG.moneda, nombre: CFG.nombre, saldoIni: CFG.saldoIni },
+    movimientos: localStorage.getItem('movimientos'),
+    alertas: localStorage.getItem('alertas')
+  };
+  const b = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+  const u = URL.createObjectURL(b);
+  const f = `mis-finanzas-${new Date().toISOString().slice(0, 10)}.json`;
+  
+  if (navigator.share && navigator.canShare?.({ files: [new File([b], f, { type: 'application/json' })] })) {
+    navigator.share({ title: 'Respaldo Mis Finanzas HN', files: [new File([b], f)] })
+      .catch(() => dl(u, f));
+  } else {
+    dl(u, f);
+  }
+}
+
+function dl(u, f) {
+  const a = document.createElement('a');
+  a.href = u;
+  a.download = f;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(u), 100);
+}
+
+function importarJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        // 🛡️ Validación estructural estricta
+        if (!data.cfg && !data.movimientos && !data.alertas) {
+          throw new Error('Estructura no reconocida');
+        }
+        if (data.cfg) {
+          localStorage.setItem('cfg_moneda', data.cfg.moneda || 'L');
+          localStorage.setItem('cfg_nombre', data.cfg.nombre || '');
+          localStorage.setItem('saldoIni', data.cfg.saldoIni?.toString() || '0');
+        }
+        if (data.movimientos) localStorage.setItem('movimientos', data.movimientos);
+        if (data.alertas) localStorage.setItem('alertas', data.alertas);
+        toast('✅ Datos importados correctamente', 'success');
+        setTimeout(() => location.reload(), 1000);
+      } catch (err) {
+        toast('❌ Archivo dañado o incompatible: ' + err.message, 'error');
+      }
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
+
+function exportarExcel() {
+  const wb = XLSX.utils.book_new();
+  const mov = JSON.parse(localStorage.getItem('movimientos') || '[]');
+  const alertas = JSON.parse(localStorage.getItem('alertas') || '[]');
+  
+  const ing = mov.filter(m => m.tipo === 'ingreso');
+  const gas = mov.filter(m => m.tipo === 'gasto');
+  const tI = ing.reduce((s, m) => s + m.monto, 0);
+  const tG = gas.reduce((s, m) => s + m.monto, 0);
+  const saldo = tI - tG + CFG.saldoIni;
+  
+  // Hoja 1: Resumen (como tu plantilla)
+  const resumen = [
+    ['Presupuesto mensual personal'], [],
+    ['INGRESOS MENSUALES REALES'],
+    ['Total de ingresos mensuales', '', `${CFG.moneda} ${tI.toFixed(2)}`],
+    ['SALDO REAL', '', `${CFG.moneda} ${saldo.toFixed(2)}`], [],
+    ['GASTOS POR CATEGORÍA'],
+    ['Categoría', 'Previsto', 'Real', 'Diferencia']
+  ];
+  const pc = {};
+  gas.forEach(g => pc[g.cat] = (pc[g.cat] || 0) + g.monto);
+  Object.entries(pc).forEach(([c, t]) => resumen.push([c, '-', `${CFG.moneda} ${t.toFixed(2)}`, '-']));
+  resumen.push([], ['TOTAL DE COSTO REAL', '', `${CFG.moneda} ${tG.toFixed(2)}`], ['DIFERENCIA DE TOTALES', '', `${CFG.moneda} ${(tI - tG).toFixed(2)}`]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen Mensual');
+  
+  // Hoja 2: Movimientos
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+    mov.map(m => ({
+      Fecha: new Date(m.fecha).toLocaleDateString('es-HN'),
+      Tipo: m.tipo === 'ingreso' ? '💰 Ingreso' : '💸 Gasto',
+      Categoría: m.cat,
+      Descripción: m.descripcion,
+      Monto: `${CFG.moneda} ${m.monto.toFixed(2)}`,
+      Método: m.metodoPago,
+      Ajuste: m.esAjuste ? 'Sí' : 'No'
+    }))
+  ), 'Movimientos');
+  
+  // Hoja 3: Alertas
+  if (alertas.length) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      alertas.map(a => ({
+        Descripción: a.descripcion,
+        Tipo: a.tipo,
+        Monto: a.monto !== null ? `${CFG.moneda} ${a.monto.toFixed(2)}` : '-',
+        'Fecha Límite': new Date(a.fechaLimite).toLocaleDateString('es-HN'),
+        Activa: a.activa ? 'Sí' : 'No'
+      }))
+    ), 'Alertas');
+  }
+  XLSX.writeFile(wb, `mis-finanzas-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+function reiniciarApp() {
+  if (confirm('⚠️ ¿Borrar todos los datos?')) {
+    localStorage.clear();
+    location.reload();
+  }
+}
 </script>
 </body>
 </html>
