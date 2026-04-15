@@ -1,40 +1,69 @@
 <!DOCTYPE html>
-<html lang="es-HN">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f1117">
   <title>Sin Conexión | Mis Finanzas HN</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center}
-    .card{background:#1e2337;padding:30px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);max-width:400px;width:100%}
-    .icon{font-size:4rem;margin-bottom:16px}
-    h1{margin-bottom:8px;font-size:1.5rem}
-    p{color:#94a3b8;margin-bottom:20px;line-height:1.5}
-    .btn{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:600;cursor:pointer;width:100%}
-    .status{margin-top:16px;font-size:0.9rem;color:#22c55e}
-    .status.offline{color:#f59e0b}
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { 
+      font-family:system-ui,-apple-system,'Space Grotesk',sans-serif; 
+      background:#0f1117; color:#f0eff4; 
+      display:flex; align-items:center; justify-content:center; 
+      min-height:100vh; padding:20px; text-align:center; 
+    }
+    .card { 
+      background:#1a1d27; border:1px solid #2d3147; 
+      border-radius:16px; padding:30px 25px; max-width:360px; 
+    }
+    .icon { font-size:48px; margin-bottom:15px; }
+    h1 { font-size:20px; margin-bottom:10px; color:#f0a500; }
+    p { color:#9b9eb5; font-size:14px; line-height:1.5; margin-bottom:20px; }
+    .btn { 
+      width:100%; padding:14px; border-radius:12px; border:none; 
+      font-weight:600; cursor:pointer; background:#f0a500; color:#0f1117; 
+      margin-bottom:10px; 
+    }
+    .security-note {
+      background:#232736; border-left:3px solid #9b7fe8;
+      padding:12px; border-radius:8px; margin-top:20px;
+      font-size:12px; color:#9b9eb5; text-align:left;
+    }
+    .security-note strong { color:#f0a500; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="icon">📡</div>
     <h1>Sin Conexión</h1>
-    <p>Tus datos están seguros. La app funciona offline y sincronizará cuando recuperes conexión.</p>
-    <button class="btn" onclick="location.reload()">🔄 Reintentar</button>
-    <div class="status" id="status"><span id="txt">Modo offline activo</span></div>
+    <p>Tus datos están seguros. La app funciona completamente offline.</p>
+    
+    <div class="security-note">
+      <strong>🔒 Tu privacidad:</strong><br>
+      • Los datos nunca salen de tu dispositivo<br>
+      • Sin servidores externos<br>
+      • Sin rastreo ni analytics
+    </div>
+    
+    <button class="btn" onclick="window.location.href='./index.html'">🔄 Reintentar</button>
   </div>
+  
   <script>
-    window.addEventListener('online', () => { 
-      document.getElementById('txt').textContent = '¡Conexión restaurada!'; 
-      document.getElementById('status').className = 'status'; 
-      setTimeout(() => location.href = './index.html', 1500); 
+    // Auto-reintentar cuando haya conexión
+    window.addEventListener('online', () => {
+      window.location.href = './index.html';
     });
-    window.addEventListener('offline', () => { 
-      document.getElementById('txt').textContent = 'Modo offline activo'; 
-      document.getElementById('status').className = 'status offline'; 
-    });
-    if (navigator.onLine) location.href = './index.html';
+    
+    // Mostrar mensaje si está offline por mucho tiempo
+    let offlineTime = 0;
+    setInterval(() => {
+      offlineTime++;
+      if(offlineTime >= 30) {
+        document.querySelector('p').innerHTML = 
+          'Tu app sigue funcionando offline.<br>Tus datos están seguros en este dispositivo.';
+      }
+    }, 1000);
   </script>
 </body>
 </html>
