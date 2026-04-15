@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finanzas-hn-v3.3';
+const CACHE_NAME = 'finanzas-hn-v3.6';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -27,19 +27,6 @@ self.addEventListener('fetch', e => {
       return res;
     }).catch(() => e.request.mode === 'navigate' ? caches.match('./offline.html') : new Response('Offline', { status: 503 })))
   );
-});
-
-self.addEventListener('push', e => {
-  const data = e.data?.json() || { title: 'Mis Finanzas HN', body: 'Tienes una alerta pendiente' };
-  e.waitUntil(self.registration.showNotification(data.title, { 
-    body: data.body, tag: data.tag || 'alerta-finanzas', 
-    icon: 'https://cdn-icons-png.flaticon.com/512/2489/2489756.png' 
-  }));
-});
-
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  e.waitUntil(clients.matchAll({ type: 'window' }).then(list => list.length ? list[0].focus() : clients.openWindow('./index.html')));
 });
 
 self.addEventListener('message', e => {
