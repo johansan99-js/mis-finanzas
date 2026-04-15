@@ -38,23 +38,26 @@
     .nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:calc(8px + env(safe-area-inset-bottom)) 0;z-index:100}
     .nav-i{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;color:var(--text2);text-decoration:none;font-size:0.75rem;cursor:pointer}.nav-i.active{color:var(--accent)}.nav-ic{font-size:1.3rem}
     .fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:1.5rem;cursor:pointer;box-shadow:0 4px 20px rgba(59,130,246,0.5);z-index:90}
-    .conc-res{padding:12px;background:var(--bg2);border-radius:10px;margin:12px 0}.diff-p{color:var(--ok)}.diff-n{color:var(--err)}
     .tc{text-align:center}.mt2{margin-top:16px}.hidden{display:none!important}.t-ok{color:var(--ok)}.t-err{color:var(--err)}
-    .mov-item,.cuenta-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}.mov-item:last-child,.cuenta-item:last-child{border-bottom:none}
-    .badge{font-size:0.7rem;padding:2px 6px;border-radius:4px;background:var(--warn);color:#000;margin-right:6px}
+    .cuenta-card{background:var(--bg2);padding:12px;border-radius:10px;margin-bottom:10px;border:1px solid var(--border)}
+    .cuenta-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .cuenta-info{font-size:0.9rem;color:var(--text2)}
+    .progress{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin:8px 0}.progress-fill{height:100%;transition:width 0.4s ease}
+    .progress-ok .progress-fill{background:var(--ok)}.progress-warn .progress-fill{background:var(--warn)}.progress-err .progress-fill{background:var(--err)}
+    .abono-box{display:flex;gap:6px;margin-top:8px}
+    .abono-box input{flex:1;padding:8px;font-size:0.9rem}
+    .btn-icon{background:none;border:none;color:var(--text2);font-size:1.2rem;cursor:pointer;padding:4px}.btn-icon:hover{color:var(--err)}
     .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-20px);padding:12px 20px;border-radius:12px;color:#fff;font-weight:500;font-size:0.95rem;z-index:1000;opacity:0;transition:all 0.3s;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,0.4);max-width:90%;text-align:center}
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
     .toast.success{background:linear-gradient(135deg,#16a34a,#22c55e)}.toast.error{background:linear-gradient(135deg,#dc2626,#ef4444)}.toast.info{background:linear-gradient(135deg,#2563eb,#3b82f6)}
-    .btn-icon{background:none;border:none;color:var(--text2);font-size:1.2rem;cursor:pointer;padding:4px}.btn-icon:hover{color:var(--err)}
-    .total-bar{background:var(--bg2);padding:12px 16px;border-radius:10px;margin:8px 0;display:flex;justify-content:space-between;font-weight:600}
-    .progress{height:8px;background:var(--bg2);border-radius:4px;overflow:hidden;margin:10px 0}.progress-fill{height:100%;background:linear-gradient(90deg,var(--ok),#10b981);transition:width 0.4s ease}
+    .historial{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:0.85rem;color:var(--text2);max-height:60px;overflow-y:auto}
+    .historial div{display:flex;justify-content:space-between;padding:2px 0}
   </style>
 </head>
 <body>
 <div class="container">
   <header><div class="app-title">💰 Mis Finanzas HN</div><button class="install-btn" id="instBtn">📱 Instalar</button></header>
 
-  <!-- ONBOARDING -->
   <section id="onboarding" class="active">
     <div class="card"><h3 style="margin-bottom:12px">👋 Bienvenido</h3><p style="color:var(--text2);margin-bottom:16px">Para comenzar tu administración financiera:</p>
       <div class="form-g"><label for="saldoInicio">¿Cuánto dinero tienes actualmente?</label>
@@ -66,143 +69,91 @@
     </div>
   </section>
 
-  <!-- HOME -->
   <section id="home">
-    <!-- ✅ DISPONIBLE ARRIBA (NÚMERO VERDE PRINCIPAL) -->
-    <div class="card">
-      <div class="balance-label">DISPONIBLE</div>
-      <div class="balance" id="saldoDisplay">L. 0.00</div>
-      <div class="stats">
-        <div class="stat"><span class="stat-v t-ok" id="ingDisplay">L. 0</span><span class="stat-l">Ingresos</span></div>
+    <div class="card"><div class="balance-label">DISPONIBLE</div><div class="balance" id="saldoDisplay">L. 0.00</div>
+      <div class="stats"><div class="stat"><span class="stat-v t-ok" id="ingDisplay">L. 0</span><span class="stat-l">Ingresos</span></div>
         <div class="stat"><span class="stat-v t-err" id="gasDisplay">L. 0</span><span class="stat-l">Gastos</span></div>
-        <div class="stat"><span class="stat-v" id="ahorroDisplay">L. 0</span><span class="stat-l">Ahorro</span></div>
-      </div>
+        <div class="stat"><span class="stat-v" id="ahorroDisplay">L. 0</span><span class="stat-l">Ahorro</span></div></div>
     </div>
 
-    <!-- ✅ META DE AHORRO MANUAL (REEMPLAZA EL AUTO-PORCENTAJE) -->
-    <div class="card" id="metaCard">
-      <div class="card-header"><span>🎯 Meta de Ahorro</span></div>
-      <div id="metaForm">
-        <div class="form-g"><label>Nombre de la meta</label><input type="text" id="metaNombre" placeholder="Ej: Laptop, Vacaciones, Emergencia"></div>
+    <div class="card" id="metaCard"><div class="card-header"><span>🎯 Meta de Ahorro</span></div>
+      <div id="metaForm"><div class="form-g"><label>Nombre de la meta</label><input type="text" id="metaNombre" placeholder="Ej: Laptop, Vacaciones, Emergencia"></div>
         <div class="form-g"><label>Monto objetivo</label><input type="number" id="metaMonto" placeholder="Ej: 10000" step="0.01" min="0"></div>
-        <button class="btn btn-ok" onclick="definirMeta()">✅ Definir Meta</button>
-      </div>
-      <div id="metaActiva" class="hidden">
-        <h4 id="metaTitulo" style="margin-bottom:4px">Meta</h4>
+        <button class="btn btn-ok" onclick="definirMeta()">✅ Definir Meta</button></div>
+      <div id="metaActiva" class="hidden"><h4 id="metaTitulo" style="margin-bottom:4px">Meta</h4>
         <p style="color:var(--text2);font-size:0.9rem"><span id="metaProgreso">0%</span> completado • Faltan: <span id="metaFalta" class="t-err">L. 0</span></p>
         <div class="progress"><div class="progress-fill" id="metaBarra" style="width:0%"></div></div>
         <div class="form-g" style="margin-top:12px"><label>Abonar a la meta</label>
-          <div style="display:flex;gap:8px">
-            <input type="number" id="metaAbonoMonto" placeholder="Ej: 200" step="0.01" min="0">
-            <button class="btn btn-ok" style="width:auto" onclick="abonarAhorro()">💰 Abonar</button>
-          </div>
-        </div>
-        <button class="btn btn-s" onclick="resetearMeta()" style="margin-top:8px;font-size:0.85rem">🔄 Cambiar/Reiniciar Meta</button>
-      </div>
+          <div style="display:flex;gap:8px"><input type="number" id="metaAbonoMonto" placeholder="Ej: 200" step="0.01" min="0"><button class="btn btn-ok" style="width:auto" onclick="abonarAhorro()">💰 Abonar</button></div>
+        </div><button class="btn btn-s" onclick="resetearMeta()" style="margin-top:8px;font-size:0.85rem">🔄 Cambiar/Reiniciar Meta</button></div>
     </div>
 
-    <!-- Cuentas por Cobrar -->
+    <!-- ✅ CUENTAS POR COBRAR (ABONOS PARCIALES) -->
     <div class="card"><div class="card-header"><span>💰 Dinero que me deben</span><button class="btn-s btn-sm" onclick="nav('cobrar')">+ Nuevo</button></div>
-      <div id="listaCobrar"><p class="tc" style="color:var(--text2)">Sin cuentas por cobrar</p></div>
-      <div class="total-bar"><span>TOTAL POR COBRAR:</span><span id="totalCobrar" class="t-ok">L. 0.00</span></div></div>
+      <div id="listaCobrar"></div><div class="total-bar"><span>TOTAL POR COBRAR:</span><span id="totalCobrar" class="t-ok">L. 0.00</span></div></div>
 
-    <!-- Cuentas por Pagar -->
+    <!-- ✅ CUENTAS POR PAGAR (ABONOS PARCIALES) -->
     <div class="card"><div class="card-header"><span>💸 Lo que debo pagar</span><button class="btn-s btn-sm" onclick="nav('pagar')">+ Nuevo</button></div>
-      <div id="listaPagar"><p class="tc" style="color:var(--text2)">Sin cuentas por pagar</p></div>
-      <div class="total-bar"><span>TOTAL POR PAGAR:</span><span id="totalPagar" class="t-err">L. 0.00</span></div></div>
+      <div id="listaPagar"></div><div class="total-bar"><span>TOTAL POR PAGAR:</span><span id="totalPagar" class="t-err">L. 0.00</span></div></div>
 
-    <div class="card"><div class="card-header"><span>🔔 Alertas</span><button class="btn-s btn-sm" onclick="nav('alertas')">+ Nueva</button></div>
-      <div id="listaAlertas"><p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p></div></div>
+    <div class="card"><div class="card-header"><span>🔔 Alertas</span><button class="btn-s btn-sm" onclick="nav('alertas')">+ Nueva</button></div><div id="listaAlertas"><p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p></div></div>
+    <div class="card"><div class="card-header"><span>📜 Movimientos Recientes</span></div><div id="listaMovimientos"><p class="tc" style="color:var(--text2)">Sin movimientos aún</p></div></div>
 
-    <div class="card"><div class="card-header"><span>📜 Movimientos Recientes</span></div>
-      <div id="listaMovimientos"><p class="tc" style="color:var(--text2)">Sin movimientos aún</p></div></div>
-
-    <!-- Conciliación Bancaria -->
     <div class="card"><div class="card-header"><span>🏦 Conciliación Bancaria</span></div>
       <p style="font-size:0.85rem;color:var(--text2);margin-bottom:12px">Ajusta tus registros al saldo real de tu banco</p>
       <div class="form-g"><label>Saldo en la app</label><div id="saldoAppDisplay" style="font-size:1.2rem;font-weight:600">L. 0.00</div></div>
       <div class="form-g"><label>Saldo real en tu banco</label><input type="number" id="saldoBanco" placeholder="Ej: 4850.50" step="0.01" min="0"></div>
       <button class="btn btn-s" id="btnCalcConc">🔍 Calcular diferencia</button>
-      <div id="resConc" class="hidden"><div class="conc-res"><p><strong>Diferencia:</strong> <span id="diffConc">L. 0.00</span></p><p id="sugConc" style="font-size:0.85rem;color:var(--text2)"></p></div>
+      <div id="resConc" class="hidden"><div style="padding:12px;background:var(--bg2);border-radius:10px;margin:12px 0"><p><strong>Diferencia:</strong> <span id="diffConc">L. 0.00</span></p><p id="sugConc" style="font-size:0.85rem;color:var(--text2)"></p></div>
         <button class="btn btn-ok" id="btnAjustConc">✅ Ajustar automáticamente</button></div>
     </div>
   </section>
 
-  <!-- CUENTAS POR COBRAR -->
   <section id="cobrar">
     <div class="card"><div class="card-header"><span>💰 Nuevo: Dinero que me deben</span></div>
       <div class="form-g"><label>Persona/Empresa</label><input type="text" id="cobrarNombre" placeholder="Ej: Juan Pérez"></div>
-      <div class="form-g"><label>Monto</label><input type="number" id="cobrarMonto" placeholder="Ej: 500" step="0.01" min="0" required></div>
+      <div class="form-g"><label>Monto total</label><input type="number" id="cobrarMonto" placeholder="Ej: 500" step="0.01" min="0" required></div>
       <div class="form-g"><label>Descripción</label><input type="text" id="cobrarDesc" placeholder="Ej: Préstamo personal"></div>
       <div class="form-g"><label>Fecha límite</label><input type="date" id="cobrarFecha"></div>
       <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarCobrar()">Guardar</button></div>
     </div>
-    <div class="card"><div class="card-header"><span>Cuentas por Cobrar</span></div><div id="listaCobrarDet"></div></div>
   </section>
 
-  <!-- CUENTAS POR PAGAR -->
   <section id="pagar">
     <div class="card"><div class="card-header"><span>💸 Nuevo: Lo que debo pagar</span></div>
       <div class="form-g"><label>Proveedor/Persona</label><input type="text" id="pagarNombre" placeholder="Ej: Electricidad"></div>
-      <div class="form-g"><label>Monto</label><input type="number" id="pagarMonto" placeholder="Ej: 350" step="0.01" min="0" required></div>
+      <div class="form-g"><label>Monto total</label><input type="number" id="pagarMonto" placeholder="Ej: 350" step="0.01" min="0" required></div>
       <div class="form-g"><label>Descripción</label><input type="text" id="pagarDesc" placeholder="Ej: Factura #1234"></div>
       <div class="form-g"><label>Fecha límite</label><input type="date" id="pagarFecha"></div>
       <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarPagar()">Guardar</button></div>
     </div>
-    <div class="card"><div class="card-header"><span>Cuentas por Pagar</span></div><div id="listaPagarDet"></div></div>
   </section>
 
-  <!-- ALERTAS -->
-  <section id="alertas">
-    <div class="card"><div class="card-header"><span>🔔 Nueva Alerta</span></div>
+  <section id="alertas"><div class="card"><div class="card-header"><span>🔔 Nueva Alerta</span></div>
       <div class="form-g"><label>Tipo</label><select id="tipoAlerta"><option value="vencimiento">📅 Vencimiento</option><option value="limite">⚠️ Límite gasto</option><option value="meta">🎯 Meta ahorro</option></select></div>
       <div class="form-g"><label>Descripción</label><input type="text" id="descAlerta" placeholder="Ej: Pago tarjeta"></div>
       <div class="form-g"><label>Monto (opcional)</label><input type="number" id="montoAlerta" placeholder="Ej: 500" step="0.01" min="0"></div>
       <div class="form-g"><label>Fecha límite</label><input type="date" id="fechaAlerta"></div>
-      <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarAlerta()">Guardar</button></div>
-    </div>
-  </section>
+      <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarAlerta()">Guardar</button></div></div></section>
 
-  <!-- CONFIGURACIÓN -->
-  <section id="config">
-    <div class="card"><div class="card-header"><span>⚙️ Configuración</span></div>
+  <section id="config"><div class="card"><div class="card-header"><span>⚙️ Configuración</span></div>
       <div class="form-g"><label>Nombre</label><input type="text" id="cfgNombre" placeholder="Tu nombre"></div>
       <div class="form-g"><label>Moneda</label><select id="cfgMoneda"><option value="L">Lempiras (L)</option><option value="$">Dólares ($)</option><option value="€">Euros (€)</option></select></div>
-      <button class="btn btn-p" onclick="guardarCfg()">Guardar</button>
-    </div>
+      <button class="btn btn-p" onclick="guardarCfg()">Guardar</button></div>
     <div class="card"><div class="card-header"><span>🔔 Notificaciones</span></div>
-      <button class="btn btn-s" onclick="pedirNotif()">Activar notificaciones</button>
-      <small class="hint">Solo alertas críticas (vencimientos o 80% límite)</small>
-    </div>
-  </section>
+      <button class="btn btn-s" onclick="pedirNotif()">Activar notificaciones</button><small class="hint">Solo alertas críticas (vencimientos o 80% límite)</small></div></section>
 
-  <!-- RESPALDO -->
-  <section id="respaldo">
-    <div class="card"><div class="card-header"><span>💾 Respaldo</span></div>
+  <section id="respaldo"><div class="card"><div class="card-header"><span>💾 Respaldo</span></div>
       <div class="btn-g"><button class="btn btn-s" onclick="exportarJSON()">📥 JSON</button><button class="btn btn-s" onclick="exportarExcel()">📊 Excel</button></div>
-      <button class="btn btn-s mt2" onclick="importarJSON()">📤 Importar</button>
-      <button class="btn btn-err mt2" onclick="reiniciarApp()">🗑 Reiniciar app</button>
-    </div>
-  </section>
+      <button class="btn btn-s mt2" onclick="importarJSON()">📤 Importar</button><button class="btn btn-err mt2" onclick="reiniciarApp()">🗑 Reiniciar app</button></div></section>
 
-  <!-- FORMULARIO MOVIMIENTO -->
-  <section id="formMov">
-    <div class="card"><div class="card-header"><span id="titMov">📉 Nuevo Gasto</span><button class="btn-s btn-sm" onclick="toggleTipoMov()">💰/📉</button></div>
+  <section id="formMov"><div class="card"><div class="card-header"><span id="titMov">📉 Nuevo Gasto</span><button class="btn-s btn-sm" onclick="toggleTipoMov()">💰/📉</button></div>
       <div class="form-g"><label>Monto</label><input type="number" id="montoMov" placeholder="Ej: 250.00" step="0.01" min="0" required></div>
-      <div class="form-g"><label>Categoría</label><select id="catMov">
-        <option value="vivienda">🏠 Vivienda</option><option value="alimentacion">🍽 Alimentación</option>
-        <option value="combustible">⛽ Combustible</option><option value="peajes">🛣 Peajes</option>
-        <option value="mantenimiento">🔧 Mantenimiento Vehículo</option><option value="transporte_pub">🚌 Transporte Público</option>
-        <option value="educacion">🎓 Educación</option><option value="tecnologia">💻 Tecnología</option>
-        <option value="salud">🏥 Salud</option><option value="ocio">🎬 Ocio</option><option value="familia">👨‍👩‍👧‍👦 Familia</option>
-        <option value="impuestos">📄 Impuestos</option><option value="ahorro">🎯 Ahorro Manual</option><option value="otros">📦 Otros</option>
-      </select></div>
+      <div class="form-g"><label>Categoría</label><select id="catMov"><option value="vivienda">🏠 Vivienda</option><option value="alimentacion">🍽 Alimentación</option><option value="combustible">⛽ Combustible</option><option value="peajes">🛣 Peajes</option><option value="mantenimiento">🔧 Mantenimiento Vehículo</option><option value="transporte_pub">🚌 Transporte Público</option><option value="educacion">🎓 Educación</option><option value="tecnologia">💻 Tecnología</option><option value="salud">🏥 Salud</option><option value="ocio">🎬 Ocio</option><option value="familia">👨‍👩‍👧‍👦 Familia</option><option value="impuestos">📄 Impuestos</option><option value="ahorro">🎯 Ahorro Manual</option><option value="otros">📦 Otros</option></select></div>
       <div class="form-g"><label>Descripción</label><input type="text" id="descMov" placeholder="Ej: Supermercado"></div>
       <div class="form-g" id="ingresoTipoDiv" style="display:none"><label>Tipo de ingreso</label><select id="tipoIngreso"><option value="salario">💼 Salario</option><option value="extra">✨ Extra</option><option value="emprendimiento">🚀 Emprendimiento</option><option value="inversion">📈 Inversión</option></select></div>
       <div class="form-g"><label>Método</label><select id="metMov"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option></select></div>
-      <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarMov()">Guardar</button></div>
-    </div>
-  </section>
+      <div class="btn-g"><button class="btn btn-s" onclick="nav('home')">Cancelar</button><button class="btn btn-p" onclick="guardarMov()">Guardar</button></div></div></section>
 </div>
 
 <nav class="nav">
@@ -215,7 +166,6 @@
 <button class="fab" onclick="nav('formMov')">+</button>
 
 <script>
-// ==================== CONFIG & UTILS ====================
 const CFG = { moneda: localStorage.getItem('cfg_moneda')||'L', nombre: localStorage.getItem('cfg_nombre')||'', saldoIni: parseFloat(localStorage.getItem('saldoIni')||'0') };
 let movTipo = 'gasto';
 let meta = JSON.parse(localStorage.getItem('metaAhorro') || '{"nombre":"","monto":0,"abonado":0}');
@@ -234,12 +184,11 @@ function parseMonto(val){
   return (isNaN(num)||num<0) ? null : num;
 }
 
-// ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', ()=>{ init(); regSW(); cfgPWA(); cargar(); cfgConc(); cfgAutoCampos(); });
 function init(){
   document.getElementById('cfgNombre').value = CFG.nombre;
   document.getElementById('cfgMoneda').value = CFG.moneda;
-  renderMetaAhorro(); // Cargar estado de la meta
+  renderMetaAhorro();
   if(localStorage.getItem('appIniciada')==='true'){
     document.getElementById('onboarding').classList.remove('active');
     document.getElementById('home').classList.add('active');
@@ -261,7 +210,6 @@ function nav(id){
   if(id==='formMov') document.getElementById('ingresoTipoDiv').style.display = movTipo==='ingreso'?'block':'none';
 }
 
-// ==================== SALDO Y MOVIMIENTOS ====================
 function iniciarApp(){
   const s = parseMonto(document.getElementById('saldoInicio').value);
   if(s===null){ toast('⚠️ Ingresa un monto válido mayor a 0','error'); return; }
@@ -270,24 +218,16 @@ function iniciarApp(){
   actualizar(); toast(`✅ Comienzas con ${CFG.moneda} ${s.toFixed(2)}`,'success');
 }
 
-// ✅ CÁLCULO DE DISPONIBLE (Saldo Real = Inicial + Ingresos - Gastos)
-function calcSaldo(){
-  const mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
-  return mov.reduce((sum,m)=> m.tipo==='ingreso'? sum+m.monto : sum-m.monto, CFG.saldoIni);
-}
+function calcSaldo(){ return JSON.parse(localStorage.getItem('movimientos')||'[]').reduce((sum,m)=> m.tipo==='ingreso'? sum+m.monto : sum-m.monto, CFG.saldoIni); }
 
 function actualizar(){
-  const saldo = calcSaldo();
-  const mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
+  const saldo = calcSaldo(), mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
   const ing = mov.filter(x=>x.tipo==='ingreso').reduce((s,x)=>s+x.monto,0);
   const gas = mov.filter(x=>x.tipo==='gasto').reduce((s,x)=>s+x.monto,0);
-  
-  // ✅ DISPONIBLE ES EL NÚMERO VERDE PRINCIPAL
   document.getElementById('saldoDisplay').textContent = `${CFG.moneda} ${saldo.toFixed(2)}`;
   document.getElementById('ingDisplay').textContent = `${CFG.moneda} ${ing.toFixed(0)}`;
   document.getElementById('gasDisplay').textContent = `${CFG.moneda} ${gas.toFixed(0)}`;
   document.getElementById('ahorroDisplay').textContent = `${CFG.moneda} ${meta.abonado.toFixed(0)}`;
-  
   const d = document.getElementById('saldoAppDisplay'); if(d) d.textContent = `${CFG.moneda} ${saldo.toFixed(2)}`;
   renderCobrar(); renderPagar();
 }
@@ -299,185 +239,74 @@ function guardarMov(){
   if(monto===null||monto<=0){ toast('⚠️ Monto inválido','error'); return; }
   const mov = { id:`m_${Date.now()}_${Math.random().toString(36).slice(2,8)}`, tipo:movTipo, monto, cat, descripcion:desc, fecha:new Date().toISOString(), metodoPago:met, tipoIngreso:movTipo==='ingreso'?document.getElementById('tipoIngreso').value:'ninguno', esAjuste:false };
   const lista = JSON.parse(localStorage.getItem('movimientos')||'[]'); lista.push(mov);
-  
-  // ✅ ELIMINADO AUTO-AHORRO PORCENTUAL. AHORA ES MANUAL DESDE LA META.
-  
   localStorage.setItem('movimientos', JSON.stringify(lista)); actualizar(); renderMov(); nav('home'); document.getElementById('montoMov').value=''; document.getElementById('descMov').value=''; toast('✅ Guardado','success'); verifAlertasCriticas();
 }
 
 function renderMov(){
   const lista = JSON.parse(localStorage.getItem('movimientos')||'[]').slice(-10).reverse(), c = document.getElementById('listaMovimientos');
   if(!lista.length){ c.innerHTML='<p class="tc" style="color:var(--text2)">Sin movimientos aún</p>'; return; }
-  c.innerHTML = lista.map(m=>`
-    <div class="mov-item">
-      <div><strong>${m.descripcion}</strong><br><small style="color:var(--text2)">${new Date(m.fecha).toLocaleDateString('es-HN')} • ${m.cat}</small></div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-weight:600;color:${m.tipo==='ingreso'?'var(--ok)':'var(--err)'}">${m.tipo==='ingreso'?'+':'-'}${CFG.moneda} ${m.monto.toFixed(2)}</span>
-        <button class="btn-icon" onclick="eliminarMov('${m.id}')" title="Eliminar">🗑️</button>
-      </div>
-    </div>`).join('');
+  c.innerHTML = lista.map(m=>`<div class="cuenta-item"><div><strong>${m.descripcion}</strong><br><small style="color:var(--text2)">${new Date(m.fecha).toLocaleDateString('es-HN')} • ${m.cat}</small></div><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;color:${m.tipo==='ingreso'?'var(--ok)':'var(--err)'}">${m.tipo==='ingreso'?'+':'-'}${CFG.moneda} ${m.monto.toFixed(2)}</span><button class="btn-icon" onclick="eliminarMov('${m.id}')" title="Eliminar">🗑️</button></div></div>`).join('');
+}
+function eliminarMov(id){ if(!confirm('¿Eliminar este movimiento?')) return; let lista=JSON.parse(localStorage.getItem('movimientos')||'[]'); lista=lista.filter(m=>m.id!==id); localStorage.setItem('movimientos',JSON.stringify(lista)); actualizar(); renderMov(); toast('✅ Movimiento eliminado','success'); }
+
+// ✅ META DE AHORRO MANUAL
+function definirMeta(){ const n=document.getElementById('metaNombre').value.trim(), m=parseMonto(document.getElementById('metaMonto').value); if(!n||m===null||m<=0){toast('⚠️ Datos inválidos','error');return;} meta={nombre:n,monto:m,abonado:0}; localStorage.setItem('metaAhorro',JSON.stringify(meta)); renderMetaAhorro(); actualizar(); toast('✅ Meta definida','success'); }
+function renderMetaAhorro(){ const f=document.getElementById('metaForm'), a=document.getElementById('metaActiva'); if(meta.nombre&&meta.monto>0){ f.classList.add('hidden'); a.classList.remove('hidden'); document.getElementById('metaTitulo').textContent=`🎯 ${meta.nombre}`; const pct=Math.min(100,Math.round((meta.abonado/meta.monto)*100)); document.getElementById('metaProgreso').textContent=`${pct}%`; document.getElementById('metaFalta').textContent=`${CFG.moneda} ${Math.max(0,meta.monto-meta.abonado).toFixed(2)}`; document.getElementById('metaBarra').style.width=`${pct}%`; } else { f.classList.remove('hidden'); a.classList.add('hidden'); } }
+function abonarAhorro(){ const m=parseMonto(document.getElementById('metaAbonoMonto').value); if(m===null||m<=0){toast('⚠️ Monto inválido','error');return;} if(m>calcSaldo()){toast('❌ Saldo insuficiente','error');return;} JSON.parse(localStorage.getItem('movimientos')||'[]').push({id:`ah_${Date.now()}`,tipo:'gasto',monto:m,cat:'ahorro',descripcion:`🎯 Abono: ${meta.nombre}`,fecha:new Date().toISOString(),metodoPago:'traspaso',tipoIngreso:'ninguno',esAjuste:false}); meta.abonado+=m; localStorage.setItem('metaAhorro',JSON.stringify(meta)); document.getElementById('metaAbonoMonto').value=''; renderMetaAhorro(); actualizar(); toast('✅ Abonado','success'); }
+function resetearMeta(){ if(!confirm('¿Reiniciar meta?')) return; meta={nombre:'',monto:0,abonado:0}; localStorage.setItem('metaAhorro',JSON.stringify(meta)); renderMetaAhorro(); actualizar(); }
+
+// ✅ CUENTAS POR COBRAR (ABONOS PARCIALES)
+function guardarCobrar(){ const n=document.getElementById('cobrarNombre').value.trim(), m=parseMonto(document.getElementById('cobrarMonto').value), d=document.getElementById('cobrarDesc').value||'Préstamo', f=document.getElementById('cobrarFecha').value; if(!n||m===null||!f){toast('⚠️ Completa todo','error');return;} const l=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'); l.push({id:`cob_${Date.now()}`,nombre:n,montoOriginal:m,montoPagado:0,descripcion:d,fechaLimite:f,fechaCreacion:new Date().toISOString(),abonos:[]}); localStorage.setItem('cuentasCobrar',JSON.stringify(l)); document.getElementById('cobrarNombre').value=''; document.getElementById('cobrarMonto').value=''; document.getElementById('cobrarDesc').value=''; document.getElementById('cobrarFecha').value=''; renderCobrar(); nav('home'); toast('✅ Cuenta registrada','success'); }
+
+function renderCobrar(){ const l=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'), c=document.getElementById('listaCobrar'); let total=0, html='';
+  l.forEach(x=>{ const rest=x.montoOriginal-x.montoPagado; if(rest>0) total+=rest; const pct=Math.min(100,Math.round((x.montoPagado/x.montoOriginal)*100)); const cls=rest<=0?'progress-ok':pct<50?'progress-err':'progress-warn';
+    html+=`<div class="cuenta-card"><div class="cuenta-header"><strong>${x.nombre}</strong><span class="btn-icon" onclick="eliminarCuenta('cobrar','${x.id}')">🗑️</span></div><div class="cuenta-info">${x.descripcion} • Vence: ${new Date(x.fechaLimite).toLocaleDateString('es-HN')}</div><div class="progress ${cls}"><div class="progress-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text2);margin:4px 0"><span>Pagado: ${CFG.moneda} ${x.montoPagado.toFixed(2)}</span><span>Restante: <b>${CFG.moneda} ${rest.toFixed(2)}</b></span></div><div class="abono-box"><input type="number" id="abono_cob_${x.id}" placeholder="Monto" step="0.01" min="0"><button class="btn btn-ok" style="width:auto;padding:8px 12px" onclick="abonarCuenta('cobrar','${x.id}')">Abonar</button></div>${x.abonos.length?`<div class="historial">${x.abonos.slice(-3).map(a=>`<div><span>${new Date(a.fecha).toLocaleDateString('es-HN')}</span><span>+${CFG.moneda} ${a.monto.toFixed(2)}</span></div>`).join('')}</div>`:''}</div>`;
+  });
+  c.innerHTML=html||'<p class="tc" style="color:var(--text2)">Sin cuentas por cobrar</p>';
+  document.getElementById('totalCobrar').textContent=`${CFG.moneda} ${total.toFixed(2)}`;
 }
 
-function eliminarMov(id){
-  if(!confirm('¿Eliminar este movimiento? Esta acción no se puede deshacer.')) return;
-  let lista = JSON.parse(localStorage.getItem('movimientos')||'[]');
-  lista = lista.filter(m=>m.id!==id);
-  localStorage.setItem('movimientos', JSON.stringify(lista));
-  actualizar(); renderMov(); toast('✅ Movimiento eliminado','success');
+function abonarCuenta(tipo, id){ const input=document.getElementById(tipo==='cobrar'?`abono_cob_${id}`:`abono_pag_${id}`); const m=parseMonto(input.value); if(m===null||m<=0){toast('⚠️ Ingresa un monto válido','error');return;} const key=tipo==='cobrar'?'cuentasCobrar':'cuentasPagar'; const l=JSON.parse(localStorage.getItem(key)||'[]'); const c=l.find(x=>x.id===id); if(!c)return; const rest=c.montoOriginal-c.montoPagado; const abono=Math.min(m, rest);
+  c.montoPagado+=abono; c.abonos.push({fecha:new Date().toISOString(),monto:abono});
+  localStorage.setItem(key,JSON.stringify(l));
+  // Registrar movimiento automático
+  const mov=JSON.parse(localStorage.getItem('movimientos')||'[]'); mov.push({id:`${tipo}_pago_${Date.now()}`,tipo:tipo==='cobrar'?'ingreso':'gasto',monto:abono,cat:tipo==='cobrar'?'cobro':'pago-deuda',descripcion:`${tipo==='cobrar'?'✅ Cobrado':'💸 Pagado'}: ${c.descripcion}`,fecha:new Date().toISOString(),metodoPago:'efectivo',tipoIngreso:'ninguno',esAjuste:false}); localStorage.setItem('movimientos',JSON.stringify(mov));
+  input.value=''; if(tipo==='cobrar'){renderCobrar();toast(`✅ Abonado ${CFG.moneda} ${abono.toFixed(2)}`,'success');} else {renderPagar();toast(`✅ Abonado ${CFG.moneda} ${abono.toFixed(2)}`,'success');} actualizar(); }
+function eliminarCuenta(tipo, id){ if(!confirm('¿Eliminar esta cuenta?')) return; const key=tipo==='cobrar'?'cuentasCobrar':'cuentasPagar'; let l=JSON.parse(localStorage.getItem(key)||'[]'); l=l.filter(x=>x.id!==id); localStorage.setItem(key,JSON.stringify(l)); if(tipo==='cobrar')renderCobrar();else renderPagar(); toast('✅ Eliminada','success'); }
+
+// ✅ CUENTAS POR PAGAR (ABONOS PARCIALES)
+function guardarPagar(){ const n=document.getElementById('pagarNombre').value.trim(), m=parseMonto(document.getElementById('pagarMonto').value), d=document.getElementById('pagarDesc').value||'Deuda', f=document.getElementById('pagarFecha').value; if(!n||m===null||!f){toast('⚠️ Completa todo','error');return;} const l=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'); l.push({id:`pag_${Date.now()}`,nombre:n,montoOriginal:m,montoPagado:0,descripcion:d,fechaLimite:f,fechaCreacion:new Date().toISOString(),abonos:[]}); localStorage.setItem('cuentasPagar',JSON.stringify(l)); document.getElementById('pagarNombre').value=''; document.getElementById('pagarMonto').value=''; document.getElementById('pagarDesc').value=''; document.getElementById('pagarFecha').value=''; renderPagar(); nav('home'); toast('✅ Cuenta registrada','success'); }
+function renderPagar(){ const l=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'), c=document.getElementById('listaPagar'); let total=0, html='';
+  l.forEach(x=>{ const rest=x.montoOriginal-x.montoPagado; if(rest>0) total+=rest; const pct=Math.min(100,Math.round((x.montoPagado/x.montoOriginal)*100)); const cls=rest<=0?'progress-ok':pct<50?'progress-err':'progress-warn';
+    html+=`<div class="cuenta-card"><div class="cuenta-header"><strong>${x.nombre}</strong><span class="btn-icon" onclick="eliminarCuenta('pagar','${x.id}')">🗑️</span></div><div class="cuenta-info">${x.descripcion} • Vence: ${new Date(x.fechaLimite).toLocaleDateString('es-HN')}</div><div class="progress ${cls}"><div class="progress-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text2);margin:4px 0"><span>Pagado: ${CFG.moneda} ${x.montoPagado.toFixed(2)}</span><span>Restante: <b>${CFG.moneda} ${rest.toFixed(2)}</b></span></div><div class="abono-box"><input type="number" id="abono_pag_${x.id}" placeholder="Monto" step="0.01" min="0"><button class="btn btn-err" style="width:auto;padding:8px 12px" onclick="abonarCuenta('pagar','${x.id}')">Abonar</button></div>${x.abonos.length?`<div class="historial">${x.abonos.slice(-3).map(a=>`<div><span>${new Date(a.fecha).toLocaleDateString('es-HN')}</span><span>+${CFG.moneda} ${a.monto.toFixed(2)}</span></div>`).join('')}</div>`:''}</div>`;
+  });
+  c.innerHTML=html||'<p class="tc" style="color:var(--text2)">Sin cuentas por pagar</p>';
+  document.getElementById('totalPagar').textContent=`${CFG.moneda} ${total.toFixed(2)}`;
 }
 
-// ==================== META DE AHORRO MANUAL ====================
-function definirMeta(){
-  const nombre = document.getElementById('metaNombre').value.trim();
-  const monto = parseMonto(document.getElementById('metaMonto').value);
-  if(!nombre || monto===null || monto<=0){ toast('⚠️ Ingresa nombre y monto válido','error'); return; }
-  meta = { nombre, monto, abonado: 0 };
-  localStorage.setItem('metaAhorro', JSON.stringify(meta));
-  renderMetaAhorro(); actualizar(); toast('✅ Meta definida','success');
-}
+// ✅ ALERTAS
+function guardarAlerta(){ try{ const t=document.getElementById('tipoAlerta').value, d=document.getElementById('descAlerta').value||'Alerta', m=parseMonto(document.getElementById('montoAlerta').value), f=document.getElementById('fechaAlerta').value; if(!t||!f) throw new Error('Tipo y fecha requeridos'); const l=JSON.parse(localStorage.getItem('alertas')||'[]'); l.push({id:`a_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,tipo:t,descripcion:d,monto:m,fechaLimite:f,fechaCreacion:new Date().toISOString(),activa:true,notificada:false}); localStorage.setItem('alertas',JSON.stringify(l)); toast('✅ Alerta guardada','success'); document.getElementById('descAlerta').value=''; document.getElementById('montoAlerta').value=''; document.getElementById('fechaAlerta').value=''; renderAlertas(); return{success:true}; }catch(e){ console.error(e); toast('❌ '+e.message,'error'); return{success:false}; } }
+function renderAlertas(){ const l=JSON.parse(localStorage.getItem('alertas')||'[]').filter(a=>a.activa), c=document.getElementById('listaAlertas'); if(!l.length){c.innerHTML='<p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p>';return;} c.innerHTML=l.map(a=>{const dias=Math.ceil((new Date(a.fechaLimite)-new Date())/86400000);const urg=dias<=2;return `<div class="alert ${urg?'urgent':''}"><strong>${a.descripcion}</strong><br><small style="color:var(--text2)">📅 ${new Date(a.fechaLimite).toLocaleDateString('es-HN')}${a.monto!==null?' | '+CFG.moneda+' '+a.monto.toFixed(2):''}${dias>=0?' | ⏰ '+dias+' días':' ⚠️ Vencida'}</small><div style="margin-top:8px"><button class="btn-sm btn-s" onclick="eliminarAlerta('${a.id}')">🗑️ Eliminar</button></div></div>`;}).join('');}
+function eliminarAlerta(id){ if(!confirm('¿Eliminar alerta?')) return; let l=JSON.parse(localStorage.getItem('alertas')||'[]'); l=l.filter(a=>a.id!==id); localStorage.setItem('alertas',JSON.stringify(l)); renderAlertas(); toast('✅ Alerta eliminada','success'); }
+function verifAlertasCriticas(){ const l=JSON.parse(localStorage.getItem('alertas')||'[]'), h=new Date(); l.forEach(a=>{if(!a.activa||a.notificada)return;const d=Math.ceil((new Date(a.fechaLimite)-h)/86400000);if(d===1){notifPush({title:'📅 Vence mañana',body:a.descripcion,tag:a.id});a.notificada=true;localStorage.setItem('alertas',JSON.stringify(l));}});}
+function notifPush(d){if('serviceWorker' in navigator)navigator.serviceWorker.ready.then(r=>r.showNotification(d.title,{body:d.body,icon:'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',tag:d.tag}));else toast(d.title+': '+d.body,'info');}
+function pedirNotif(){if(!('Notification' in window))return;Notification.requestPermission().then(p=>{if(p==='granted')toast('✅ Notificaciones activadas','success');else toast('❌ Actívalo en configuración','error');});}
 
-function renderMetaAhorro(){
-  const form = document.getElementById('metaForm');
-  const activa = document.getElementById('metaActiva');
-  if(meta.nombre && meta.monto > 0){
-    form.classList.add('hidden'); activa.classList.remove('hidden');
-    document.getElementById('metaTitulo').textContent = `🎯 ${meta.nombre}`;
-    const pct = Math.min(100, Math.round((meta.abonado / meta.monto) * 100));
-    const falta = Math.max(0, meta.monto - meta.abonado);
-    document.getElementById('metaProgreso').textContent = `${pct}%`;
-    document.getElementById('metaFalta').textContent = `${CFG.moneda} ${falta.toFixed(2)}`;
-    document.getElementById('metaBarra').style.width = `${pct}%`;
-    if(pct >= 100) toast('🎉 ¡Meta alcanzada!','success');
-  } else {
-    form.classList.remove('hidden'); activa.classList.add('hidden');
-  }
-}
+// ✅ CONCILIACIÓN
+function cfgConc(){document.getElementById('btnCalcConc')?.addEventListener('click',calcConc);document.getElementById('btnAjustConc')?.addEventListener('click',ajustConc);}
+function calcConc(){const sApp=calcSaldo(),sBanco=parseMonto(document.getElementById('saldoBanco').value);if(sBanco===null){toast('⚠️ Ingresa saldo válido','error');return;}const diff=sBanco-sApp;document.getElementById('resConc').classList.remove('hidden');const elD=document.getElementById('diffConc'),elS=document.getElementById('sugConc');elD.textContent=CFG.moneda+' '+diff.toFixed(2);elD.className=diff>=0?'t-ok':'t-err';if(Math.abs(diff)<0.01)elS.textContent='✅ ¡Coinciden!';else if(diff>0)elS.textContent='🟢 Dinero en banco no registrado.';else elS.textContent='🔴 Gastos no reflejados en banco.';window._conc={sApp,sBanco,diff};}
+function ajustConc(){if(!window._conc)return;const{diff}=window._conc;if(Math.abs(diff)<0.01){toast('✅ Sin diferencia','success');return;}if(!confirm(`¿Registrar ajuste de ${CFG.moneda} ${Math.abs(diff).toFixed(2)}?`))return;const l=JSON.parse(localStorage.getItem('movimientos')||'[]');l.push({id:`conc_${Date.now()}`,tipo:diff>0?'ingreso':'gasto',monto:Math.abs(diff),cat:'conciliacion',descripcion:`⚖️ Ajuste banco ${new Date().toLocaleDateString('es-HN')}`,fecha:new Date().toISOString(),metodoPago:'ajuste',tipoIngreso:'ninguno',esAjuste:true});localStorage.setItem('movimientos',JSON.stringify(l));actualizar();renderMov();document.getElementById('resConc').classList.add('hidden');document.getElementById('saldoBanco').value='';toast('✅ Ajuste registrado','success');delete window._conc;}
 
-function abonarAhorro(){
-  const monto = parseMonto(document.getElementById('metaAbonoMonto').value);
-  if(monto===null || monto<=0){ toast('⚠️ Ingresa un monto válido','error'); return; }
-  const disponible = calcSaldo();
-  if(monto > disponible){ toast(`❌ Saldo insuficiente. Disponible: ${CFG.moneda} ${disponible.toFixed(2)}`,'error'); return; }
-  
-  // ✅ Registrar como gasto que rebaja del disponible automáticamente
-  const mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
-  mov.push({ id:`ah_${Date.now()}`, tipo:'gasto', monto, cat:'ahorro', descripcion:`🎯 Abono a: ${meta.nombre}`, fecha:new Date().toISOString(), metodoPago:'traspaso', tipoIngreso:'ninguno', esAjuste:false, esAhorroManual:true });
-  localStorage.setItem('movimientos', JSON.stringify(mov));
-  
-  meta.abonado += monto;
-  localStorage.setItem('metaAhorro', JSON.stringify(meta));
-  
-  document.getElementById('metaAbonoMonto').value='';
-  renderMetaAhorro(); actualizar(); toast(`✅ Abonado ${CFG.moneda} ${monto.toFixed(2)} a tu meta`,'success');
-}
+// ✅ CONFIG
+function cfgAutoCampos(){document.getElementById('catMov')?.addEventListener('change',e=>{const desc=document.getElementById('descMov'),met=document.getElementById('metMov');const map={'combustible':'Gasolina - ','peajes':'Peaje - ','mantenimiento':'Mantenimiento - ','educacion':'Mensualidad - ','alimentacion':'Supermercado - '};if(map[e.target.value]){desc.placeholder=map[e.target.value];desc.focus();}if(['combustible','peajes','alimentacion'].includes(e.target.value)){met.value='efectivo';}});}
+function guardarCfg(){localStorage.setItem('cfg_nombre',document.getElementById('cfgNombre').value);localStorage.setItem('cfg_moneda',document.getElementById('cfgMoneda').value);CFG.nombre=document.getElementById('cfgNombre').value;CFG.moneda=document.getElementById('cfgMoneda').value;actualizar();toast('✅ Configuración guardada','success');}
 
-function resetearMeta(){
-  if(!confirm('¿Cambiar o reiniciar la meta actual? El ahorro acumulado se mantendrá en tu historial.')) return;
-  meta = { nombre:'', monto:0, abonado:0 };
-  localStorage.setItem('metaAhorro', JSON.stringify(meta));
-  renderMetaAhorro(); actualizar();
-}
-
-// ==================== CUENTAS POR COBRAR ====================
-function guardarCobrar(){
-  const nombre = document.getElementById('cobrarNombre').value.trim(), monto = parseMonto(document.getElementById('cobrarMonto').value), desc = document.getElementById('cobrarDesc').value||'Préstamo', fecha = document.getElementById('cobrarFecha').value;
-  if(!nombre||monto===null||!fecha){ toast('⚠️ Completa todos los campos','error'); return; }
-  const lista = JSON.parse(localStorage.getItem('cuentasCobrar')||'[]');
-  lista.push({ id:`cob_${Date.now()}`, nombre, monto, descripcion:desc, fechaLimite:fecha, fechaCreacion:new Date().toISOString(), pagado:false });
-  localStorage.setItem('cuentasCobrar', JSON.stringify(lista));
-  document.getElementById('cobrarNombre').value=''; document.getElementById('cobrarMonto').value=''; document.getElementById('cobrarDesc').value=''; document.getElementById('cobrarFecha').value='';
-  renderCobrar(); nav('home'); toast('✅ Cuenta por cobrar registrada','success');
-}
-function renderCobrar(){
-  const lista = JSON.parse(localStorage.getItem('cuentasCobrar')||'[]').filter(c=>!c.pagado), total = lista.reduce((s,c)=>s+c.monto,0);
-  const c1 = document.getElementById('listaCobrar'), c2 = document.getElementById('listaCobrarDet');
-  document.getElementById('totalCobrar').textContent = `${CFG.moneda} ${total.toFixed(2)}`;
-  if(!lista.length){ const h='<p class="tc" style="color:var(--text2)">Sin cuentas por cobrar</p>'; if(c1)c1.innerHTML=h; if(c2)c2.innerHTML=h; return; }
-  const html = lista.map(c=>`<div class="cuenta-item"><div><strong>${c.nombre}</strong><br><small style="color:var(--text2)">${c.descripcion} • 📅 ${new Date(c.fechaLimite).toLocaleDateString('es-HN')}</small></div><div style="display:flex;align-items:center;gap:8px"><span class="t-ok" style="font-weight:600">${CFG.moneda} ${c.monto.toFixed(2)}</span><button class="btn-icon" onclick="eliminarCobrar('${c.id}')" title="Eliminar">🗑️</button><button class="btn-sm btn-ok" onclick="marcarPagadoCobrar('${c.id}')">✅ Cobrado</button></div></div>`).join('');
-  if(c1)c1.innerHTML=html; if(c2)c2.innerHTML=html;
-}
-function eliminarCobrar(id){ if(!confirm('¿Eliminar esta cuenta por cobrar?')) return; let lista=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'); lista=lista.filter(c=>c.id!==id); localStorage.setItem('cuentasCobrar',JSON.stringify(lista)); renderCobrar(); toast('✅ Eliminada','success'); }
-function marcarPagadoCobrar(id){
-  if(!confirm('¿Marcar como COBRADO? Esto sumará el monto a tu saldo disponible.')) return;
-  let lista=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'), cuenta=lista.find(c=>c.id===id);
-  if(!cuenta) return;
-  const mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
-  mov.push({ id:`cob_pago_${Date.now()}`, tipo:'ingreso', monto:cuenta.monto, cat:'cobro', descripcion:`✅ Cobrado: ${cuenta.descripcion}`, fecha:new Date().toISOString(), metodoPago:'efectivo', tipoIngreso:'cobro', esAjuste:false });
-  localStorage.setItem('movimientos', JSON.stringify(mov));
-  cuenta.pagado = true; cuenta.fechaPago = new Date().toISOString();
-  localStorage.setItem('cuentasCobrar', JSON.stringify(lista));
-  actualizar(); renderCobrar(); toast(`✅ ${CFG.moneda} ${cuenta.monto.toFixed(2)} agregado a tu saldo`,'success');
-}
-
-// ==================== CUENTAS POR PAGAR ====================
-function guardarPagar(){
-  const nombre = document.getElementById('pagarNombre').value.trim(), monto = parseMonto(document.getElementById('pagarMonto').value), desc = document.getElementById('pagarDesc').value||'Deuda', fecha = document.getElementById('pagarFecha').value;
-  if(!nombre||monto===null||!fecha){ toast('⚠️ Completa todos los campos','error'); return; }
-  const lista = JSON.parse(localStorage.getItem('cuentasPagar')||'[]');
-  lista.push({ id:`pag_${Date.now()}`, nombre, monto, descripcion:desc, fechaLimite:fecha, fechaCreacion:new Date().toISOString(), pagado:false });
-  localStorage.setItem('cuentasPagar', JSON.stringify(lista));
-  document.getElementById('pagarNombre').value=''; document.getElementById('pagarMonto').value=''; document.getElementById('pagarDesc').value=''; document.getElementById('pagarFecha').value='';
-  renderPagar(); nav('home'); toast('✅ Cuenta por pagar registrada','success');
-}
-function renderPagar(){
-  const lista = JSON.parse(localStorage.getItem('cuentasPagar')||'[]').filter(c=>!c.pagado), total = lista.reduce((s,c)=>s+c.monto,0);
-  const c1 = document.getElementById('listaPagar'), c2 = document.getElementById('listaPagarDet');
-  document.getElementById('totalPagar').textContent = `${CFG.moneda} ${total.toFixed(2)}`;
-  if(!lista.length){ const h='<p class="tc" style="color:var(--text2)">Sin cuentas por pagar</p>'; if(c1)c1.innerHTML=h; if(c2)c2.innerHTML=h; return; }
-  const html = lista.map(c=>`<div class="cuenta-item"><div><strong>${c.nombre}</strong><br><small style="color:var(--text2)">${c.descripcion} • 📅 ${new Date(c.fechaLimite).toLocaleDateString('es-HN')}</small></div><div style="display:flex;align-items:center;gap:8px"><span class="t-err" style="font-weight:600">${CFG.moneda} ${c.monto.toFixed(2)}</span><button class="btn-icon" onclick="eliminarPagar('${c.id}')" title="Eliminar">🗑️</button><button class="btn-sm btn-err" onclick="marcarPagadoPagar('${c.id}')">💸 Pagado</button></div></div>`).join('');
-  if(c1)c1.innerHTML=html; if(c2)c2.innerHTML=html;
-}
-function eliminarPagar(id){ if(!confirm('¿Eliminar esta cuenta por pagar?')) return; let lista=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'); lista=lista.filter(c=>c.id!==id); localStorage.setItem('cuentasPagar',JSON.stringify(lista)); renderPagar(); toast('✅ Eliminada','success'); }
-function marcarPagadoPagar(id){
-  if(!confirm('¿Marcar como PAGADO? Esto restará el monto de tu saldo disponible.')) return;
-  let lista=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'), cuenta=lista.find(c=>c.id===id);
-  if(!cuenta) return;
-  const mov = JSON.parse(localStorage.getItem('movimientos')||'[]');
-  mov.push({ id:`pag_pago_${Date.now()}`, tipo:'gasto', monto:cuenta.monto, cat:'pago-deuda', descripcion:`💸 Pagado: ${cuenta.descripcion}`, fecha:new Date().toISOString(), metodoPago:'efectivo', tipoIngreso:'ninguno', esAjuste:false });
-  localStorage.setItem('movimientos', JSON.stringify(mov));
-  cuenta.pagado = true; cuenta.fechaPago = new Date().toISOString();
-  localStorage.setItem('cuentasPagar', JSON.stringify(lista));
-  actualizar(); renderPagar(); toast(`✅ ${CFG.moneda} ${cuenta.monto.toFixed(2)} registrado como pago`,'success');
-}
-
-// ==================== ALERTAS ====================
-function guardarAlerta(){
-  try{
-    const tipo=document.getElementById('tipoAlerta').value, desc=document.getElementById('descAlerta').value||'Alerta', monto=parseMonto(document.getElementById('montoAlerta').value), fecha=document.getElementById('fechaAlerta').value;
-    if(!tipo||!fecha) throw new Error('Tipo y fecha requeridos');
-    const lista=JSON.parse(localStorage.getItem('alertas')||'[]'); lista.push({ id:`a_${Date.now()}_${Math.random().toString(36).slice(2,8)}`, tipo, descripcion:desc, monto, fechaLimite:fecha, fechaCreacion:new Date().toISOString(), activa:true, notificada:false });
-    localStorage.setItem('alertas', JSON.stringify(lista)); toast('✅ Alerta guardada','success');
-    document.getElementById('descAlerta').value=''; document.getElementById('montoAlerta').value=''; document.getElementById('fechaAlerta').value='';
-    renderAlertas(); return{success:true};
-  }catch(e){ console.error(e); toast('❌ '+e.message,'error'); return{success:false}; }
-}
-function renderAlertas(){
-  const lista=JSON.parse(localStorage.getItem('alertas')||'[]').filter(a=>a.activa), c=document.getElementById('listaAlertas');
-  if(!lista.length){ c.innerHTML='<p class="tc" style="color:var(--text2)">✅ Sin alertas próximas</p>'; return; }
-  c.innerHTML=lista.map(a=>{ const dias=Math.ceil((new Date(a.fechaLimite)-new Date())/86400000); const urg=dias<=2;
-    return `<div class="alert ${urg?'urgent':''}"><strong>${a.descripcion}</strong><br><small style="color:var(--text2)">📅 ${new Date(a.fechaLimite).toLocaleDateString('es-HN')}${a.monto!==null?' | '+CFG.moneda+' '+a.monto.toFixed(2):''}${dias>=0?' | ⏰ '+dias+' días':' ⚠️ Vencida'}</small><div style="margin-top:8px"><button class="btn-sm btn-s" onclick="eliminarAlerta('${a.id}')">🗑️ Eliminar</button></div></div>`;
-  }).join('');
-}
-function eliminarAlerta(id){ if(!confirm('¿Eliminar esta alerta?')) return; let lista=JSON.parse(localStorage.getItem('alertas')||'[]'); lista=lista.filter(a=>a.id!==id); localStorage.setItem('alertas',JSON.stringify(lista)); renderAlertas(); toast('✅ Alerta eliminada','success'); }
-function verifAlertasCriticas(){ const lista=JSON.parse(localStorage.getItem('alertas')||'[]'), hoy=new Date(); lista.forEach(a=>{ if(!a.activa||a.notificada) return; const dias=Math.ceil((new Date(a.fechaLimite)-hoy)/86400000); if(dias===1){ notifPush({title:'📅 Vence mañana',body:a.descripcion,tag:a.id}); a.notificada=true; localStorage.setItem('alertas',JSON.stringify(lista)); }}); }
-function notifPush(d){ if('serviceWorker' in navigator) navigator.serviceWorker.ready.then(r=>r.showNotification(d.title,{body:d.body,icon:'https://cdn-icons-png.flaticon.com/512/2489/2489756.png',tag:d.tag})); else toast(d.title+': '+d.body,'info'); }
-function pedirNotif(){ if(!('Notification' in window)) return; Notification.requestPermission().then(p=>{ if(p==='granted') toast('✅ Notificaciones activadas','success'); else toast('❌ Actívalo en configuración del navegador','error'); }); }
-
-// ==================== CONCILIACIÓN ====================
-function cfgConc(){ document.getElementById('btnCalcConc')?.addEventListener('click',calcConc); document.getElementById('btnAjustConc')?.addEventListener('click',ajustConc); }
-function calcConc(){ const sApp=calcSaldo(), sBanco=parseMonto(document.getElementById('saldoBanco').value); if(sBanco===null){ toast('⚠️ Ingresa saldo válido del banco','error'); return; } const diff=sBanco-sApp; document.getElementById('resConc').classList.remove('hidden'); const elD=document.getElementById('diffConc'), elS=document.getElementById('sugConc'); elD.textContent=CFG.moneda+' '+diff.toFixed(2); elD.className=diff>=0?'diff-p':'diff-n'; if(Math.abs(diff)<0.01)elS.textContent='✅ ¡Coinciden!'; else if(diff>0)elS.textContent='🟢 Dinero en banco no registrado.'; else elS.textContent='🔴 Gastos no reflejados en banco.'; window._conc={sApp,sBanco,diff}; }
-function ajustConc(){ if(!window._conc)return; const{diff}=window._conc; if(Math.abs(diff)<0.01){ toast('✅ Sin diferencia','success'); return; } if(!confirm(`¿Registrar ajuste de ${CFG.moneda} ${Math.abs(diff).toFixed(2)}?`))return; const lista=JSON.parse(localStorage.getItem('movimientos')||'[]'); lista.push({ id:`conc_${Date.now()}`, tipo:diff>0?'ingreso':'gasto', monto:Math.abs(diff), cat:'conciliacion', descripcion:`⚖️ Ajuste banco ${new Date().toLocaleDateString('es-HN')}`, fecha:new Date().toISOString(), metodoPago:'ajuste', tipoIngreso:'ninguno', esAjuste:true }); localStorage.setItem('movimientos',JSON.stringify(lista)); actualizar(); renderMov(); document.getElementById('resConc').classList.add('hidden'); document.getElementById('saldoBanco').value=''; toast('✅ Ajuste registrado','success'); delete window._conc; }
-
-// ==================== CONFIG ====================
-function cfgAutoCampos(){ document.getElementById('catMov')?.addEventListener('change',e=>{ const desc=document.getElementById('descMov'), met=document.getElementById('metMov'); const map={'combustible':'Gasolina - ','peajes':'Peaje - ','mantenimiento':'Mantenimiento - ','educacion':'Mensualidad - ','alimentacion':'Supermercado - '}; if(map[e.target.value]){ desc.placeholder=map[e.target.value]; desc.focus(); } if(['combustible','peajes','alimentacion'].includes(e.target.value)){ met.value='efectivo'; }}); }
-function guardarCfg(){ localStorage.setItem('cfg_nombre',document.getElementById('cfgNombre').value); localStorage.setItem('cfg_moneda',document.getElementById('cfgMoneda').value); CFG.nombre=document.getElementById('cfgNombre').value; CFG.moneda=document.getElementById('cfgMoneda').value; actualizar(); toast('✅ Configuración guardada','success'); }
-
-// ==================== RESPALDO & EXPORT ====================
-function exportarJSON(){ const d={v:'3.4',fecha:new Date().toISOString(),cfg:{moneda:CFG.moneda,nombre:CFG.nombre,saldoIni:CFG.saldoIni},movimientos:localStorage.getItem('movimientos'),alertas:localStorage.getItem('alertas'),cobrar:localStorage.getItem('cuentasCobrar'),pagar:localStorage.getItem('cuentasPagar'),meta:localStorage.getItem('metaAhorro')}; const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}), u=URL.createObjectURL(b), f=`mis-finanzas-${new Date().toISOString().slice(0,10)}.json`; if(navigator.share&&navigator.canShare?.({files:[new File([b],f,{type:'application/json'})]})) navigator.share({title:'Respaldo',files:[new File([b],f)]}).catch(()=>dl(u,f)); else dl(u,f); }
-function dl(u,f){ const a=document.createElement('a'); a.href=u; a.download=f; a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(u),100); }
-function importarJSON(){ const input=document.createElement('input'); input.type='file'; input.accept='.json'; input.onchange=e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>{ try{ const data=JSON.parse(ev.target.result); if(!data.cfg&&!data.movimientos) throw new Error('Estructura inválida'); if(data.cfg){ localStorage.setItem('cfg_moneda',data.cfg.moneda||'L'); localStorage.setItem('cfg_nombre',data.cfg.nombre||''); localStorage.setItem('saldoIni',data.cfg.saldoIni?.toString()||'0'); } if(data.movimientos) localStorage.setItem('movimientos',data.movimientos); if(data.alertas) localStorage.setItem('alertas',data.alertas); if(data.cobrar) localStorage.setItem('cuentasCobrar',data.cobrar); if(data.pagar) localStorage.setItem('cuentasPagar',data.pagar); if(data.meta) localStorage.setItem('metaAhorro',data.meta); meta=JSON.parse(localStorage.getItem('metaAhorro')||'{"nombre":"","monto":0,"abonado":0}'); toast('✅ Datos importados','success'); setTimeout(()=>location.reload(),1000); }catch(err){ toast('❌ '+err.message,'error'); } }; r.readAsText(f); }; input.click(); }
-function exportarExcel(){ const wb=XLSX.utils.book_new(); const mov=JSON.parse(localStorage.getItem('movimientos')||'[]'); const alertas=JSON.parse(localStorage.getItem('alertas')||'[]'); const cobrar=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]'); const pagar=JSON.parse(localStorage.getItem('cuentasPagar')||'[]'); const ing=mov.filter(m=>m.tipo==='ingreso'), gas=mov.filter(m=>m.tipo==='gasto'), tI=ing.reduce((s,m)=>s+m.monto,0), tG=gas.reduce((s,m)=>s+m.monto,0), saldo=tI-tG+CFG.saldoIni; const resumen=[['Presupuesto mensual personal'],[],['INGRESOS MENSUALES REALES'],['Total de ingresos mensuales','',CFG.moneda+' '+tI.toFixed(2)],['SALDO REAL','',CFG.moneda+' '+saldo.toFixed(2)],[],['GASTOS POR CATEGORÍA'],['Categoría','Previsto','Real','Diferencia']]; const pc={}; gas.forEach(g=>pc[g.cat]=(pc[g.cat]||0)+g.monto); Object.entries(pc).forEach(([c,t])=>resumen.push([c,'-',CFG.moneda+' '+t.toFixed(2),'-'])); resumen.push([],['TOTAL DE COSTO REAL','',CFG.moneda+' '+tG.toFixed(2)],['DIFERENCIA DE TOTALES','',CFG.moneda+' '+(tI-tG).toFixed(2)]); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(resumen),'Resumen Mensual'); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mov.map(m=>({Fecha:new Date(m.fecha).toLocaleDateString('es-HN'),Tipo:m.tipo==='ingreso'?'💰 Ingreso':'💸 Gasto',Categoría:m.cat,Descripción:m.descripcion,Monto:CFG.moneda+' '+m.monto.toFixed(2),Método:m.metodoPago}))), 'Movimientos'); if(alertas.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alertas.map(a=>({Descripción:a.descripcion,Tipo:a.tipo,Monto:a.monto!==null?CFG.moneda+' '+a.monto.toFixed(2):'-','Fecha Límite':new Date(a.fechaLimite).toLocaleDateString('es-HN')}))), 'Alertas'); if(cobrar.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cobrar.map(c=>({Nombre:c.nombre,Descripción:c.descripcion,Monto:CFG.moneda+' '+c.monto.toFixed(2),'Fecha Límite':new Date(c.fechaLimite).toLocaleDateString('es-HN'),Estado:c.pagado?'✅ Cobrado':'⏳ Pendiente'}))), 'Por Cobrar'); if(pagar.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pagar.map(p=>({Nombre:p.nombre,Descripción:p.descripcion,Monto:CFG.moneda+' '+p.monto.toFixed(2),'Fecha Límite':new Date(p.fechaLimite).toLocaleDateString('es-HN'),Estado:p.pagado?'✅ Pagado':'⏳ Pendiente'}))), 'Por Pagar'); if(meta.nombre) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Meta:meta.nombre,Objetivo:CFG.moneda+' '+meta.monto.toFixed(2),Acumulado:CFG.moneda+' '+meta.abonado.toFixed(2),Progreso:Math.min(100,Math.round((meta.abonado/meta.monto)*100))+'%'}]), 'Meta de Ahorro'); XLSX.writeFile(wb,`mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`); }
-function reiniciarApp(){ if(confirm('⚠️ ¿Borrar TODOS los datos?')){ localStorage.clear(); location.reload(); } }
+// ✅ RESPALDO
+function exportarJSON(){const d={v:'3.5',fecha:new Date().toISOString(),cfg:{moneda:CFG.moneda,nombre:CFG.nombre,saldoIni:CFG.saldoIni},movimientos:localStorage.getItem('movimientos'),alertas:localStorage.getItem('alertas'),cobrar:localStorage.getItem('cuentasCobrar'),pagar:localStorage.getItem('cuentasPagar'),meta:localStorage.getItem('metaAhorro')};const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),f=`mis-finanzas-${new Date().toISOString().slice(0,10)}.json`;if(navigator.share&&navigator.canShare?.({files:[new File([b],f,{type:'application/json'})]}))navigator.share({title:'Respaldo',files:[new File([b],f)]}).catch(()=>dl(u,f));else dl(u,f);}
+function dl(u,f){const a=document.createElement('a');a.href=u;a.download=f;a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),100);}
+function importarJSON(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.cfg&&!d.movimientos)throw new Error('Estructura inválida');if(d.cfg){localStorage.setItem('cfg_moneda',d.cfg.moneda||'L');localStorage.setItem('cfg_nombre',d.cfg.nombre||'');localStorage.setItem('saldoIni',d.cfg.saldoIni?.toString()||'0');}if(d.movimientos)localStorage.setItem('movimientos',d.movimientos);if(d.alertas)localStorage.setItem('alertas',d.alertas);if(d.cobrar)localStorage.setItem('cuentasCobrar',d.cobrar);if(d.pagar)localStorage.setItem('cuentasPagar',d.pagar);if(d.meta)localStorage.setItem('metaAhorro',d.meta);meta=JSON.parse(localStorage.getItem('metaAhorro')||'{"nombre":"","monto":0,"abonado":0}');toast('✅ Importado','success');setTimeout(()=>location.reload(),1000);}catch(err){toast('❌ '+err.message,'error');}};r.readAsText(f);};i.click();}
+function exportarExcel(){const wb=XLSX.utils.book_new();const mov=JSON.parse(localStorage.getItem('movimientos')||'[]');const alertas=JSON.parse(localStorage.getItem('alertas')||'[]');const cobrar=JSON.parse(localStorage.getItem('cuentasCobrar')||'[]');const pagar=JSON.parse(localStorage.getItem('cuentasPagar')||'[]');const ing=mov.filter(m=>m.tipo==='ingreso'),gas=mov.filter(m=>m.tipo==='gasto'),tI=ing.reduce((s,m)=>s+m.monto,0),tG=gas.reduce((s,m)=>s+m.monto,0),saldo=tI-tG+CFG.saldoIni;const res=[['Presupuesto mensual personal'],[],['INGRESOS MENSUALES REALES'],['Total ingresos','',CFG.moneda+' '+tI.toFixed(2)],['SALDO REAL','',CFG.moneda+' '+saldo.toFixed(2)],[],['GASTOS POR CATEGORÍA'],['Categoría','Previsto','Real','Diferencia']];const pc={};gas.forEach(g=>pc[g.cat]=(pc[g.cat]||0)+g.monto);Object.entries(pc).forEach(([c,t])=>res.push([c,'-',CFG.moneda+' '+t.toFixed(2),'-']));res.push([],['TOTAL GASTOS','',CFG.moneda+' '+tG.toFixed(2)],['DIFERENCIA','',CFG.moneda+' '+(tI-tG).toFixed(2)]);XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(res),'Resumen');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mov.map(m=>({Fecha:new Date(m.fecha).toLocaleDateString('es-HN'),Tipo:m.tipo==='ingreso'?'💰 Ingreso':'💸 Gasto',Categoría:m.cat,Descripción:m.descripcion,Monto:CFG.moneda+' '+m.monto.toFixed(2),Método:m.metodoPago}))),'Movimientos');if(alertas.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alertas.map(a=>({Descripción:a.descripcion,Tipo:a.tipo,Monto:a.monto!==null?CFG.moneda+' '+a.monto.toFixed(2):'-','Fecha Límite':new Date(a.fechaLimite).toLocaleDateString('es-HN')}))), 'Alertas');if(cobrar.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cobrar.map(c=>({Nombre:c.nombre,Original:CFG.moneda+' '+c.montoOriginal.toFixed(2),Pagado:CFG.moneda+' '+c.montoPagado.toFixed(2),Restante:CFG.moneda+' '+(c.montoOriginal-c.montoPagado).toFixed(2),Estado:c.montoOriginal<=c.montoPagado?'✅ Completada':'⏳ Pendiente'}))),'Por Cobrar');if(pagar.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pagar.map(p=>({Nombre:p.nombre,Original:CFG.moneda+' '+p.montoOriginal.toFixed(2),Pagado:CFG.moneda+' '+p.montoPagado.toFixed(2),Restante:CFG.moneda+' '+(p.montoOriginal-p.montoPagado).toFixed(2),Estado:p.montoOriginal<=p.montoPagado?'✅ Completada':'⏳ Pendiente'}))),'Por Pagar');if(meta.nombre)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Meta:meta.nombre,Objetivo:CFG.moneda+' '+meta.monto.toFixed(2),Acumulado:CFG.moneda+' '+meta.abonado.toFixed(2),Progreso:Math.min(100,Math.round((meta.abonado/meta.monto)*100))+'%'}]),'Meta');XLSX.writeFile(wb,`mis-finanzas-${new Date().toISOString().slice(0,10)}.xlsx`);}
+function reiniciarApp(){if(confirm('⚠️ ¿Borrar todos los datos?')){localStorage.clear();location.reload();}}
 </script>
 </body>
 </html>
