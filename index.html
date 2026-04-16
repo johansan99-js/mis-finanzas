@@ -6,6 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f1117">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 <title>Mis Finanzas HN - Pro</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -785,38 +786,112 @@ function deletePagoRecurrente(id){if(confirm('¿Eliminar este pago recurrente?')
 function checkRecurrentPayments(){if(state.pagosRecurrentes&&state.pagosRecurrentes.length>0) renderPagosRecurrentes()}
 function initPaymentNotifications(){setInterval(checkRecurrentPayments,3600000);checkRecurrentPayments()}
 
-// === CONCILIACIÓN BANCARIA ===
+// === CONCILIACIÓN BANCARIA - CORREGIDA ===
 function reconcileBalance(){
   const saldoReal=parseFloat(document.getElementById('reconcile-balance').value);
   if(!saldoReal&&saldoReal!==0) return alert('Ingresa el saldo real del banco');
-  const balanceActual=state.saldoInicial+state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0)-state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
+  
+  // Calcular balance actual SIN incluir el saldo inicial
+  const income=state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
+  const expense=state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
+  const balanceActual=state.saldoInicial+income-expense;
+  
   const diferencia=saldoReal-balanceActual;
-  if(confirm(`📊 Conciliación Bancaria\n\nSaldo en app: ${fL(balanceActual)}\nSaldo real banco: ${fL(saldoReal)}\nDiferencia: ${fL(diferencia)}\n\n¿Ajustar saldo inicial para conciliar?`)){
+  
+  if(confirm(`📊 Conciliación Bancaria\n\n💰 Saldo en app: ${fL(balanceActual)}\n🏦 Saldo real banco: ${fL(saldoReal)}\n📈 Diferencia: ${fL(diferencia)}\n\n¿Ajustar saldo inicial para conciliar?`)){
+    // Solo ajustar el saldo inicial, NO crear transacción que afecte income/expense
     state.saldoInicial+=diferencia;
-    state.transactions.push({id:Date.now(),type:diferencia>0?'income':'expense',amount:Math.abs(diferencia),cat:'Conciliación',subcat:`Ajuste bancario`,date:new Date().toISOString()});
-    save();renderDashboard();document.getElementById('reconcile-balance').value='';alert('✅ Saldo conciliado correctamente');
+    
+    // Crear registro de auditoría (tipo especial que NO se cuenta en income/expense)
+    state.transactions.push({
+      id:Date.now(),
+      type:'conciliacion',
+      amount:Math.abs(diferencia),
+      cat:'Conciliación',
+      subcat:`Ajuste bancario ${todayStr()}`,
+      date:new Date().toISOString(),
+      nota:`Saldo anterior: ${fL(balanceActual)}, Saldo real: ${fL(saldoReal)}`
+    });
+    
+    save();
+    renderDashboard();
+    document.getElementById('reconcile-balance').value='';
+    alert(`✅ Saldo conciliado correctamente\n\nNuevo saldo inicial: ${fL(state.saldoInicial)}`);
   }
 }
 
-// === RENDER DASHBOARD ===
+// === RENDER DASHBOARD - CORREGIDO ===
 function renderDashboard(){
   const hoy=todayStr();
-  const cobradoHoy=state.transactions.filter(t=>t.type==='income'&&t.date.startsWith(hoy)&&t.cat==='Cobro').reduce((a,b)=>a+b.amount,0);
-  const pagadoHoy=state.transactions.filter(t=>t.type==='expense'&&t.date.startsWith(hoy)&&(t.cat==='Pago'||t.cat==='Préstamo')).reduce((a,b)=>a+b.amount,0);
-  document.getElementById('cobrado-hoy').textContent=fL(cobradoHoy);document.getElementById('pagado-hoy').textContent=fL(pagadoHoy);
-  const income=state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0),expense=state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0),extra=state.transactions.filter(t=>t.type==='income'&&t.subcat==='extra').reduce((a,b)=>a+b.amount,0),balance=state.saldoInicial+income-expense;
-  document.getElementById('balance-amount').textContent=fL(balance);document.getElementById('balance-amount').style.color=balance>=0?'var(--green)':'var(--red)';document.getElementById('balance-status').textContent=income>0?'Ingresos este mes':'Sin ingresos este mes';
-  document.getElementById('total-income').textContent=fL(income);document.getElementById('total-expense').textContent=fL(expense);document.getElementById('total-extra').textContent=fL(extra);
+  
+  // Filtrar transacciones NORMALES (excluir conciliaciones del cálculo)
+  const normalTransactions=state.transactions.filter(t=>t.type!=='conciliacion');
+  
+  const cobradoHoy=normalTransactions.filter(t=>t.type==='income'&&t.date.startsWith(hoy)&&t.cat==='Cobro').reduce((a,b)=>a+b.amount,0);
+  const pagadoHoy=normalTransactions.filter(t=>t.type==='expense'&&t.date.startsWith(hoy)&&(t.cat==='Pago'||t.cat==='Préstamo')).reduce((a,b)=>a+b.amount,0);
+  
+  document.getElementById('cobrado-hoy').textContent=fL(cobradoHoy);
+  document.getElementById('pagado-hoy').textContent=fL(pagadoHoy);
+  
+  // Calcular SOLO con transacciones normales
+  const income=normalTransactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
+  const expense=normalTransactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
+  const extra=normalTransactions.filter(t=>t.type==='income'&&t.subcat==='extra').reduce((a,b)=>a+b.amount,0);
+  
+  // Balance = saldoInicial + ingresos - gastos
+  const balance=state.saldoInicial+income-expense;
+  
+  document.getElementById('balance-amount').textContent=fL(balance);
+  document.getElementById('balance-amount').style.color=balance>=0?'var(--green)':'var(--red)';
+  document.getElementById('balance-status').textContent=income>0?'Ingresos este mes':'Sin ingresos este mes';
+  
+  document.getElementById('total-income').textContent=fL(income);
+  document.getElementById('total-expense').textContent=fL(expense);
+  document.getElementById('total-extra').textContent=fL(extra);
+  
   const maxVal=Math.max(income,expense,balance,1);
-  document.getElementById('bar-income').style.height=((income/maxVal)*100)+'%';document.getElementById('bar-expense').style.height=((expense/maxVal)*100)+'%';document.getElementById('bar-saving').style.height=(balance>0?(balance/maxVal)*100:0)+'%';
-  document.getElementById('val-income').textContent=fL(income);document.getElementById('val-expense').textContent=fL(expense);document.getElementById('val-saving').textContent=fL(balance>0?balance:0);
+  document.getElementById('bar-income').style.height=((income/maxVal)*100)+'%';
+  document.getElementById('bar-expense').style.height=((expense/maxVal)*100)+'%';
+  document.getElementById('bar-saving').style.height=(balance>0?(balance/maxVal)*100:0)+'%';
+  
+  document.getElementById('val-income').textContent=fL(income);
+  document.getElementById('val-expense').textContent=fL(expense);
+  document.getElementById('val-saving').textContent=fL(balance>0?balance:0);
+  
+  // Mostrar TODAS las transacciones (incluyendo conciliaciones) en el historial
   const recent=state.transactions.slice().reverse().slice(0,5);
-  document.getElementById('recent-history').innerHTML=recent.map(t=>`<div class="history-item"><div><div style="font-weight:600">${t.cat||'Sin categoría'}${t.tarjetaNombre?` <span class="tag">${t.tarjetaNombre}</span>`:''}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} • ${new Date(t.date).toLocaleDateString()}</div></div><div style="display:flex;align-items:center;gap:10px"><span class="badge badge-${t.type==='income'?'income':'expense'}">${t.type==='income'?'Ingreso':'Gasto'}</span><span style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${fL(t.amount)}</span><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin movimientos</p>';
-  renderDashboardGoals();renderCardAlerts();
+  document.getElementById('recent-history').innerHTML=recent.map(t=>{
+    const isConciliacion=t.type==='conciliacion';
+    return `<div class="history-item">
+      <div>
+        <div style="font-weight:600">${t.cat||'Sin categoría'}${isConciliacion?' <span style="font-size:10px;background:var(--bg4);padding:2px 6px;border-radius:4px">AJUSTE</span>':''}${t.tarjetaNombre?` <span class="tag">${t.tarjetaNombre}</span>`:''}</div>
+        <div style="font-size:11px;color:var(--text2)">${t.subcat||''} • ${new Date(t.date).toLocaleDateString()}${t.nota?`<br>${t.nota}`:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${!isConciliacion?`<span class="badge badge-${t.type==='income'?'income':'expense'}">${t.type==='income'?'Ingreso':'Gasto'}</span>`:''}
+        <span style="font-weight:700;color:${isConciliacion?'var(--blue)':(t.type==='income'?'var(--green)':'var(--red)')}">
+          ${isConciliacion?'±':''}${t.type==='income'?'+':t.type==='expense'?'-':''}${fL(t.amount)}
+        </span>
+        <button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button>
+      </div>
+    </div>`;
+  }).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin movimientos</p>';
+  
+  renderDashboardGoals();
+  renderCardAlerts();
 }
 
-function renderGastos(){const gastos=state.transactions.filter(t=>t.type==='expense');document.getElementById('gastos-mes').textContent=fL(gastos.reduce((a,b)=>a+b.amount,0));document.getElementById('gastos-list').innerHTML=gastos.slice().reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${t.cat||'Sin categoría'}${t.tarjetaNombre?` <span class="tag">${t.tarjetaNombre}</span>`:''}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} • ${new Date(t.date).toLocaleDateString()}</div></div><div style="text-align:right"><div style="color:var(--red);font-weight:700">-${fL(t.amount)}</div><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">×</button></div></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin gastos</p>'}
-function renderIngresos(){const ingresos=state.transactions.filter(t=>t.type==='income');document.getElementById('ingreso-salario').textContent=fL(ingresos.filter(t=>t.subcat==='salario').reduce((a,b)=>a+b.amount,0));document.getElementById('ingresos-list').innerHTML=ingresos.slice().reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${t.cat||'Ingreso'}</div><div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString()}</div></div><div style="text-align:right"><div style="color:var(--green);font-weight:700">+${fL(t.amount)}</div><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">×</button></div></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin ingresos</p>'}
+function renderGastos(){
+  const gastos=state.transactions.filter(t=>t.type==='expense');
+  document.getElementById('gastos-mes').textContent=fL(gastos.reduce((a,b)=>a+b.amount,0));
+  document.getElementById('gastos-list').innerHTML=gastos.slice().reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${t.cat||'Sin categoría'}${t.tarjetaNombre?` <span class="tag">${t.tarjetaNombre}</span>`:''}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} • ${new Date(t.date).toLocaleDateString()}</div></div><div style="text-align:right"><div style="color:var(--red);font-weight:700">-${fL(t.amount)}</div><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">×</button></div></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin gastos</p>'
+}
+
+function renderIngresos(){
+  const ingresos=state.transactions.filter(t=>t.type==='income');
+  document.getElementById('ingreso-salario').textContent=fL(ingresos.filter(t=>t.subcat==='salario').reduce((a,b)=>a+b.amount,0));
+  document.getElementById('ingresos-list').innerHTML=ingresos.slice().reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${t.cat||'Ingreso'}</div><div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString()}</div></div><div style="text-align:right"><div style="color:var(--green);font-weight:700">+${fL(t.amount)}</div><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">×</button></div></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin ingresos</p>'
+}
 
 // === HISTÓRICO / CONCILIACIÓN ===
 function renderHistorico(){
@@ -828,7 +903,7 @@ function renderHistorico(){
   state.transactions.forEach(t=>{
     const m=new Date(t.date).toLocaleString('es-HN',{month:'short',year:'numeric'});
     if(!monthly[m]) monthly[m]={income:0,expense:0};
-    if(t.type==='income') monthly[m].income+=t.amount;else monthly[m].expense+=t.amount;
+    if(t.type==='income') monthly[m].income+=t.amount;else if(t.type==='expense') monthly[m].expense+=t.amount;
   });
   
   const months=Object.keys(monthly).slice(-6),maxVal=Math.max(1,...Object.values(monthly).map(d=>Math.max(d.income,d.expense)));
@@ -870,7 +945,7 @@ function exportFullReport(){
   });
   
   Object.entries(CATEGORIES).forEach(([key,{label,sub}])=>{
-    if(byCat[key]||key==='vivienda'){ // Mostrar siempre vivienda como ejemplo
+    if(byCat[key]||key==='vivienda'){
       csv+=`\n${label.toUpperCase()}\n`;
       sub.forEach(s=>{
         const real=byCat[key]?.[s]||0;
