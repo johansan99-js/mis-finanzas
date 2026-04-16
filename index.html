@@ -94,6 +94,10 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .pin-input{width:100%;background:var(--bg3);border:2px solid var(--border);padding:15px;border-radius:8px;color:var(--text);text-align:center;font-size:32px;letter-spacing:15px;margin:20px 0;max-width:200px}
 .reconcile-box{background:linear-gradient(135deg,var(--bg3),var(--bg4));border:2px solid var(--blue);border-radius:var(--r);padding:15px;margin:15px 0}
 .reconcile-box h4{color:var(--blue);margin-bottom:10px}
+.goal-mini{background:var(--bg3);padding:10px;border-radius:8px;margin-bottom:8px}
+.goal-mini-header{display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px}
+.goal-mini-bar{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.goal-mini-progress{height:100%;background:var(--green)}
 </style>
 </head>
 <body>
@@ -192,12 +196,13 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     </div>
   </div>
 
+  <!-- METAS EN EL DASHBOARD -->
+  <h3 style="margin:20px 0 10px;font-size:14px">🎯 Metas de Ahorro</h3>
+  <div id="dashboard-goals"></div>
+
   <h3 style="margin:20px 0 10px;font-size:14px">🔔 Alertas de Tarjetas</h3>
   <div id="card-alerts"></div>
   <p id="no-card-alerts" style="text-align:center;color:var(--text2);font-size:12px;padding:10px">✅ Sin alertas próximas</p>
-
-  <h3 style="margin:20px 0 10px;font-size:14px">🎯 Metas de Ahorro</h3>
-  <div id="goals-summary"></div>
 
   <h3 style="margin:20px 0 10px;font-size:14px">📜 Movimientos Recientes</h3>
   <div id="recent-history"></div>
@@ -352,7 +357,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 </nav>
 
 <!-- MODALES -->
-<div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')"><div class="modal-content"><h3>📉 Nuevo Gasto</h3><input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)"><input type="text" id="gasto-cat" class="input-field" placeholder="Categoría"><input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría"><select id="gasto-pago" class="input-field"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option></select><button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button><button class="btn btn-primary" onclick="saveGasto()">Guardar</button></div></div>
+<div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')"><div class="modal-content"><h3>📉 Nuevo Gasto</h3><input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)"><input type="text" id="gasto-cat" class="input-field" placeholder="Categoría"><input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría"><select id="gasto-pago" class="input-field" onchange="checkCreditCard()"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Tarjeta de Crédito</option></select><select id="gasto-tarjeta" class="input-field hidden"><option value="">Selecciona tarjeta...</option></select><button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button><button class="btn btn-primary" onclick="saveGasto()">Guardar</button></div></div>
 
 <div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')"><div class="modal-content"><h3>💰 Nuevo Ingreso</h3><input type="number" id="ingreso-monto" class="input-field" placeholder="Monto (L)"><select id="ingreso-tipo" class="input-field"><option value="salario">Salario</option><option value="extra">Extra</option></select><button class="btn btn-secondary" onclick="closeModal('modal-ingreso')">Cancelar</button><button class="btn btn-primary" onclick="saveIngreso()">Registrar</button></div></div>
 
@@ -360,9 +365,9 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 
 <div id="modal-abono" class="modal" onclick="closeModalIfBg(event,'modal-abono')"><div class="modal-content"><h3>💸 Abonar a Meta de Ahorro</h3><p id="abono-meta-nombre" style="color:var(--amber);margin-bottom:15px"></p><p style="font-size:12px;color:var(--text2);margin-bottom:15px">Este monto se restará de tu saldo disponible.</p><input type="number" id="abono-monto" class="input-field" placeholder="Monto a abonar (L)"><input type="hidden" id="abono-meta-id"><button class="btn btn-primary" onclick="saveAbono()">Abonar</button></div></div>
 
-<div id="modal-cobrar" class="modal" onclick="closeModalIfBg(event,'modal-cobrar')"><div class="modal-content"><h3>💰 Dinero que me deben</h3><input type="text" id="cobrar-persona" class="input-field" placeholder="¿Quién te debe?"><input type="number" id="cobrar-monto" class="input-field" placeholder="Monto total (L)"><input type="number" id="cobrar-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><input type="date" id="cobrar-fecha" class="input-field"><button class="btn btn-primary" onclick="saveCobrar()">Guardar</button></div></div>
+<div id="modal-cobrar" class="modal" onclick="closeModalIfBg(event,'modal-cobrar')"><div class="modal-content"><h3>💰 Dinero que me deben</h3><input type="text" id="cobrar-persona" class="input-field" placeholder="¿Quién te debe?"><input type="number" id="cobrar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo. Los ingresos se registran al marcar "Registrar Pago".</p><input type="number" id="cobrar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="cobrar-fecha" class="input-field"><button class="btn btn-primary" onclick="saveCobrar()">Guardar</button></div></div>
 
-<div id="modal-pagar" class="modal" onclick="closeModalIfBg(event,'modal-pagar')"><div class="modal-content"><h3>💸 Lo que debo pagar</h3><input type="text" id="pagar-creditor" class="input-field" placeholder="¿A quién le debes?"><input type="number" id="pagar-monto" class="input-field" placeholder="Monto total (L)"><input type="number" id="pagar-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><input type="date" id="pagar-fecha" class="input-field"><button class="btn btn-secondary" onclick="savePagar()">Registrar</button></div></div>
+<div id="modal-pagar" class="modal" onclick="closeModalIfBg(event,'modal-pagar')"><div class="modal-content"><h3>💸 Lo que debo pagar</h3><input type="text" id="pagar-creditor" class="input-field" placeholder="¿A quién le debes?"><input type="number" id="pagar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo. Los gastos se registran al marcar "Registrar Pago".</p><input type="number" id="pagar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="pagar-fecha" class="input-field"><button class="btn btn-secondary" onclick="savePagar()">Registrar</button></div></div>
 
 <div id="modal-prestamo" class="modal" onclick="closeModalIfBg(event,'modal-prestamo')"><div class="modal-content"><h3>🏦 Nuevo Préstamo Bancario</h3><input type="text" id="prest-entidad" class="input-field" placeholder="Entidad (Ej. BAC, Ficohsa, Familiar)"><input type="number" id="prest-monto" class="input-field" placeholder="Monto total del préstamo (L)"><input type="number" id="prest-tasa" class="input-field" placeholder="Tasa de interés anual (%)"><div class="input-row"><input type="number" id="prest-cuotas" class="input-field" placeholder="Número de cuotas"><input type="number" id="prest-cuota-calc" class="input-field" placeholder="Cuota calculada" readonly></div><input type="date" id="prest-fecha-pago" class="input-field"><input type="number" id="prest-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><div id="prest-breakdown" class="loan-breakdown hidden"></div><button class="btn btn-primary" onclick="calculateLoan();savePrestamo()">Calcular y Guardar</button></div></div>
 
@@ -371,7 +376,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="number" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
 
 <script>
-const LS_KEY='mifinanzashn_secure_v8';
+const LS_KEY='mifinanzashn_secure_v9';
 let savedState=JSON.parse(localStorage.getItem(LS_KEY));
 let state={
   setup:false,
@@ -534,8 +539,62 @@ function toggleFabMenu(){const m=document.getElementById('fab-menu');m.style.dis
 // === CÁLCULO DE PRÉSTAMOS ===
 function calculateLoan(){const P=parseFloat(document.getElementById('prest-monto').value)||0;const r=(parseFloat(document.getElementById('prest-tasa').value)||0)/100/12;const n=parseInt(document.getElementById('prest-cuotas').value)||1;let cuota;if(r===0){cuota=P/n}else{cuota=P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1)}document.getElementById('prest-cuota-calc').value=fL(cuota);const interes=P*r;const capital=cuota-interes;document.getElementById('prest-breakdown').classList.remove('hidden');document.getElementById('prest-breakdown').innerHTML=`<div style="font-weight:600;margin-bottom:8px">Desglose primer pago:</div><div class="loan-breakdown-row"><span>Cuota mensual:</span><strong>${fL(cuota)}</strong></div><div class="loan-breakdown-row"><span>→ Interés:</span><span style="color:var(--red)">${fL(interes)}</span></div><div class="loan-breakdown-row"><span>→ Capital:</span><span style="color:var(--green)">${fL(capital)}</span></div><div class="loan-breakdown-row"><span>Total intereses:</span><span style="color:var(--amber)">${fL(cuota*n-P)}</span></div>`;return cuota}
 
-// === TRANSACCIONES ===
-function saveGasto(){const monto=parseFloat(document.getElementById('gasto-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:document.getElementById('gasto-cat').value||'General',subcat:document.getElementById('gasto-subcat').value||'',pago:document.getElementById('gasto-pago').value,date:new Date().toISOString()});save();closeModal('modal-gasto');renderAll();['gasto-monto','gasto-cat','gasto-subcat'].forEach(id=>document.getElementById(id).value='')}
+// === GASTOS CON TARJETA ===
+function checkCreditCard(){
+  const pagoType=document.getElementById('gasto-pago').value;
+  const tarjetaSelect=document.getElementById('gasto-tarjeta');
+  
+  if(pagoType==='credito'){
+    tarjetaSelect.classList.remove('hidden');
+    // Cargar tarjetas disponibles
+    tarjetaSelect.innerHTML='<option value="">Selecciona tarjeta...</option>';
+    state.tarjetas.forEach(t=>{
+      tarjetaSelect.innerHTML+=`<option value="${t.id}">${t.nombre} (Saldo: ${fL(t.saldo)})</option>`;
+    });
+  }else{
+    tarjetaSelect.classList.add('hidden');
+  }
+}
+
+function saveGasto(){
+  const monto=parseFloat(document.getElementById('gasto-monto').value);
+  const cat=document.getElementById('gasto-cat').value||'General';
+  const subcat=document.getElementById('gasto-subcat').value||'';
+  const pago=document.getElementById('gasto-pago').value;
+  
+  if(!monto||monto<=0)return alert('Monto inválido');
+  
+  const transaction={
+    id:Date.now(),
+    type:'expense',
+    amount:monto,
+    cat:cat,
+    subcat:subcat,
+    pago:pago,
+    date:new Date().toISOString()
+  };
+  
+  // Si es con tarjeta de crédito, actualizar saldo de la tarjeta
+  if(pago==='credito'){
+    const tarjetaId=parseInt(document.getElementById('gasto-tarjeta').value);
+    if(tarjetaId){
+      const tarjeta=state.tarjetas.find(t=>t.id===tarjetaId);
+      if(tarjeta){
+        tarjeta.saldo+=monto;
+        transaction.tarjetaId=tarjetaId;
+        transaction.tarjetaNombre=tarjeta.nombre;
+      }
+    }
+  }
+  
+  state.transactions.push(transaction);
+  save();
+  closeModal('modal-gasto');
+  renderAll();
+  
+  ['gasto-monto','gasto-cat','gasto-subcat'].forEach(id=>document.getElementById(id).value='');
+}
+
 function saveIngreso(){const monto=parseFloat(document.getElementById('ingreso-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'income',amount:monto,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value,date:new Date().toISOString()});save();closeModal('modal-ingreso');renderAll();document.getElementById('ingreso-monto').value=''}
 function deleteTx(id){if(confirm('¿Eliminar?')){state.transactions=state.transactions.filter(t=>t.id!==id);save();renderAll()}}
 
@@ -543,21 +602,12 @@ function deleteTx(id){if(confirm('¿Eliminar?')){state.transactions=state.transa
 function saveMeta(){const nombre=document.getElementById('meta-nombre').value;const objetivo=parseFloat(document.getElementById('meta-objetivo').value);if(!nombre||!objetivo)return alert('Completa nombre y monto');state.goals.push({id:Date.now(),nombre,objetivo,actual:parseFloat(document.getElementById('meta-actual').value)||0});save();closeModal('modal-meta');renderAll();['meta-nombre','meta-objetivo','meta-actual'].forEach(id=>document.getElementById(id).value=id==='meta-actual'?'0':'')}
 function openAbono(id){const g=state.goals.find(x=>x.id===id);if(!g)return;document.getElementById('abono-meta-nombre').textContent=g.nombre;document.getElementById('abono-meta-id').value=id;openModal('modal-abono')}
 function saveAbono(){const id=parseInt(document.getElementById('abono-meta-id').value);const monto=parseFloat(document.getElementById('abono-monto').value);if(!monto||monto<=0)return alert('Monto inválido');const g=state.goals.find(x=>x.id===id);if(g){g.actual+=monto;state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Ahorro',subcat:`Meta: ${g.nombre}`,date:new Date().toISOString()});save();closeModal('modal-abono');renderAll()}document.getElementById('abono-monto').value=''}
-
-// ✅ FUNCIÓN DELETE META CORREGIDA CON BOTÓN
-function deleteMeta(id){
-  if(confirm('¿Estás seguro de eliminar esta meta?')){
-    state.goals = state.goals.filter(g => g.id !== id);
-    save();
-    renderMetas(); // Re-renderizar solo metas para actualizar la vista
-    renderDashboard(); // Actualizar dashboard también
-  }
-}
+function deleteMeta(id){if(confirm('¿Eliminar esta meta?')){state.goals=state.goals.filter(g=>g.id!==id);save();renderAll()}}
 
 function renderMetas(){
-  const container = document.getElementById('metas-list');
+  const container=document.getElementById('metas-list');
   if(!container) return;
-
+  
   if(state.goals.length===0){
     container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">📭 Sin metas de ahorro creadas<br><br>Crea tu primera meta para comenzar a ahorrar.</p>';
     return;
@@ -594,17 +644,169 @@ function renderMetas(){
   }).join('');
 }
 
+// ✅ METAS EN EL DASHBOARD
+function renderDashboardGoals(){
+  const container=document.getElementById('dashboard-goals');
+  if(!container) return;
+  
+  if(state.goals.length===0){
+    container.innerHTML='<p style="text-align:center;color:var(--text2);padding:15px;font-size:12px">Sin metas activas</p>';
+    return;
+  }
+  
+  // Mostrar solo las primeras 3 metas en el dashboard
+  const goalsToShow=state.goals.slice(0,3);
+  
+  container.innerHTML=goalsToShow.map(g=>{
+    const pct=Math.min(100,(g.actual/g.objetivo)*100);
+    return `
+      <div class="goal-mini">
+        <div class="goal-mini-header">
+          <span style="font-weight:600">${g.nombre}</span>
+          <span style="color:var(--green)">${pct.toFixed(0)}%</span>
+        </div>
+        <div class="goal-mini-bar">
+          <div class="goal-mini-progress" style="width:${pct}%"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text2);margin-top:3px">${fL(g.actual)} / ${fL(g.objetivo)}</div>
+      </div>
+    `;
+  }).join('');
+  
+  if(state.goals.length>3){
+    container.innerHTML+=`<p style="text-align:center;font-size:11px;color:var(--text2);margin-top:10px">+ ${state.goals.length-3} metas más (ver en Metas)</p>`;
+  }
+}
+
 // === COBRAR ===
-function saveCobrar(){const persona=document.getElementById('cobrar-persona').value.trim();const monto=parseFloat(document.getElementById('cobrar-monto').value);if(!persona||!monto)return alert('Completa los campos');state.receivables.push({id:Date.now(),persona,monto,pagado:parseFloat(document.getElementById('cobrar-pagado').value)||0,fecha:document.getElementById('cobrar-fecha').value});const yaPagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;if(yaPagado>0){state.transactions.push({id:Date.now(),type:'income',amount:yaPagado,cat:'Cobro',subcat:`Cobro: ${persona}`,date:new Date().toISOString()})}save();closeModal('modal-cobrar');renderAll();['cobrar-persona','cobrar-monto','cobrar-pagado','cobrar-fecha'].forEach(id=>document.getElementById(id).value=id==='cobrar-pagado'?'0':'')}
-function renderCobrar(){const container=document.getElementById('cobrar-list');const total=state.receivables.reduce((a,r)=>a+(r.monto-(r.pagado||0)),0);document.getElementById('total-cobrar').textContent=fL(total);if(state.receivables.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Nadie te debe dinero aún</p>';return}container.innerHTML=state.receivables.map(r=>{const pendiente=r.monto-(r.pagado||0);const pct=r.monto>0?((r.pagado||0)/r.monto)*100:0;return `<div class="card card-receivable"><div class="debt-header"><div><div class="debt-title">${r.persona}</div><div class="debt-meta">Total: ${fL(r.monto)} • Pendiente: ${fL(pendiente)}</div></div><button onclick="deleteCobrar(${r.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${pct}%;background:${pct>=50?'var(--green)':(pct>=25?'var(--amber)':'var(--red)')}"></div></div><div class="debt-stats"><div class="debt-stat"><div style="color:var(--text2)">Pagado</div><div style="font-weight:700">${fL(r.pagado||0)}</div></div><div class="debt-stat"><div style="color:var(--text2)">Pendiente</div><div style="font-weight:700;color:var(--amber)">${fL(pendiente)}</div></div></div><div class="debt-actions"><button class="btn btn-primary" style="flex:1;padding:10px;font-size:12px" onclick="abonarCobrar(${r.id})">Registrar Pago</button></div></div>`}).join('')}
+function saveCobrar(){
+  const persona=document.getElementById('cobrar-persona').value.trim();
+  const monto=parseFloat(document.getElementById('cobrar-monto').value);
+  const pagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;
+  
+  if(!persona||!monto)return alert('Completa los campos');
+  
+  // Guardar el registro SIN afectar ingresos/egresos
+  state.receivables.push({
+    id:Date.now(),
+    persona:persona,
+    monto:monto,
+    pagado:pagado, // Solo informativo
+    fecha:document.getElementById('cobrar-fecha').value
+  });
+  
+  save();
+  closeModal('modal-cobrar');
+  renderAll();
+  
+  ['cobrar-persona','cobrar-monto','cobrar-pagado','cobrar-fecha'].forEach(id=>document.getElementById(id).value=id==='cobrar-pagado'?'0':'');
+}
+
+function renderCobrar(){
+  const container=document.getElementById('cobrar-list');
+  const total=state.receivables.reduce((a,r)=>a+(r.monto-(r.pagado||0)),0);
+  document.getElementById('total-cobrar').textContent=fL(total);
+  
+  if(state.receivables.length===0){
+    container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Nadie te debe dinero aún</p>';
+    return;
+  }
+  
+  container.innerHTML=state.receivables.map(r=>{
+    const pendiente=r.monto-(r.pagado||0);
+    const pct=r.monto>0?((r.pagado||0)/r.monto)*100:0;
+    return `<div class="card card-receivable"><div class="debt-header"><div><div class="debt-title">${r.persona}</div><div class="debt-meta">Total: ${fL(r.monto)} • Pendiente: ${fL(pendiente)}</div></div><button onclick="deleteCobrar(${r.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${pct}%;background:${pct>=50?'var(--green)':(pct>=25?'var(--amber)':'var(--red)')}"></div></div><div class="debt-stats"><div class="debt-stat"><div style="color:var(--text2)">Pagado</div><div style="font-weight:700">${fL(r.pagado||0)}</div></div><div class="debt-stat"><div style="color:var(--text2)">Pendiente</div><div style="font-weight:700;color:var(--amber)">${fL(pendiente)}</div></div></div><div class="debt-actions"><button class="btn btn-primary" style="flex:1;padding:10px;font-size:12px" onclick="abonarCobrar(${r.id})">Registrar Pago</button></div></div>`;
+  }).join('');
+}
+
 function deleteCobrar(id){if(confirm('¿Eliminar?')){state.receivables=state.receivables.filter(r=>r.id!==id);save();renderAll()}}
-function abonarCobrar(id){const r=state.receivables.find(x=>x.id===id);if(!r)return;const monto=parseFloat(prompt(`Registrar pago de ${r.persona}:\n\nPendiente: ${fL(r.monto-(r.pagado||0))}\n\nMonto:`));if(monto&&!isNaN(monto)&&monto>0){r.pagado=(r.pagado||0)+monto;state.transactions.push({id:Date.now(),type:'income',amount:monto,cat:'Cobro',subcat:`Cobro: ${r.persona}`,date:new Date().toISOString()});save();renderAll()}}
+
+function abonarCobrar(id){
+  const r=state.receivables.find(x=>x.id===id);
+  if(!r)return;
+  
+  const monto=parseFloat(prompt(`Registrar pago de ${r.persona}:\n\nPendiente: ${fL(r.monto-(r.pagado||0))}\n\nMonto:`));
+  
+  if(monto&&!isNaN(monto)&&monto>0){
+    r.pagado=(r.pagado||0)+monto;
+    // AHORA SÍ registrar el ingreso
+    state.transactions.push({
+      id:Date.now(),
+      type:'income',
+      amount:monto,
+      cat:'Cobro',
+      subcat:`Cobro: ${r.persona}`,
+      date:new Date().toISOString()
+    });
+    save();
+    renderAll();
+  }
+}
 
 // === PAGAR ===
-function savePagar(){const creditor=document.getElementById('pagar-creditor').value.trim();const monto=parseFloat(document.getElementById('pagar-monto').value);if(!creditor||!monto)return alert('Completa los campos');state.payables.push({id:Date.now(),creditor,monto,pagado:parseFloat(document.getElementById('pagar-pagado').value)||0,fecha:document.getElementById('pagar-fecha').value});const yaPagado=parseFloat(document.getElementById('pagar-pagado').value)||0;if(yaPagado>0){state.transactions.push({id:Date.now(),type:'expense',amount:yaPagado,cat:'Pago',subcat:`Pago: ${creditor}`,date:new Date().toISOString()})}save();closeModal('modal-pagar');renderAll();['pagar-creditor','pagar-monto','pagar-pagado','pagar-fecha'].forEach(id=>document.getElementById(id).value=id==='pagar-pagado'?'0':'')}
-function renderPagar(){const container=document.getElementById('pagar-list');const total=state.payables.reduce((a,p)=>a+(p.monto-(p.pagado||0)),0);document.getElementById('total-pagar').textContent=fL(total);if(state.payables.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">No tienes deudas pendientes</p>';return}container.innerHTML=state.payables.map(p=>{const pendiente=p.monto-(p.pagado||0);const pct=p.monto>0?((p.pagado||0)/p.monto)*100:0;return `<div class="card card-debt"><div class="debt-header"><div><div class="debt-title">${p.creditor}</div><div class="debt-meta">Total: ${fL(p.monto)} • Pendiente: ${fL(pendiente)}</div></div><button onclick="deletePagar(${p.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${pct}%;background:${pct>=50?'var(--green)':(pct>=25?'var(--amber)':'var(--red)')}"></div></div><div class="debt-stats"><div class="debt-stat"><div style="color:var(--text2)">Pagado</div><div style="font-weight:700">${fL(p.pagado||0)}</div></div><div class="debt-stat"><div style="color:var(--text2)">Pendiente</div><div style="font-weight:700;color:var(--amber)">${fL(pendiente)}</div></div></div><div class="debt-actions"><button class="btn btn-secondary" style="flex:1;padding:10px;font-size:12px" onclick="abonarPagar(${p.id})">Registrar Pago</button></div></div>`}).join('')}
+function savePagar(){
+  const creditor=document.getElementById('pagar-creditor').value.trim();
+  const monto=parseFloat(document.getElementById('pagar-monto').value);
+  const pagado=parseFloat(document.getElementById('pagar-pagado').value)||0;
+  
+  if(!creditor||!monto)return alert('Completa los campos');
+  
+  // Guardar el registro SIN afectar ingresos/egresos
+  state.payables.push({
+    id:Date.now(),
+    creditor:creditor,
+    monto:monto,
+    pagado:pagado, // Solo informativo
+    fecha:document.getElementById('pagar-fecha').value
+  });
+  
+  save();
+  closeModal('modal-pagar');
+  renderAll();
+  
+  ['pagar-creditor','pagar-monto','pagar-pagado','pagar-fecha'].forEach(id=>document.getElementById(id).value=id==='pagar-pagado'?'0':'');
+}
+
+function renderPagar(){
+  const container=document.getElementById('pagar-list');
+  const total=state.payables.reduce((a,p)=>a+(p.monto-(p.pagado||0)),0);
+  document.getElementById('total-pagar').textContent=fL(total);
+  
+  if(state.payables.length===0){
+    container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">No tienes deudas pendientes</p>';
+    return;
+  }
+  
+  container.innerHTML=state.payables.map(p=>{
+    const pendiente=p.monto-(p.pagado||0);
+    const pct=p.monto>0?((p.pagado||0)/p.monto)*100:0;
+    return `<div class="card card-debt"><div class="debt-header"><div><div class="debt-title">${p.creditor}</div><div class="debt-meta">Total: ${fL(p.monto)} • Pendiente: ${fL(pendiente)}</div></div><button onclick="deletePagar(${p.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${pct}%;background:${pct>=50?'var(--green)':(pct>=25?'var(--amber)':'var(--red)')}"></div></div><div class="debt-stats"><div class="debt-stat"><div style="color:var(--text2)">Pagado</div><div style="font-weight:700">${fL(p.pagado||0)}</div></div><div class="debt-stat"><div style="color:var(--text2)">Pendiente</div><div style="font-weight:700;color:var(--amber)">${fL(pendiente)}</div></div></div><div class="debt-actions"><button class="btn btn-secondary" style="flex:1;padding:10px;font-size:12px" onclick="abonarPagar(${p.id})">Registrar Pago</button></div></div>`;
+  }).join('');
+}
+
 function deletePagar(id){if(confirm('¿Eliminar?')){state.payables=state.payables.filter(p=>p.id!==id);save();renderAll()}}
-function abonarPagar(id){const p=state.payables.find(x=>x.id===id);if(!p)return;const monto=parseFloat(prompt(`Registrar pago a ${p.creditor}:\n\nPendiente: ${fL(p.monto-(p.pagado||0))}\n\nMonto:`));if(monto&&!isNaN(monto)&&monto>0){p.pagado=(p.pagado||0)+monto;state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Pago',subcat:`Pago: ${p.creditor}`,date:new Date().toISOString()});save();renderAll()}}
+
+function abonarPagar(id){
+  const p=state.payables.find(x=>x.id===id);
+  if(!p)return;
+  
+  const monto=parseFloat(prompt(`Registrar pago a ${p.creditor}:\n\nPendiente: ${fL(p.monto-(p.pagado||0))}\n\nMonto:`));
+  
+  if(monto&&!isNaN(monto)&&monto>0){
+    p.pagado=(p.pagado||0)+monto;
+    // AHORA SÍ registrar el gasto
+    state.transactions.push({
+      id:Date.now(),
+      type:'expense',
+      amount:monto,
+      cat:'Pago',
+      subcat:`Pago: ${p.creditor}`,
+      date:new Date().toISOString()
+    });
+    save();
+    renderAll();
+  }
+}
 
 // === PRÉSTAMOS ===
 function savePrestamo(){const entidad=document.getElementById('prest-entidad').value.trim();const monto=parseFloat(document.getElementById('prest-monto').value);const tasa=parseFloat(document.getElementById('prest-tasa').value)||0;const cuotas=parseInt(document.getElementById('prest-cuotas').value)||1;const cuota=calculateLoan();const fechaPago=document.getElementById('prest-fecha-pago').value;if(!entidad||!monto||!cuota)return alert('Completa entidad, monto y cuotas');state.prestamos.push({id:Date.now(),entidad,monto,tasa,cuotas,cuota,fechaPago,pagado:parseFloat(document.getElementById('prest-pagado').value)||0,cuotasPagadas:0});save();closeModal('modal-prestamo');renderAll();['prest-entidad','prest-monto','prest-tasa','prest-cuotas','prest-cuota-calc','prest-fecha-pago','prest-pagado'].forEach(id=>document.getElementById(id).value=id==='prest-pagado'?'0':'');document.getElementById('prest-breakdown').classList.add('hidden')}
@@ -827,16 +1029,17 @@ function renderDashboard(){
   document.getElementById('val-saving').textContent=fL(balance>0?balance:0);
   
   const recent=state.transactions.slice().reverse().slice(0,5);
-  document.getElementById('recent-history').innerHTML=recent.map(t=>`<div class="history-item"><div><div style="font-weight:600">${t.cat||'Sin categoría'}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} • ${new Date(t.date).toLocaleDateString()}</div></div><div style="display:flex;align-items:center;gap:10px"><span class="badge badge-${t.type==='income'?'income':'expense'}">${t.type==='income'?'Ingreso':'Gasto'}</span><span style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${fL(t.amount)}</span><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin movimientos</p>';
+  document.getElementById('recent-history').innerHTML=recent.map(t=>`<div class="history-item"><div><div style="font-weight:600">${t.cat||'Sin categoría'}${t.tarjetaNombre?` <span class="tag">${t.tarjetaNombre}</span>`:''}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} • ${new Date(t.date).toLocaleDateString()}</div></div><div style="display:flex;align-items:center;gap:10px"><span class="badge badge-${t.type==='income'?'income':'expense'}">${t.type==='income'?'Ingreso':'Gasto'}</span><span style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${fL(t.amount)}</span><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin movimientos</p>';
   
-  renderMetas();
+  // Renderizar metas en el dashboard
+  renderDashboardGoals();
   renderCardAlerts();
 }
 
 function renderGastos(){
   const gastos=state.transactions.filter(t=>t.type==='expense');
   document.getElementById('gastos-mes').textContent=fL(gastos.reduce((a,b)=>a+b.amount,0));
-  document.getElementById('gastos-list').innerHTML=gastos.slice().reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${t.cat||'Sin categoría'}</div><div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString()}</div></div><div style="text-align:right"><div style="color:var(--red);font-weight:700">-${fL(t.amount)}</div><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">×</button></div></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin gastos</p>';
+  document.getElementById('gastos-list').innerHTML=gastos.slice().reverse().map(t=>`<div class="card" style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${t.cat||'Sin categoría'}${t.tarjetaNombre?` <span class="tag">${t.tarjetaNombre}</span>`:''}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} • ${new Date(t.date).toLocaleDateString()}</div></div><div style="text-align:right"><div style="color:var(--red);font-weight:700">-${fL(t.amount)}</div><button onclick="deleteTx(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">×</button></div></div></div>`).join('')||'<p style="text-align:center;color:var(--text2);padding:20px">Sin gastos</p>';
 }
 
 function renderIngresos(){
@@ -871,7 +1074,6 @@ function exportDataEncriptado(){
 }
 
 function exportToExcel(){
-  // Generar un CSV compatible con Excel basado en el formato proporcionado
   let csv='Presupuesto mensual personal\n\n';
   csv+='RESUMEN GENERAL\n';
   csv+=`Total Ingresos,${state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0)}\n`;
@@ -879,10 +1081,10 @@ function exportToExcel(){
   csv+=`Saldo Disponible,${state.saldoInicial}\n\n`;
   
   csv+='CATEGORÍAS (Detalle de Gastos)\n';
-  csv+='Categoría,Subcategoría,Monto,Fecha\n';
+  csv+='Categoría,Subcategoría,Monto,Fecha,Método de Pago\n';
   
   state.transactions.filter(t=>t.type==='expense').forEach(t=>{
-    csv+=`${t.cat||'Varios'},${t.subcat||''},${t.amount},${new Date(t.date).toLocaleDateString()}\n`;
+    csv+=`${t.cat||'Varios'},${t.subcat||''},${t.amount},${new Date(t.date).toLocaleDateString()},${t.pago||'Efectivo'}\n`;
   });
   
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
