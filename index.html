@@ -5,30 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1117">
-<link rel="icon" href="image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 <title>Mis Finanzas HN - Pro</title>
 <link rel="manifest" href="manifest.json">
 <style>
 :root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#232736;--bg4:#2d3147;--amber:#f0a500;--text:#f0eff4;--text2:#9b9eb5;--green:#2ecc8a;--red:#e85d5d;--blue:#4a9ef8;--purple:#9b7fe8;--border:#2d3147;--r:12px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);max-width:430px;margin:0 auto;padding-bottom:20px}
+body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);max-width:430px;margin:0 auto;padding-bottom:100px}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:15px}
-.card-debt{border-left:4px solid var(--red)}
-.card-credit{border-left:4px solid var(--amber)}
-.card-receivable{border-left:4px solid var(--green)}
-.card-saving{border-left:4px solid var(--blue)}
-.card-security{border-left:4px solid var(--purple)}
-.btn{width:100%;padding:14px;border-radius:8px;border:none;font-weight:700;cursor:pointer;margin:5px 0}
+.btn{width:100%;padding:14px;border-radius:8px;border:none;font-weight:700;cursor:pointer;margin:5px 0;font-size:14px}
 .btn-primary{background:var(--amber);color:var(--bg)}
 .btn-secondary{background:var(--bg3);color:var(--text)}
 .btn-danger{background:var(--red);color:white}
-.input-field{width:100%;background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:8px;color:var(--text);margin-bottom:10px}
+.input-field{width:100%;background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:8px;color:var(--text);margin-bottom:10px;font-size:14px}
 .input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:300;justify-content:center;align-items:center;padding:20px}
+.tab-nav{display:flex;background:var(--bg2);position:fixed;bottom:0;width:100%;max-width:430px;border-top:1px solid var(--border);z-index:100;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tab-nav::-webkit-scrollbar{display:none}
+.tab-item{flex:0 0 auto;min-width:70px;padding:12px 8px;text-align:center;color:var(--text2);font-size:10px;cursor:pointer;white-space:nowrap}
+.tab-item.active{color:var(--amber);font-weight:700;border-top:2px solid var(--amber)}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:200;justify-content:center;align-items:center;padding:20px}
 .modal-content{background:var(--bg2);border-radius:var(--r);width:100%;max-width:380px;padding:20px;max-height:90vh;overflow-y:auto}
-.view{display:none;padding:20px;padding-top:70px}
+.view{display:none;padding:20px;padding-bottom:100px}
 .view.active{display:block}
 .hidden{display:none!important}
 .balance-card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:15px}
@@ -58,9 +55,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .badge-expense{background:rgba(232,93,93,0.2);color:var(--red)}
 .badge-secure{background:var(--purple);color:white}
 .alert-card{background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:var(--r);padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
-.alert-card.urgent{border-left-color:var(--red);background:rgba(232,93,93,0.15);animation:pulse 2s infinite}
-.alert-card.green{border-left-color:var(--green);background:rgba(46,204,138,0.1)}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,93,93,0.4)}50%{box-shadow:0 0 0 10px rgba(232,93,93,0)}}
+.alert-card.urgent{border-left-color:var(--red);background:rgba(232,93,93,0.1)}
 .alert-icon{font-size:20px}
 .alert-content{flex:1}
 .alert-title{font-weight:600;font-size:13px}
@@ -81,9 +76,9 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .daily-box{background:var(--bg3);padding:12px;border-radius:8px;text-align:center}
 .daily-label{font-size:10px;color:var(--text2);margin-bottom:5px}
 .daily-value{font-size:16px;font-weight:700}
-.pwa-banner{background:linear-gradient(135deg,var(--amber),#d48e00);color:var(--bg);padding:12px 15px;border-radius:8px;margin:15px;display:flex;align-items:center;gap:10px;font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(240,165,0,0.3);animation:slideIn 0.3s ease}
-.pwa-banner.hidden{display:none!important}
-@keyframes slideIn{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.pwa-banner{background:var(--amber);color:var(--bg);padding:12px;border-radius:8px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;cursor:pointer}
+.pwa-banner span{flex:1}
+.pwa-banner button{background:var(--bg);color:var(--amber);border:none;padding:6px 12px;border-radius:4px;font-weight:700;cursor:pointer;margin-left:10px}
 .loan-breakdown{background:var(--bg3);padding:10px;border-radius:6px;margin:10px 0;font-size:11px}
 .loan-breakdown-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--border)}
 .loan-breakdown-row:last-child{border-bottom:none}
@@ -107,18 +102,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .category-title{font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text)}
 .category-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px dashed var(--border)}
 .category-row:last-child{border-bottom:none}
-
-/* === MENÚ HAMBURGUESA === */
-.hamburger-menu{position:fixed;top:0;left:0;width:100%;height:60px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:200;display:flex;align-items:center;padding:0 15px;justify-content:space-between}
-.hamburger-btn{background:none;border:none;color:var(--text);font-size:24px;cursor:pointer;padding:10px}
-.hamburger-title{font-size:16px;font-weight:700;color:var(--amber)}
-.hamburger-panel{position:fixed;top:60px;left:0;width:100%;height:calc(100% - 60px);background:var(--bg2);z-index:199;transform:translateX(-100%);transition:transform 0.3s ease;overflow-y:auto}
-.hamburger-panel.active{transform:translateX(0)}
-.hamburger-nav{padding:20px}
-.hamburger-item{display:flex;align-items:center;gap:15px;padding:15px;border-radius:8px;margin-bottom:10px;cursor:pointer;background:var(--bg3);color:var(--text);font-weight:600}
-.hamburger-item:hover{background:var(--bg4)}
-.hamburger-item.active{background:var(--amber);color:var(--bg)}
-.hamburger-close{position:absolute;top:15px;right:15px;background:none;border:none;color:var(--text);font-size:24px;cursor:pointer}
 .budget-rule-display{background:var(--bg3);padding:10px 15px;border-radius:8px;margin:10px 0;text-align:center}
 .budget-rule-display h4{font-size:12px;color:var(--text2);margin-bottom:8px}
 .budget-percentages{display:flex;justify-content:space-around;font-size:14px}
@@ -400,15 +383,10 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 
 <!-- TARJETAS -->
 <div id="view-tarjetas" class="view">
-  <h2 style="margin-bottom:15px">💳 Tarjetas de Crédito Inteligentes</h2>
-  <div class="card" style="background:linear-gradient(135deg,var(--bg2),var(--bg3));margin-bottom:20px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:11px;color:var(--text2)">TARJETAS REGISTRADAS</div><div style="font-size:24px;font-weight:700;color:var(--amber)" id="total-tarjetas">0</div></div>
-      <button class="btn btn-primary" style="width:auto;padding:10px 20px" onclick="agregarTarjeta()">+ Nueva</button>
-    </div>
-  </div>
-  <div id="tarjetas-dashboard"></div>
-  <div id="timeline-container"></div>
+  <h2 style="margin-bottom:15px">💳 Tarjetas de Crédito</h2>
+  <p style="font-size:12px;color:var(--text2);margin-bottom:15px">Registra tus tarjetas para recibir alertas de corte y pago.</p>
+  <div id="tarjetas-list"></div>
+  <button class="btn btn-secondary" onclick="openModal('modal-tarjeta')">+ Agregar Tarjeta</button>
 </div>
 
 <!-- PAGOS RECURRENTES -->
@@ -522,7 +500,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="fab-menu-item" onclick="openModal('modal-pago-recurrente');toggleFabMenu()"><span style="color:var(--amber)">🔔</span> Pago Recurrente</div>
 </div>
 
-<!-- MODALES (Gasto, Ingreso, Meta, Abono, Cobrar, Pagar, Préstamo, Tarjeta, Pago Recurrente) -->
+<!-- MODALES -->
 <div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')"><div class="modal-content"><h3>📉 Nuevo Gasto</h3><input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)"><input type="text" id="gasto-cat" class="input-field" placeholder="Categoría"><input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría"><select id="gasto-pago" class="input-field" onchange="checkCreditCard()"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Tarjeta de Crédito</option></select><select id="gasto-tarjeta" class="input-field hidden"><option value="">Selecciona tarjeta...</option></select><button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button><button class="btn btn-primary" onclick="saveGasto()">Guardar</button></div></div>
 
 <div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')"><div class="modal-content"><h3>💰 Nuevo Ingreso</h3><input type="number" id="ingreso-monto" class="input-field" placeholder="Monto (L)"><select id="ingreso-tipo" class="input-field"><option value="salario">Salario</option><option value="extra">Extra</option></select><button class="btn btn-secondary" onclick="closeModal('modal-ingreso')">Cancelar</button><button class="btn btn-primary" onclick="saveIngreso()">Registrar</button></div></div>
@@ -537,12 +515,12 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 
 <div id="modal-prestamo" class="modal" onclick="closeModalIfBg(event,'modal-prestamo')"><div class="modal-content"><h3>🏦 Nuevo Préstamo Bancario</h3><input type="text" id="prest-entidad" class="input-field" placeholder="Entidad (Ej. BAC, Ficohsa, Familiar)"><input type="number" id="prest-monto" class="input-field" placeholder="Monto total del préstamo (L)"><input type="number" id="prest-tasa" class="input-field" placeholder="Tasa de interés anual (%)"><div class="input-row"><input type="number" id="prest-cuotas" class="input-field" placeholder="Número de cuotas"><input type="number" id="prest-cuota-calc" class="input-field" placeholder="Cuota calculada" readonly></div><input type="date" id="prest-fecha-pago" class="input-field"><input type="number" id="prest-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><div id="prest-breakdown" class="loan-breakdown hidden"></div><button class="btn btn-primary" onclick="calculateLoan();savePrestamo()">Calcular y Guardar</button></div></div>
 
-<div id="modal-tarjeta" class="modal" onclick="closeModalIfBg(event,'modal-tarjeta')"><div class="modal-content"><h3>💳 Nueva Tarjeta de Crédito</h3><input type="text" id="tc-nombre" class="input-field" placeholder="Nombre (Ej. BAC Oro, Visa)"><div class="input-row"><input type="number" id="tc-corte" class="input-field" placeholder="Día de corte" min="1" max="31"><input type="number" id="tc-gracia" class="input-field" placeholder="Días de gracia" min="1" max="30"></div><input type="number" id="tc-limite" class="input-field" placeholder="Límite de crédito (L)"><input type="number" id="tc-saldo" class="input-field" placeholder="Saldo actual (L)" value="0"><button class="btn btn-primary" onclick="saveTarjeta()">Guardar Tarjeta</button></div></div>
+<div id="modal-tarjeta" class="modal" onclick="closeModalIfBg(event,'modal-tarjeta')"><div class="modal-content"><h3>💳 Nueva Tarjeta de Crédito</h3><input type="text" id="tc-nombre" class="input-field" placeholder="Nombre (Ej. BAC Oro, Visa)"><div class="input-row"><input type="number" id="tc-corte" class="input-field" placeholder="Día de corte" min="1" max="31"><input type="number" id="tc-pago" class="input-field" placeholder="Día de pago" min="1" max="31"></div><input type="number" id="tc-limite" class="input-field" placeholder="Límite de crédito (L)"><input type="number" id="tc-saldo" class="input-field" placeholder="Saldo actual (L)" value="0"><button class="btn btn-primary" onclick="saveTarjeta()">Guardar Tarjeta</button></div></div>
 
 <div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="number" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
 
 <script>
-const LS_KEY='mifinanzashn_pro_v15';
+const LS_KEY='mifinanzashn_pro_v16';
 let savedState=JSON.parse(localStorage.getItem(LS_KEY));
 let state={
   setup:false,
@@ -739,252 +717,11 @@ function deleteMeta(id){if(confirm('¿Eliminar esta meta?')){state.goals=state.g
 function renderMetas(){const container=document.getElementById('metas-list');if(!container) return;if(state.goals.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">📭 Sin metas de ahorro creadas<br><br>Crea tu primera meta para comenzar a ahorrar.</p>';return}container.innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100),faltante=g.objetivo-g.actual;return `<div class="card card-saving" style="margin-bottom:15px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="flex:1"><div style="font-size:15px;font-weight:700;margin-bottom:5px">${g.nombre}</div><div style="font-size:12px;color:var(--text2)">${fL(g.actual)} de ${fL(g.objetivo)}</div></div><button onclick="deleteMeta(${g.id})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:20px;padding:5px;margin-left:10px" title="Eliminar meta">🗑️</button></div><div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-bottom:10px"><div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width 0.5s ease"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:12px"><span>✅ Progreso: ${pct.toFixed(0)}%</span><span style="color:${faltante>0?'var(--amber)':'var(--green)'}">Falta: ${fL(faltante)}</span></div><button class="btn btn-primary" onclick="openAbono(${g.id})" style="padding:10px;font-size:12px">💰 Abonar a esta meta</button></div>`}).join('')}
 function renderDashboardGoals(){const container=document.getElementById('dashboard-goals');if(!container) return;if(state.goals.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:15px;font-size:12px">Sin metas activas</p>';return}const goalsToShow=state.goals.slice(0,3);container.innerHTML=goalsToShow.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="goal-mini"><div class="goal-mini-header"><span style="font-weight:600">${g.nombre}</span><span style="color:var(--green)">${pct.toFixed(0)}%</span></div><div class="goal-mini-bar"><div class="goal-mini-progress" style="width:${pct}%"></div></div><div style="font-size:10px;color:var(--text2);margin-top:3px">${fL(g.actual)} / ${fL(g.objetivo)}</div></div>`}).join('');if(state.goals.length>3){container.innerHTML+=`<p style="text-align:center;font-size:11px;color:var(--text2);margin-top:10px">+ ${state.goals.length-3} metas más (ver en Metas)</p>`}}
 
-// === MOTOR DE CÁLCULO DE TARJETAS INTELIGENTE ===
-function calcularFechasTarjeta(tarjeta,fechaReferencia=new Date()){
-  const hoy=new Date(fechaReferencia);
-  const diaHoy=hoy.getDate();
-  const mesHoy=hoy.getMonth();
-  const anioHoy=hoy.getFullYear();
-  
-  let ultimoCorte=new Date(anioHoy,mesHoy,tarjeta.diaCorte);
-  if(diaHoy<tarjeta.diaCorte){ultimoCorte.setMonth(mesHoy-1)}
-  
-  let proximoCorte=new Date(ultimoCorte);
-  proximoCorte.setMonth(proximoCorte.getMonth()+1);
-  
-  let fechaLimitePago=new Date(ultimoCorte);
-  fechaLimitePago.setDate(fechaLimitePago.getDate()+tarjeta.diasGracia);
-  
-  let proximaFechaLimite=new Date(proximoCorte);
-  proximaFechaLimite.setDate(proximaFechaLimite.getDate()+tarjeta.diasGracia);
-  
-  const diasParaCorte=Math.ceil((proximoCorte-hoy)/(1000*60*60*24));
-  const diasParaPago=Math.ceil((fechaLimitePago-hoy)/(1000*60*60*24));
-  
-  let estado={tipo:'neutro',mensaje:'',color:'var(--text2)',icono:'⚪'};
-  
-  if(diasParaCorte<=5&&diasParaCorte>=0){
-    estado={tipo:'excelente',mensaje:'🟢 Excelente momento para compras mayores',color:'var(--green)',icono:'🟢'}
-  }else if(diasParaCorte<=0&&diasParaPago>0){
-    estado={tipo:'precaucion',mensaje:'🟡 Precaución: Compras entrarán en próximo corte',color:'var(--amber)',icono:'🟡'}
-  }else if(diasParaPago<=3&&diasParaPago>0){
-    estado={tipo:'urgente',mensaje:'🔴 ¡Pago inminente!',color:'var(--red)',icono:'🔴'}
-  }
-  
-  return{
-    ultimoCorte,proximoCorte,fechaLimitePago,proximaFechaLimite,
-    diasParaCorte,diasParaPago,estado,
-    usoPorcentaje:((tarjeta.saldoActual/tarjeta.limiteCredito)*100).toFixed(1)
-  }
-}
-
-function generarLineaDeTiempo(tarjetas,diasAdelante=45){
-  const hoy=new Date();
-  const fechaLimite=new Date(hoy);
-  fechaLimite.setDate(fechaLimite.getDate()+diasAdelante);
-  
-  let eventos=[];
-  
-  tarjetas.forEach(tarjeta=>{
-    const calculo=calcularFechasTarjeta(tarjeta,hoy);
-    
-    if(calculo.proximoCorte<=fechaLimite){
-      eventos.push({
-        fecha:calculo.proximoCorte,tipo:'corte',tarjeta:tarjeta.nombre,
-        descripcion:`Corte de ${tarjeta.nombre}`,color:'var(--amber)'
-      });
-    }
-    
-    if(calculo.fechaLimitePago<=fechaLimite&&calculo.fechaLimitePago>=hoy){
-      eventos.push({
-        fecha:calculo.fechaLimitePago,tipo:'pago',tarjeta:tarjeta.nombre,
-        descripcion:`Pago límite: ${tarjeta.nombre}`,
-        color:calculo.diasParaPago<=3?'var(--red)':'var(--green)'
-      });
-    }
-  });
-  
-  return eventos.sort((a,b)=>a.fecha-b.fecha);
-}
-
-function renderTarjetasDashboard(){
-  const container=document.getElementById('tarjetas-dashboard');
-  if(!container||!state.tarjetas.length){
-    if(container)container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin tarjetas registradas</p>';
-    return;
-  }
-  
-  const hoy=new Date();
-  
-  container.innerHTML=state.tarjetas.map(tarjeta=>{
-    const calc=calcularFechasTarjeta(tarjeta,hoy);
-    
-    return `
-      <div class="card card-credit" style="margin-bottom:15px;border-left-color:${calc.estado.color}">
-        <div class="debt-header">
-          <div>
-            <div class="debt-title" style="font-size:16px">
-              ${calc.estado.icono} ${tarjeta.nombre}
-            </div>
-            <div class="debt-meta">
-              Límite: ${fL(tarjeta.limiteCredito)} • Saldo: ${fL(tarjeta.saldoActual)}
-            </div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:11px;color:var(--text2)">Uso</div>
-            <div style="font-weight:700;color:${calc.usoPorcentaje>80?'var(--red)':'var(--green)'}">
-              ${calc.usoPorcentaje}%
-            </div>
-          </div>
-        </div>
-        
-        <div class="debt-progress">
-          <div class="debt-progress-bar" style="width:${calc.usoPorcentaje}%;background:${calc.usoPorcentaje>80?'var(--red)':(calc.usoPorcentaje>50?'var(--amber)':'var(--green)')}"></div>
-        </div>
-        
-        <div style="background:${calc.estado.color}20;padding:10px;border-radius:8px;margin:10px 0;border-left:3px solid ${calc.estado.color}">
-          <div style="font-size:12px;font-weight:600;color:${calc.estado.color}">
-            ${calc.estado.mensaje}
-          </div>
-        </div>
-        
-        <div class="debt-stats">
-          <div class="debt-stat">
-            <div style="color:var(--text2)">Próximo Corte</div>
-            <div style="font-weight:700;font-size:13px">
-              ${calc.proximoCorte.toLocaleDateString('es-HN',{day:'numeric',month:'short'})}
-              <span style="font-size:10px;color:var(--text2)">(${calc.diasParaCorte} días)</span>
-            </div>
-          </div>
-          <div class="debt-stat">
-            <div style="color:var(--text2)">Fecha Límite Pago</div>
-            <div style="font-weight:700;font-size:13px;color:${calc.diasParaPago<=3?'var(--red)':'var(--green)'}">
-              ${calc.fechaLimitePago.toLocaleDateString('es-HN',{day:'numeric',month:'short'})}
-              <span style="font-size:10px;color:var(--text2)">(${calc.diasParaPago} días)</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="debt-actions">
-          <button class="btn btn-secondary" style="flex:1;padding:8px;font-size:11px" onclick="actualizarSaldoTarjeta(${tarjeta.id})">
-            Actualizar Saldo
-          </button>
-          <button class="btn btn-danger" style="width:auto;padding:8px 12px;font-size:11px" onclick="eliminarTarjeta(${tarjeta.id})">
-            ×
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  document.getElementById('total-tarjetas').textContent=state.tarjetas.length;
-}
-
-function renderLineaDeTiempo(){
-  const container=document.getElementById('timeline-container');
-  if(!container)return;
-  
-  const eventos=generarLineaDeTiempo(state.tarjetas,45);
-  
-  if(eventos.length===0){
-    container.innerHTML='';
-    return;
-  }
-  
-  container.innerHTML=`
-    <h3 style="margin:20px 0 10px;font-size:14px">📅 Línea de Tiempo (Próximos 45 días)</h3>
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:15px">
-      ${eventos.map((evento,index)=>`
-        <div style="display:flex;align-items:center;gap:15px;padding:12px 0;${index!==eventos.length-1?'border-bottom:1px dashed var(--border)':''}">
-          <div style="width:12px;height:12px;background:${evento.color};border-radius:50%;flex-shrink:0"></div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:13px">${evento.descripcion}</div>
-            <div style="font-size:11px;color:var(--text2)">
-              ${evento.fecha.toLocaleDateString('es-HN',{weekday:'long',day:'numeric',month:'long'})}
-            </div>
-          </div>
-          <div style="font-size:11px;font-weight:700;color:${evento.color}">
-            ${evento.tipo==='corte'?'✂️':'💳'}
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-function agregarTarjeta(){
-  const nombre=prompt('Nombre de la tarjeta (Ej: BAC Oro, Ficohsa Platinum):');
-  if(!nombre)return;
-  
-  const diaCorte=parseInt(prompt('Día de corte (1-31):'));
-  if(!diaCorte||diaCorte<1||diaCorte>31){alert('Día de corte inválido');return}
-  
-  const diasGracia=parseInt(prompt('Días de gracia (Ej: 15, 20, 25):'));
-  if(!diasGracia||diasGracia<1){alert('Días de gracia inválidos');return}
-  
-  const limiteCredito=parseFloat(prompt('Límite de crédito (L):'))||0;
-  
-  state.tarjetas.push({
-    id:Date.now(),nombre,diaCorte,diasGracia,saldoActual:0,limiteCredito
-  });
-  
-  save();renderAll();alert('✅ Tarjeta agregada correctamente');
-}
-
-function actualizarSaldoTarjeta(id){
-  const tarjeta=state.tarjetas.find(t=>t.id===id);
-  if(!tarjeta)return;
-  
-  const nuevoSaldo=parseFloat(prompt(`Actualizar saldo de ${tarjeta.nombre}:\n\nSaldo actual: ${fL(tarjeta.saldoActual)}\n\nNuevo saldo:`));
-  
-  if(!isNaN(nuevoSaldo)&&nuevoSaldo>=0){
-    tarjeta.saldoActual=nuevoSaldo;
-    save();renderAll();
-  }
-}
-
-function eliminarTarjeta(id){
-  if(confirm('¿Eliminar esta tarjeta?')){
-    state.tarjetas=state.tarjetas.filter(t=>t.id!==id);
-    save();renderAll();
-  }
-}
-
-// === TARJETAS - CORREGIDO ===
-function saveTarjeta(){
-  const nombre=document.getElementById('tc-nombre').value.trim();
-  const corte=parseInt(document.getElementById('tc-corte').value);
-  const gracia=parseInt(document.getElementById('tc-gracia').value);
-  const limite=parseFloat(document.getElementById('tc-limite').value)||0;
-  const saldo=parseFloat(document.getElementById('tc-saldo').value)||0;
-  
-  if(!nombre||!corte||!gracia||corte<1||corte>31||gracia<1||gracia>30){
-    return alert('Completa nombre, corte (1-31) y días de gracia (1-30) correctamente');
-  }
-  
-  state.tarjetas.push({id:Date.now(),nombre,diaCorte:corte,diasGracia:gracia,limite,saldo});
-  save();closeModal('modal-tarjeta');renderAll();
-  ['tc-nombre','tc-corte','tc-gracia','tc-limite','tc-saldo'].forEach(id=>document.getElementById(id).value=id==='tc-saldo'?'0':'');
-}
-function renderTarjetas(){const container=document.getElementById('tarjetas-list');if(!container)return;const hoy=new Date().getDate();if(state.tarjetas.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin tarjetas registradas</p>';return}container.innerHTML=state.tarjetas.map(t=>{const faltanCorte=t.diaCorte>=hoy?t.diaCorte-hoy:(30-hoy)+t.diaCorte;const faltanPago=(t.diaCorte+t.diasGracia)>=hoy?(t.diaCorte+t.diasGracia)-hoy:(30-hoy)+(t.diaCorte+t.diasGracia);const alertaCorte=faltanCorte<=3;const alertaPago=faltanPago<=5;const usado=t.limite>0?((t.saldo/t.limite)*100).toFixed(0):0;return `<div class="card card-credit"><div class="debt-header"><div><div class="debt-title">${t.nombre}</div><div class="debt-meta">Límite: ${fL(t.limite)} • Saldo: ${fL(t.saldo)} • Usado: ${usado}%</div></div><button onclick="deleteTarjeta(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${usado}%;background:${usado>=80?'var(--red)':(usado>=50?'var(--amber)':'var(--green)')}"></div></div>${alertaCorte||alertaPago?`<div class="alert-card ${alertaPago?'urgent':''}"><div class="alert-icon">${alertaPago?'🚨':''}</div><div class="alert-content"><div class="alert-title">${t.nombre}</div><div class="alert-detail">${alertaCorte?`📅 Corte en ${faltanCorte} día(s)`:''}${alertaPago?`<br>⚠️ Pagar en ${faltanPago} día(s)`:''}</div></div></div>`:''}<div style="font-size:11px;color:var(--text2);margin-top:10px">📅 Corte: Día ${t.diaCorte} • 💳 Pago: Día ${t.diaCorte+t.diasGracia}</div><div class="debt-actions"><button class="btn btn-secondary" style="flex:1;padding:10px;font-size:12px" onclick="actualizarSaldoTarjeta(${t.id})">Actualizar Saldo</button></div></div>`}).join('')}
-function deleteTarjeta(id){if(confirm('¿Eliminar?')){state.tarjetas=state.tarjetas.filter(t=>t.id!==id);save();renderAll()}}
-
-function renderCardAlerts(){
-  const container=document.getElementById('card-alerts');const noAlerts=document.getElementById('no-card-alerts');if(!container)return;
-  container.innerHTML='';const hoy=new Date().getDate();let hay=false;
-  state.tarjetas.forEach(t=>{
-    const faltanCorte=t.diaCorte>=hoy?t.diaCorte-hoy:(30-hoy)+t.diaCorte;
-    const faltanPago=(t.diaCorte+t.diasGracia)>=hoy?(t.diaCorte+t.diasGracia)-hoy:(30-hoy)+(t.diaCorte+t.diasGracia);
-    if(faltanCorte<=3||faltanPago<=5){hay=true;const urgente=faltanPago<=2;container.innerHTML+=`<div class="alert-card ${urgente?'urgent':''}"><div class="alert-icon">${urgente?'🚨':''}</div><div class="alert-content"><div class="alert-title">${t.nombre}</div><div class="alert-detail">${faltanCorte<=3?`📅 Corte en ${faltanCorte} día(s)`:''}${faltanPago<=5?`<br>⚠️ Pagar en ${faltanPago} día(s)`:''}</div></div></div>`}
-  });
-  noAlerts.style.display=hay?'none':'block';
-}
-
 // === PRÓXIMOS PAGOS Y COBROS (Dashboard) ===
 function renderUpcomingPayments(){
   const container=document.getElementById('upcoming-payments');
   const noPayments=document.getElementById('no-upcoming-payments');
-  if(!container)return;
+  if(!container) return;
   
   const hoy=new Date();
   const hoyDia=hoy.getDate();
@@ -994,37 +731,39 @@ function renderUpcomingPayments(){
   
   let pagosPendientes=[];
   
+  // Préstamos bancarios
   state.prestamos.forEach(p=>{
     if(p.fechaPago){
       const fechaPago=new Date(p.fechaPago);
       const diffDays=Math.ceil((fechaPago-hoy)/(1000*60*60*24));
-      if(diffDays>=0&&diffDays<=diasLimite){
+      if(diffDays>=0 && diffDays<=diasLimite){
         pagosPendientes.push({tipo:'préstamo',entidad:p.entidad,monto:p.cuota,fecha:p.fechaPago,dias:diffDays,urgente:diffDays<=2});
       }
     }
   });
   
+  // Tarjetas de crédito (fecha de pago)
   state.tarjetas.forEach(t=>{
-    const fechaPago=new Date(hoyAnio,hoyMes,t.diaCorte+t.diasGracia);
-    if(fechaPago<hoy)fechaPago.setMonth(fechaPago.getMonth()+1);
-    const faltanDias=Math.ceil((fechaPago-hoy)/(1000*60*60*24));
-    if(faltanDias>=0&&faltanDias<=diasLimite){
-      pagosPendientes.push({tipo:'tarjeta',entidad:t.nombre,monto:t.saldo,fecha:fechaPago,dias:faltanDias,urgente:faltanDias<=2});
+    const faltanPago=t.pago>=hoyDia?t.pago-hoyDia:(new Date(hoyAnio,hoyMes+1,0).getDate()-hoyDia)+t.pago;
+    if(faltanPago>=0 && faltanPago<=diasLimite){
+      pagosPendientes.push({tipo:'tarjeta',entidad:t.nombre,monto:t.saldo,fecha:`Día ${t.pago} de este mes`,dias:faltanPago,urgente:faltanPago<=2});
     }
   });
   
+  // Pagos recurrentes
   state.pagosRecurrentes.forEach(p=>{
     const faltanDias=p.dia>=hoyDia?p.dia-hoyDia:(new Date(hoyAnio,hoyMes+1,0).getDate()-hoyDia)+p.dia;
-    if(faltanDias>=0&&faltanDias<=diasLimite){
+    if(faltanDias>=0 && faltanDias<=diasLimite){
       pagosPendientes.push({tipo:'recurrente',entidad:p.servicio,monto:p.monto,fecha:`Día ${p.dia} de este mes`,dias:faltanDias,urgente:faltanDias<=2});
     }
   });
   
+  // Cuentas por pagar
   state.payables.forEach(p=>{
     if(p.fecha){
       const fechaPago=new Date(p.fecha);
       const diffDays=Math.ceil((fechaPago-hoy)/(1000*60*60*24));
-      if(diffDays>=0&&diffDays<=diasLimite){
+      if(diffDays>=0 && diffDays<=diasLimite){
         const pendiente=p.monto-(p.pagado||0);
         if(pendiente>0){
           pagosPendientes.push({tipo:'deuda',entidad:p.creditor,monto:pendiente,fecha:p.fecha,dias:diffDays,urgente:diffDays<=2});
@@ -1060,21 +799,27 @@ function renderUpcomingPayments(){
 function renderUpcomingReceivables(){
   const container=document.getElementById('upcoming-receivables');
   const noReceivables=document.getElementById('no-upcoming-receivables');
-  if(!container)return;
+  if(!container) return;
   
   const hoy=new Date();
   const diasLimite=7;
   
   const cobrosPendientes=state.receivables.filter(r=>{
-    if(!r.fecha)return false;
+    if(!r.fecha) return false;
     const fechaCobro=new Date(r.fecha);
     const diffDays=Math.ceil((fechaCobro-hoy)/(1000*60*60*24));
     const pendiente=r.monto-(r.pagado||0);
-    return diffDays>=0&&diffDays<=diasLimite&&pendiente>0;
+    return diffDays>=0 && diffDays<=diasLimite && pendiente>0;
   }).map(r=>{
     const fechaCobro=new Date(r.fecha);
     const diffDays=Math.ceil((fechaCobro-hoy)/(1000*60*60*24));
-    return{persona:r.persona,monto:r.monto-(r.pagado||0),fecha:r.fecha,dias:diffDays,urgente:diffDays<=2};
+    return {
+      persona:r.persona,
+      monto:r.monto-(r.pagado||0),
+      fecha:r.fecha,
+      dias:diffDays,
+      urgente:diffDays<=2
+    };
   }).sort((a,b)=>a.dias-b.dias);
   
   if(cobrosPendientes.length===0){
@@ -1178,7 +923,7 @@ function calcularEstadoPrestamo(p){
 }
 
 function renderPrestamos(){
-  const container=document.getElementById('prestamos-list');if(!container)return;
+  const container=document.getElementById('prestamos-list');if(!container) return;
   const total=state.prestamos.reduce((a,p)=>a+(p.monto-(p.pagado||0)),0);
   document.getElementById('total-prestamos').textContent=fL(total);
   if(state.prestamos.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin préstamos registrados</p>';return}
@@ -1203,6 +948,48 @@ function abonarPrestamo(id){
   }
 }
 
+// === TARJETAS - CORREGIDO ===
+function saveTarjeta(){
+  const nombre=document.getElementById('tc-nombre').value.trim();
+  const corte=parseInt(document.getElementById('tc-corte').value);
+  const pago=parseInt(document.getElementById('tc-pago').value);
+  const limite=parseFloat(document.getElementById('tc-limite').value)||0;
+  const saldo=parseFloat(document.getElementById('tc-saldo').value)||0;
+  
+  // Validar que sean números válidos del 1-31
+  if(!nombre||!corte||!pago||corte<1||corte>31||pago<1||pago>31){
+    return alert('Completa nombre, corte (1-31) y pago (1-31) correctamente');
+  }
+  
+  state.tarjetas.push({id:Date.now(),nombre,corte,pago,limite,saldo});
+  save();closeModal('modal-tarjeta');renderAll();
+  ['tc-nombre','tc-corte','tc-pago','tc-limite','tc-saldo'].forEach(id=>document.getElementById(id).value=id==='tc-saldo'?'0':'');
+}
+function renderTarjetas(){
+  const container=document.getElementById('tarjetas-list');if(!container) return;
+  const hoy=new Date().getDate();
+  if(state.tarjetas.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:20px">Sin tarjetas registradas</p>';return}
+  container.innerHTML=state.tarjetas.map(t=>{
+    const faltanCorte=t.corte>=hoy?t.corte-hoy:(30-hoy)+t.corte;
+    const faltanPago=t.pago>=hoy?t.pago-hoy:(30-hoy)+t.pago;
+    const alertaCorte=faltanCorte<=3;const alertaPago=faltanPago<=5;
+    const usado=t.limite>0?((t.saldo/t.limite)*100).toFixed(0):0;
+    return `<div class="card card-credit"><div class="debt-header"><div><div class="debt-title">${t.nombre}</div><div class="debt-meta">Límite: ${fL(t.limite)} • Saldo: ${fL(t.saldo)} • Usado: ${usado}%</div></div><button onclick="deleteTarjeta(${t.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px">×</button></div><div class="debt-progress"><div class="debt-progress-bar" style="width:${usado}%;background:${usado>=80?'var(--red)':(usado>=50?'var(--amber)':'var(--green)')}"></div></div>${alertaCorte||alertaPago?`<div class="alert-card ${alertaPago?'urgent':''}"><div class="alert-icon">${alertaPago?'🚨':''}</div><div class="alert-content"><div class="alert-title">${t.nombre}</div><div class="alert-detail">${alertaCorte?`📅 Corte en ${faltanCorte} día(s)`:''}${alertaPago?`<br>⚠️ Pagar en ${faltanPago} día(s)`:''}</div></div></div>`:''}<div style="font-size:11px;color:var(--text2);margin-top:10px">📅 Corte: Día ${t.corte} • 💳 Pago: Día ${t.pago}</div><div class="debt-actions"><button class="btn btn-secondary" style="flex:1;padding:10px;font-size:12px" onclick="actualizarSaldoTarjeta(${t.id})">Actualizar Saldo</button></div></div>`;
+  }).join('');
+}
+function deleteTarjeta(id){if(confirm('¿Eliminar?')){state.tarjetas=state.tarjetas.filter(t=>t.id!==id);save();renderAll()}}
+function actualizarSaldoTarjeta(id){const t=state.tarjetas.find(x=>x.id===id);if(!t)return;const nuevoSaldo=parseFloat(prompt(`Actualizar saldo de ${t.nombre}:\n\nSaldo actual: ${fL(t.saldo)}\n\nNuevo saldo:`));if(!isNaN(nuevoSaldo)){t.saldo=nuevoSaldo;save();renderAll()}}
+function renderCardAlerts(){
+  const container=document.getElementById('card-alerts');const noAlerts=document.getElementById('no-card-alerts');if(!container) return;
+  container.innerHTML='';const hoy=new Date().getDate();let hay=false;
+  state.tarjetas.forEach(t=>{
+    const faltanCorte=t.corte>=hoy?t.corte-hoy:(30-hoy)+t.corte;
+    const faltanPago=t.pago>=hoy?t.pago-hoy:(30-hoy)+t.pago;
+    if(faltanCorte<=3||faltanPago<=5){hay=true;const urgente=faltanPago<=2;container.innerHTML+=`<div class="alert-card ${urgente?'urgent':''}"><div class="alert-icon">${urgente?'🚨':''}</div><div class="alert-content"><div class="alert-title">${t.nombre}</div><div class="alert-detail">${faltanCorte<=3?`📅 Corte en ${faltanCorte} día(s)`:''}${faltanPago<=5?`<br>⚠️ Pagar en ${faltanPago} día(s)`:''}</div></div></div>`}
+  });
+  noAlerts.style.display=hay?'none':'block';
+}
+
 // === PAGOS RECURRENTES ===
 function savePagoRecurrente(){
   const servicioEl=document.getElementById('pago-servicio'),montoEl=document.getElementById('pago-monto'),diaEl=document.getElementById('pago-dia'),alertaEl=document.getElementById('pago-alerta'),notificacionEl=document.getElementById('pago-notificacion');
@@ -1210,39 +997,39 @@ function savePagoRecurrente(){
   if(!servicio||!monto||monto<=0){alert('❌ Completa: Nombre del servicio y monto válido');return}
   if(dia<1||dia>31){alert('❌ El día debe ser entre 1 y 31');return}
   try{
-    if(!Array.isArray(state.pagosRecurrentes))state.pagosRecurrentes=[];
+    if(!Array.isArray(state.pagosRecurrentes)) state.pagosRecurrentes=[];
     state.pagosRecurrentes.push({id:Date.now(),servicio,monto,dia,alertaDias,notificacion,ultimoPago:null,pagado:0,fechaCreacion:new Date().toISOString()});
-    if(notificacion)requestNotificationPermission().catch(()=>{});
-    save();if(servicioEl)servicioEl.value='';if(montoEl)montoEl.value='';if(diaEl)diaEl.value='';
+    if(notificacion) requestNotificationPermission().catch(()=>{});
+    save();if(servicioEl) servicioEl.value='';if(montoEl) montoEl.value='';if(diaEl) diaEl.value='';
     closeModal('modal-pago-recurrente');renderPagosRecurrentes();renderDashboard();
   }catch(err){console.error('Error:',err);alert('Error al guardar.')}
 }
 function renderPagosRecurrentes(){
   const container=document.getElementById('pagos-list'),alertasContainer=document.getElementById('pagos-alertas');
-  if(!container||!alertasContainer)return;
-  if(!Array.isArray(state.pagosRecurrentes))state.pagosRecurrentes=[];
+  if(!container||!alertasContainer) return;
+  if(!Array.isArray(state.pagosRecurrentes)) state.pagosRecurrentes=[];
   const hoy=new Date().getDate(),mes=new Date().getMonth(),anio=new Date().getFullYear();
   if(state.pagosRecurrentes.length===0){container.innerHTML='<p style="text-align:center;color:var(--text2);padding:40px 20px">📭 Sin pagos recurrentes<br><br>Registra tus servicios (agua, luz, teléfono, etc.) para recibir alertas antes del vencimiento.</p>';alertasContainer.innerHTML='';return}
   let alertasHTML='',pagosHTML='';
   state.pagosRecurrentes.forEach(p=>{
     try{
       const faltanDias=p.dia>=hoy?p.dia-hoy:(new Date(anio,mes+1,0).getDate()-hoy)+p.dia,urgente=faltanDias<=p.alertaDias,vencido=faltanDias===0;
-      if(urgente&&!vencido)alertasHTML+=`<div class="alert-card ${faltanDias<=1?'urgent':''}"><div class="alert-icon">${faltanDias<=1?'🚨':'⏰'}</div><div class="alert-content"><div class="alert-title">${p.servicio}</div><div class="alert-detail">Vence en ${faltanDias} día(s) • Monto: ${fL(p.monto)}</div></div></div>`;
-      if(vencido)alertasHTML+=`<div class="alert-card urgent"><div class="alert-icon">⚠️</div><div class="alert-content"><div class="alert-title">${p.servicio}</div><div class="alert-detail" style="color:var(--red)">¡VENCE HOY! • Monto: ${fL(p.monto)}</div></div></div>`;
+      if(urgente&&!vencido) alertasHTML+=`<div class="alert-card ${faltanDias<=1?'urgent':''}"><div class="alert-icon">${faltanDias<=1?'🚨':''}</div><div class="alert-content"><div class="alert-title">${p.servicio}</div><div class="alert-detail">Vence en ${faltanDias} día(s) • Monto: ${fL(p.monto)}</div></div></div>`;
+      if(vencido) alertasHTML+=`<div class="alert-card urgent"><div class="alert-icon">⚠️</div><div class="alert-content"><div class="alert-title">${p.servicio}</div><div class="alert-detail" style="color:var(--red)">¡VENCE HOY! • Monto: ${fL(p.monto)}</div></div></div>`;
       pagosHTML+=`<div class="card card-credit" style="margin-bottom:15px"><div class="debt-header"><div><div class="debt-title" style="font-size:16px">${p.servicio}</div><div class="debt-meta">Monto: ${fL(p.monto)} • Día: ${p.dia}</div></div><button onclick="deletePagoRecurrente(${p.id})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px">×</button></div><div style="padding:10px;background:${urgente?'rgba(232,93,93,0.1)':'var(--bg3)'};border-radius:8px;margin:10px 0"><div style="font-size:13px;color:${urgente?'var(--red)':'var(--green)'};font-weight:600">${urgente?(vencido?'⚠️ ¡VENCE HOY!':`⏰ Vence en ${faltanDias} día(s)`):`✅ Próximo pago en ${faltanDias} día(s)`}</div></div><button class="btn btn-primary" onclick="marcarPagoRecurrente(${p.id})">✓ Marcar como Pagado</button></div>`;
     }catch(err){}
   });
   container.innerHTML=pagosHTML;alertasContainer.innerHTML=alertasHTML||'<p style="text-align:center;color:var(--text2);padding:20px">✅ No hay pagos próximos</p>';
 }
-function marcarPagoRecurrente(id){const pago=state.pagosRecurrentes.find(p=>p.id===id);if(!pago)return;if(confirm(`¿Marcar ${pago.servicio} (${fL(pago.monto)}) como pagado?`)){pago.ultimoPago=new Date().toISOString();pago.pagado=(pago.pagado||0)+pago.monto;state.transactions.push({id:Date.now(),type:'expense',amount:pago.monto,cat:'Servicios',subcat:pago.servicio,date:new Date().toISOString()});save();renderPagosRecurrentes();renderDashboard()}}
+function marcarPagoRecurrente(id){const pago=state.pagosRecurrentes.find(p=>p.id===id);if(!pago) return;if(confirm(`¿Marcar ${pago.servicio} (${fL(pago.monto)}) como pagado?`)){pago.ultimoPago=new Date().toISOString();pago.pagado=(pago.pagado||0)+pago.monto;state.transactions.push({id:Date.now(),type:'expense',amount:pago.monto,cat:'Servicios',subcat:pago.servicio,date:new Date().toISOString()});save();renderPagosRecurrentes();renderDashboard()}}
 function deletePagoRecurrente(id){if(confirm('¿Eliminar este pago recurrente?')){try{state.pagosRecurrentes=state.pagosRecurrentes.filter(p=>p.id!==id);save();renderPagosRecurrentes()}catch(err){}}}
-function checkRecurrentPayments(){if(state.pagosRecurrentes&&state.pagosRecurrentes.length>0)renderPagosRecurrentes()}
+function checkRecurrentPayments(){if(state.pagosRecurrentes&&state.pagosRecurrentes.length>0) renderPagosRecurrentes()}
 function initPaymentNotifications(){setInterval(checkRecurrentPayments,3600000);checkRecurrentPayments()}
 
 // === CONCILIACIÓN BANCARIA - CORREGIDA ===
 function reconcileBalance(){
   const saldoReal=parseFloat(document.getElementById('reconcile-balance').value);
-  if(!saldoReal&&saldoReal!==0)return alert('Ingresa el saldo real del banco');
+  if(!saldoReal&&saldoReal!==0) return alert('Ingresa el saldo real del banco');
   
   const income=state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
   const expense=state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
@@ -1344,20 +1131,20 @@ function renderIngresos(){
 // === HISTÓRICO / CONCILIACIÓN ===
 function renderHistorico(){
   const chartContainer=document.getElementById('history-chart'),milestonesContainer=document.getElementById('history-milestones');
-  if(!chartContainer)return;
+  if(!chartContainer) return;
   
   const monthly={};
   state.transactions.forEach(t=>{
     const m=new Date(t.date).toLocaleString('es-HN',{month:'short',year:'numeric'});
-    if(!monthly[m])monthly[m]={income:0,expense:0};
-    if(t.type==='income')monthly[m].income+=t.amount;else if(t.type==='expense')monthly[m].expense+=t.amount;
+    if(!monthly[m]) monthly[m]={income:0,expense:0};
+    if(t.type==='income') monthly[m].income+=t.amount;else if(t.type==='expense') monthly[m].expense+=t.amount;
   });
   
   const months=Object.keys(monthly).slice(-6),maxVal=Math.max(1,...Object.values(monthly).map(d=>Math.max(d.income,d.expense)));
   
   chartContainer.innerHTML=`<div class="history-chart">${months.map(m=>{const d=monthly[m],iH=(d.income/maxVal)*100,eH=(d.expense/maxVal)*100;return `<div class="history-bar"><div style="display:flex;gap:2px;height:80px;align-items:flex-end"><div class="history-bar-income" style="height:${iH}%" title="Ingresos: ${fL(d.income)}"></div><div class="history-bar-expense" style="height:${eH}%" title="Gastos: ${fL(d.expense)}"></div></div><span style="font-size:9px;color:var(--text2);transform:rotate(-45deg);transform-origin:left">${m}</span></div>`}).join('')}</div>`;
   
-  if(!milestonesContainer)return;
+  if(!milestonesContainer) return;
   const completedGoals=state.goals.filter(g=>g.actual>=g.objetivo),paidLoans=state.prestamos.filter(p=>p.cuotasPagadas>=p.cuotasTotal);
   if(completedGoals.length===0&&paidLoans.length===0){milestonesContainer.innerHTML='<p style="text-align:center;color:var(--text2);padding:15px">Aún no hay hitos alcanzados</p>';return}
   milestonesContainer.innerHTML=[...completedGoals.map(g=>`<div style="padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:8px"><span style="color:var(--green);font-weight:700">✅</span> Meta "${g.nombre}" completada</div>`),...paidLoans.map(p=>`<div style="padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:8px"><span style="color:var(--green);font-weight:700">✅</span> Préstamo "${p.entidad}" saldado</div>`)].join('');
@@ -1382,8 +1169,8 @@ function exportFullReport(){
   const byCat={};
   expense.forEach(t=>{
     const cat=t.cat||'Varios',sub=t.subcat||'General';
-    if(!byCat[cat])byCat[cat]={};
-    if(!byCat[cat][sub])byCat[cat][sub]=0;
+    if(!byCat[cat]) byCat[cat]={};
+    if(!byCat[cat][sub]) byCat[cat][sub]=0;
     byCat[cat][sub]+=t.amount;
   });
   
@@ -1419,24 +1206,24 @@ function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileRe
 function resetApp(){if(confirm('⚠️ ¿BORRAR TODOS TUS DATOS?\n\nEsta acción NO se puede deshacer.')){if(confirm('🔄 Confirma: Se eliminarán todos los datos. ¿Continuar?')){localStorage.removeItem(LS_KEY);localStorage.removeItem('finanzas_pin');localStorage.removeItem('finanzas_recordar');location.reload()}}}
 
 // === UTILS ===
-function switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.hamburger-item').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');const items=document.querySelectorAll('.hamburger-item');items.forEach(item=>{if(item.textContent.toLowerCase().includes(v))item.classList.add('active')});if(v==='gastos')renderGastos();if(v==='ingresos')renderIngresos();if(v==='metas')renderMetas();if(v==='cobrar')renderCobrar();if(v==='pagar')renderPagar();if(v==='prestamos')renderPrestamos();if(v==='tarjetas'){renderTarjetasDashboard();renderLineaDeTiempo()}if(v==='pagos')renderPagosRecurrentes();if(v==='historico')renderHistorico()}
+function switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.hamburger-item').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');const items=document.querySelectorAll('.hamburger-item');items.forEach(item=>{if(item.textContent.toLowerCase().includes(v)) item.classList.add('active')});if(v==='gastos')renderGastos();if(v==='ingresos')renderIngresos();if(v==='metas')renderMetas();if(v==='cobrar')renderCobrar();if(v==='pagar')renderPagar();if(v==='prestamos')renderPrestamos();if(v==='tarjetas')renderTarjetas();if(v==='pagos')renderPagosRecurrentes();if(v==='historico')renderHistorico()}
 function openModal(id){document.getElementById(id).style.display='flex';document.getElementById('fab-menu').style.display='none'}
 function closeModal(id){document.getElementById(id).style.display='none'}
 function closeModalIfBg(e,id){if(e.target.id===id)closeModal(id)}
-function renderAll(){renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetasDashboard();renderLineaDeTiempo();renderPagosRecurrentes();renderHistorico();renderBudgetRules();renderUpcomingPayments();renderUpcomingReceivables();document.getElementById('total-tarjetas').textContent=state.tarjetas.length}
+function renderAll(){renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetas();renderPagosRecurrentes();renderHistorico();renderBudgetRules();renderUpcomingPayments();renderUpcomingReceivables()}
 
 // === INICIALIZACIÓN ===
 window.onload=()=>{
-  if(!state.pagosRecurrentes||!Array.isArray(state.pagosRecurrentes))state.pagosRecurrentes=[];
-  if(!state.prestamos||!Array.isArray(state.prestamos))state.prestamos=[];
-  if(!state.budgetRules)state.budgetRules={gastos:65,ahorro:20,extra:15};
+  if(!state.pagosRecurrentes||!Array.isArray(state.pagosRecurrentes)) state.pagosRecurrentes=[];
+  if(!state.prestamos||!Array.isArray(state.prestamos)) state.prestamos=[];
+  if(!state.budgetRules) state.budgetRules={gastos:65,ahorro:20,extra:15};
   
   if(appPIN&&!recordarPIN){document.getElementById('modal-pin').style.display='flex';document.getElementById('pin-input').focus()}
   else if(appPIN&&recordarPIN){if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll();initPaymentNotifications()}}
   else{if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll();initPaymentNotifications()}}
   
-  const recordarEl=document.getElementById('recordar-pin');if(recordarEl)recordarEl.checked=recordarPIN;
-  const btnConfigPIN=document.getElementById('btn-config-pin');if(btnConfigPIN)btnConfigPIN.textContent=appPIN?'Cambiar PIN':'Configurar PIN';
+  const recordarEl=document.getElementById('recordar-pin');if(recordarEl) recordarEl.checked=recordarPIN;
+  const btnConfigPIN=document.getElementById('btn-config-pin');if(btnConfigPIN) btnConfigPIN.textContent=appPIN?'Cambiar PIN':'Configurar PIN';
   
   renderBudgetRules();
 };
