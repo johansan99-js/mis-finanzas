@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1117">
-<link rel="icon" href="image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 <title>Mis Finanzas HN - Pro</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -47,10 +46,13 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .income-bar{background:var(--green)}
 .expense-bar{background:var(--red)}
 .saving-bar{background:var(--blue)}
-.fab{position:fixed;bottom:80px;right:20px;width:60px;height:60px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--bg);cursor:pointer;box-shadow:0 4px 15px rgba(240,165,0,0.3);z-index:150}
-.fab-menu{position:fixed;bottom:150px;right:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:140;display:none;min-width:200px}
-.fab-menu-item{padding:12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;margin-bottom:5px}
-.fab-menu-item:hover{background:var(--bg3)}
+.fab{position:fixed;bottom:80px;right:20px;width:60px;height:60px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--bg);cursor:pointer;box-shadow:0 4px 15px rgba(240,165,0,0.3);z-index:250;transition:transform 0.2s ease}
+.fab:active{transform:scale(0.95)}
+.fab-menu{position:fixed;bottom:150px;right:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:249;display:none;min-width:220px;animation:fadeIn 0.2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fab-menu-item{padding:12px 15px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;margin-bottom:5px;transition:background 0.2s ease;-webkit-tap-highlight-color:transparent;user-select:none}
+.fab-menu-item:hover{background:var(--bg4)}
+.fab-menu-item:active{background:var(--border)}
 .history-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
 .history-item:last-child{border-bottom:none}
 .badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase}
@@ -123,25 +125,35 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .hamburger-title{font-size:16px;font-weight:700;color:var(--amber)}
 .hamburger-panel{position:fixed;top:60px;left:0;width:85%;max-width:300px;height:calc(100% - 60px);background:var(--bg2);z-index:199;transform:translateX(-100%);transition:transform 0.3s ease-out;overflow-y:auto;box-shadow:2px 0 10px rgba(0,0,0,0.3)}
 .hamburger-panel.active{transform:translateX(0)}
-.hamburger-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:198;opacity:0;visibility:hidden;transition:opacity 0.3s ease}
-.hamburger-overlay.active{opacity:1;visibility:visible}
+.hamburger-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:198;opacity:0;visibility:hidden;transition:opacity 0.3s ease;pointer-events:none}
+.hamburger-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
 .hamburger-nav{padding:20px}
 .hamburger-item{display:flex;align-items:center;gap:15px;padding:15px;border-radius:8px;margin-bottom:10px;cursor:pointer;background:var(--bg3);color:var(--text);font-weight:600;font-size:14px}
 .hamburger-item:hover{background:var(--bg4)}
 .hamburger-item.active{background:var(--amber);color:var(--bg)}
 .hamburger-close{position:absolute;top:15px;right:15px;background:none;border:none;color:var(--text);font-size:24px;cursor:pointer;line-height:1}
+
+/* === TOUCH OPTIMIZATIONS === */
+@media (hover:none) and (pointer:coarse){
+  .fab-menu-item{padding:15px 15px;min-height:50px}
+  .fab{width:65px;height:65px;font-size:32px}
+  .hamburger-item{padding:18px 15px;min-height:55px}
+}
 </style>
 </head>
 <body>
 
-<!-- MENÚ HAMBURGUESA - CORREGIDO -->
+<!-- MENÚ HAMBURGUESA -->
 <div class="hamburger-menu">
   <button class="hamburger-btn" onclick="toggleHamburger()">☰</button>
   <div class="hamburger-title">Mis Finanzas HN</div>
   <div style="width:40px"></div>
 </div>
 
+<!-- OVERLAY PARA CERRAR MENÚ -->
 <div class="hamburger-overlay" id="hamburgerOverlay" onclick="toggleHamburger()"></div>
+
+<!-- PANEL DEL MENÚ -->
 <div class="hamburger-panel" id="hamburgerPanel">
   <button class="hamburger-close" onclick="toggleHamburger()">✕</button>
   <div class="hamburger-nav">
@@ -165,29 +177,24 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="modal-content">
     <h3>📊 Reglas de Presupuesto Personalizado</h3>
     <p style="font-size:12px;color:var(--text2);margin:10px 0">Configura tus porcentajes de distribución del ingreso</p>
-    
     <div style="margin:15px 0">
       <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text2)">Gastos Necesarios (%)</label>
       <input type="number" id="rule-gastos" class="input-field" placeholder="Ej: 65" min="0" max="100">
       <p style="font-size:11px;color:var(--text2)">Vivienda, transporte, alimentación, servicios</p>
     </div>
-    
     <div style="margin:15px 0">
       <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text2)">Ahorro (%)</label>
       <input type="number" id="rule-ahorro" class="input-field" placeholder="Ej: 20" min="0" max="100">
       <p style="font-size:11px;color:var(--text2)">Fondo de emergencia, metas, jubilación</p>
     </div>
-    
     <div style="margin:15px 0">
       <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text2)">Gastos Personales/Extra (%)</label>
       <input type="number" id="rule-extra" class="input-field" placeholder="Ej: 15" min="0" max="100">
       <p style="font-size:11px;color:var(--text2)">Ocio, gustos, entretenimiento</p>
     </div>
-    
     <div id="budget-total-warning" style="padding:10px;background:var(--bg4);border-radius:8px;margin:15px 0;text-align:center;display:none">
       <span style="color:var(--red)">⚠️ El total debe ser 100%</span>
     </div>
-    
     <button class="btn btn-primary" onclick="saveBudgetRules()">Guardar Reglas</button>
     <button class="btn btn-secondary" onclick="closeModal('modal-budget-rules')">Cancelar</button>
   </div>
@@ -199,14 +206,10 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <div style="font-size:24px">📲</div>
     <div style="flex:1">
       <div style="font-weight:700;font-size:14px">Instala Mis Finanzas HN</div>
-      <div style="font-size:11px;color:var(--bg);opacity:0.9;margin-top:2px">
-        Accede rápido • Funciona sin internet
-      </div>
+      <div style="font-size:11px;color:var(--bg);opacity:0.9;margin-top:2px">Accede rápido • Funciona sin internet</div>
     </div>
   </div>
-  <button class="btn btn-primary" id="install-btn" style="width:auto;padding:10px 16px;font-size:12px;white-space:nowrap;background:var(--bg);color:var(--amber)">
-    Instalar
-  </button>
+  <button class="btn btn-primary" id="install-btn" style="width:auto;padding:10px 16px;font-size:12px;white-space:nowrap;background:var(--bg);color:var(--amber)">Instalar</button>
   <button onclick="dismissPwaBanner()" style="background:none;border:none;color:var(--bg);opacity:0.8;font-size:20px;cursor:pointer;margin-left:8px">×</button>
 </div>
 
@@ -215,22 +218,11 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="modal-content" style="text-align:center">
     <div style="font-size:48px;margin-bottom:15px">📲</div>
     <h3 style="margin-bottom:10px">Instalar en iPhone/iPad</h3>
-    <p style="color:var(--text2);font-size:13px;margin-bottom:20px">
-      Para instalar esta app en tu pantalla principal:
-    </p>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:20px">Para instalar esta app en tu pantalla principal:</p>
     <div style="text-align:left;background:var(--bg3);padding:15px;border-radius:8px;margin-bottom:20px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <span style="font-size:20px">1️⃣</span>
-        <span>Toca el botón <strong>Compartir</strong> <span style="font-size:18px">📤</span></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <span style="font-size:20px">2️⃣</span>
-        <span>Desliza hacia abajo y toca <strong>"Agregar a inicio"</strong></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:20px">3️⃣</span>
-        <span>Toca <strong>"Agregar"</strong> para confirmar</span>
-      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:20px">1️⃣</span><span>Toca el botón <strong>Compartir</strong> 📤</span></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:20px">2️⃣</span><span>Desliza hacia abajo y toca <strong>"Agregar a inicio"</strong></span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">3️⃣</span><span>Toca <strong>"Agregar"</strong> para confirmar</span></div>
     </div>
     <button class="btn btn-primary" onclick="closeModal('ios-instructions')">Entendido, gracias</button>
   </div>
@@ -246,12 +238,8 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <button class="btn btn-primary" onclick="verificarPIN()">🔓 Entrar</button>
     <p id="pin-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none">❌ PIN incorrecto</p>
     <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
-      <p style="font-size:11px;color:var(--text2)">
-        <button onclick="olvidePIN()" style="background:none;border:none;color:var(--amber);cursor:pointer;text-decoration:underline">¿Olvidaste tu PIN?</button>
-      </p>
-      <p style="font-size:11px;color:var(--text2);margin-top:10px">
-        <button onclick="configurarPIN()" style="background:none;border:none;color:var(--text2);cursor:pointer;text-decoration:underline" id="btn-config-pin">Configurar PIN</button>
-      </p>
+      <p style="font-size:11px;color:var(--text2)"><button onclick="olvidePIN()" style="background:none;border:none;color:var(--amber);cursor:pointer;text-decoration:underline">¿Olvidaste tu PIN?</button></p>
+      <p style="font-size:11px;color:var(--text2);margin-top:10px"><button onclick="configurarPIN()" style="background:none;border:none;color:var(--text2);cursor:pointer;text-decoration:underline" id="btn-config-pin">Configurar PIN</button></p>
     </div>
   </div>
 </div>
@@ -264,10 +252,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <input type="text" id="ob-nombre" class="input-field" placeholder="Tu nombre">
     <input type="number" id="ob-salario" class="input-field" placeholder="¿Cuánto dinero tienes actualmente? (L)">
     <p style="font-size:11px;color:var(--text2);margin:10px 0">Este será tu saldo inicial para comenzar a administrar.</p>
-    <div class="card" style="margin:15px 0">
-      <strong style="font-size:12px">Tu distribución personalizada</strong>
-      <div id="ob-preview" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
-    </div>
+    <div class="card" style="margin:15px 0"><strong style="font-size:12px">Tu distribución personalizada</strong><div id="ob-preview" style="margin-top:10px;font-size:12px;color:var(--text2)"></div></div>
     <button class="btn btn-primary" onclick="finishOnboarding()">Comenzar →</button>
     <p style="font-size:11px;color:var(--text2);margin-top:15px;text-align:center">🔒 Tus datos se guardan SOLO en este dispositivo.<br>Nadie más tiene acceso a tu información.</p>
   </div>
@@ -280,28 +265,15 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <div class="balance-amount" id="balance-amount" style="color:var(--green)">L. 0.00</div>
     <div id="balance-status" style="font-size:12px;color:var(--text2)">Sin ingresos este mes</div>
   </div>
-
-  <!-- REGLA DE PRESUPUESTO PERSONALIZADA -->
   <div class="budget-rule-display">
     <h4>📊 Mi Distribución Personalizada</h4>
     <div class="budget-percentages">
-      <div class="budget-item">
-        <div class="budget-value budget-gasto" id="budget-gastos-val">65%</div>
-        <div class="budget-label">Gastos</div>
-      </div>
-      <div class="budget-item">
-        <div class="budget-value budget-ahorro" id="budget-ahorro-val">20%</div>
-        <div class="budget-label">Ahorro</div>
-      </div>
-      <div class="budget-item">
-        <div class="budget-value budget-extra" id="budget-extra-val">15%</div>
-        <div class="budget-label">Extra</div>
-      </div>
+      <div class="budget-item"><div class="budget-value budget-gasto" id="budget-gastos-val">65%</div><div class="budget-label">Gastos</div></div>
+      <div class="budget-item"><div class="budget-value budget-ahorro" id="budget-ahorro-val">20%</div><div class="budget-label">Ahorro</div></div>
+      <div class="budget-item"><div class="budget-value budget-extra" id="budget-extra-val">15%</div><div class="budget-label">Extra</div></div>
     </div>
     <button class="btn btn-secondary" style="margin-top:10px;padding:8px;font-size:11px" onclick="openModal('modal-budget-rules')">✏️ Editar Reglas</button>
   </div>
-
-  <!-- CONCILIACIÓN BANCARIA -->
   <div class="reconcile-box">
     <h4>🏦 Conciliación Bancaria</h4>
     <p style="font-size:11px;color:var(--text2);margin-bottom:10px">Ajusta tu saldo al valor real de tu banco</p>
@@ -311,19 +283,15 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     </div>
     <p id="reconcile-diff" style="font-size:11px;color:var(--text2);margin-top:8px;display:none"></p>
   </div>
-
   <div class="daily-summary">
     <div class="daily-box"><div class="daily-label">💰 Cobrado hoy</div><div class="daily-value" id="cobrado-hoy" style="color:var(--green)">L. 0</div></div>
     <div class="daily-box"><div class="daily-label">💸 Pagado hoy</div><div class="daily-value" id="pagado-hoy" style="color:var(--red)">L. 0</div></div>
   </div>
-
   <div class="summary-grid">
     <div class="summary-box"><div class="summary-label">Ingresos</div><div class="summary-value" id="total-income" style="color:var(--green)">L. 0</div></div>
     <div class="summary-box"><div class="summary-label">Gastos</div><div class="summary-value" id="total-expense" style="color:var(--red)">L. 0</div></div>
     <div class="summary-box"><div class="summary-label">Extra</div><div class="summary-value" id="total-extra" style="color:var(--blue)">L. 0</div></div>
   </div>
-  
-  <!-- AVISO DE SEGURIDAD -->
   <div class="security-notice">
     <h4>🔒 Tu Privacidad está Protegida</h4>
     <ul style="margin:0">
@@ -333,7 +301,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <li>💡 Exporta tu respaldo semanalmente</li>
     </ul>
   </div>
-
   <div class="chart-container">
     <div class="chart-title">📊 Resumen del Mes</div>
     <div class="chart-bars">
@@ -342,25 +309,17 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <div class="chart-bar"><div class="bar saving-bar" id="bar-saving" style="height:0%"></div><div class="bar-value" id="val-saving">L. 0</div><div class="bar-label">Ahorro</div></div>
     </div>
   </div>
-
-  <!-- METAS EN EL DASHBOARD -->
   <h3 style="margin:20px 0 10px;font-size:14px">🎯 Metas de Ahorro</h3>
   <div id="dashboard-goals"></div>
-
   <h3 style="margin:20px 0 10px;font-size:14px">🔔 Alertas de Tarjetas</h3>
   <div id="card-alerts"></div>
   <p id="no-card-alerts" style="text-align:center;color:var(--text2);font-size:12px;padding:10px">✅ Sin alertas próximas</p>
-
-  <!-- PRÓXIMOS PAGOS -->
   <h3 style="margin:20px 0 10px;font-size:14px">🔔 Próximos Pagos (7 días)</h3>
   <div id="upcoming-payments"></div>
   <p id="no-upcoming-payments" style="text-align:center;color:var(--text2);font-size:12px;padding:10px;display:none">✅ Sin pagos próximos en los próximos 7 días</p>
-
-  <!-- PRÓXIMOS COBROS -->
   <h3 style="margin:20px 0 10px;font-size:14px">💰 Próximos Cobros (7 días)</h3>
   <div id="upcoming-receivables"></div>
   <p id="no-upcoming-receivables" style="text-align:center;color:var(--text2);font-size:12px;padding:10px;display:none">✅ Sin cobros próximos en los próximos 7 días</p>
-
   <h3 style="margin:20px 0 10px;font-size:14px">📜 Movimientos Recientes</h3>
   <div id="recent-history"></div>
 </div>
@@ -459,8 +418,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <!-- CONFIG -->
 <div id="view-config" class="view">
   <h2 style="margin-bottom:15px">⚙️ Configuración y Seguridad</h2>
-  
-  <!-- SEGURIDAD -->
   <div class="card card-security">
     <h4 style="margin-bottom:10px;color:var(--purple)">🔐 Configuración de Seguridad</h4>
     <button class="btn btn-secondary" onclick="configurarPIN()" style="margin-bottom:10px">🔑 Cambiar PIN de Acceso</button>
@@ -474,19 +431,13 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       </label>
     </div>
   </div>
-  
-  <!-- RESPALDO -->
   <div class="card">
     <h4 style="margin-bottom:10px">💾 Respaldo de Datos</h4>
     <button class="btn btn-secondary" onclick="exportData()" style="margin-bottom:10px">📥 Exportar JSON (Sin cifrar)</button>
     <input type="file" id="import-file" style="display:none" onchange="importData(event)">
     <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Importar Respaldo</button>
-    <p style="font-size:11px;color:var(--text2);margin-top:10px">
-      💡 Recomendación: Exporta tu respaldo cada semana y guárdalo en un lugar seguro.
-    </p>
+    <p style="font-size:11px;color:var(--text2);margin-top:10px">💡 Recomendación: Exporta tu respaldo cada semana y guárdalo en un lugar seguro.</p>
   </div>
-  
-  <!-- PRIVACIDAD -->
   <div class="security-notice">
     <h4>📋 Tu Privacidad</h4>
     <ul style="margin:0;font-size:11px">
@@ -498,8 +449,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <li>⚠️ Sin respaldo en la nube = haz backups manuales</li>
     </ul>
   </div>
-  
-  <!-- PELIGRO -->
   <div class="card" style="border-color:var(--red)">
     <h4 style="margin-bottom:10px;color:var(--red)">🗑️ Zona de Peligro</h4>
     <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Borra todos tus datos y regresa al inicio. Esta acción NO se puede deshacer.</p>
@@ -520,86 +469,35 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="fab-menu-item" onclick="openModal('modal-pago-recurrente');toggleFabMenu()"><span style="color:var(--amber)">🔔</span> Pago Recurrente</div>
 </div>
 
-<!-- MODALES (simplificados para brevedad - mantener los mismos del archivo anterior) -->
-<!-- [Los modales se mantienen igual que en la versión anterior] -->
+<!-- MODALES (simplificados - mantener estructura existente) -->
+<div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')"><div class="modal-content"><h3>📉 Nuevo Gasto</h3><input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)"><input type="text" id="gasto-cat" class="input-field" placeholder="Categoría"><input type="text" id="gasto-subcat" class="input-field" placeholder="Subcategoría"><select id="gasto-pago" class="input-field" onchange="checkCreditCard()"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Tarjeta de Crédito</option></select><select id="gasto-tarjeta" class="input-field hidden"><option value="">Selecciona tarjeta...</option></select><button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button><button class="btn btn-primary" onclick="saveGasto()">Guardar</button></div></div>
+<div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')"><div class="modal-content"><h3>💰 Nuevo Ingreso</h3><input type="number" id="ingreso-monto" class="input-field" placeholder="Monto (L)"><select id="ingreso-tipo" class="input-field"><option value="salario">Salario</option><option value="extra">Extra</option></select><button class="btn btn-secondary" onclick="closeModal('modal-ingreso')">Cancelar</button><button class="btn btn-primary" onclick="saveIngreso()">Registrar</button></div></div>
+<div id="modal-meta" class="modal" onclick="closeModalIfBg(event,'modal-meta')"><div class="modal-content"><h3>🎯 Nueva Meta de Ahorro</h3><input type="text" id="meta-nombre" class="input-field" placeholder="Nombre de la meta"><input type="number" id="meta-objetivo" class="input-field" placeholder="Monto objetivo (L)"><input type="number" id="meta-actual" class="input-field" placeholder="Ahorrado actualmente" value="0"><button class="btn btn-secondary" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Guardar Meta</button></div></div>
+<div id="modal-abono" class="modal" onclick="closeModalIfBg(event,'modal-abono')"><div class="modal-content"><h3>💸 Abonar a Meta de Ahorro</h3><p id="abono-meta-nombre" style="color:var(--amber);margin-bottom:15px"></p><p style="font-size:12px;color:var(--text2);margin-bottom:15px">Este monto se restará de tu saldo disponible.</p><input type="number" id="abono-monto" class="input-field" placeholder="Monto a abonar (L)"><input type="hidden" id="abono-meta-id"><button class="btn btn-primary" onclick="saveAbono()">Abonar</button></div></div>
+<div id="modal-cobrar" class="modal" onclick="closeModalIfBg(event,'modal-cobrar')"><div class="modal-content"><h3>💰 Dinero que me deben</h3><input type="text" id="cobrar-persona" class="input-field" placeholder="¿Quién te debe?"><input type="number" id="cobrar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo. Los ingresos se registran al marcar "Registrar Pago".</p><input type="number" id="cobrar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="cobrar-fecha" class="input-field"><button class="btn btn-primary" onclick="saveCobrar()">Guardar</button></div></div>
+<div id="modal-pagar" class="modal" onclick="closeModalIfBg(event,'modal-pagar')"><div class="modal-content"><h3>💸 Lo que debo pagar</h3><input type="text" id="pagar-creditor" class="input-field" placeholder="¿A quién le debes?"><input type="number" id="pagar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo. Los gastos se registran al marcar "Registrar Pago".</p><input type="number" id="pagar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="pagar-fecha" class="input-field"><button class="btn btn-secondary" onclick="savePagar()">Registrar</button></div></div>
+<div id="modal-prestamo" class="modal" onclick="closeModalIfBg(event,'modal-prestamo')"><div class="modal-content"><h3>🏦 Nuevo Préstamo Bancario</h3><input type="text" id="prest-entidad" class="input-field" placeholder="Entidad (Ej. BAC, Ficohsa, Familiar)"><input type="number" id="prest-monto" class="input-field" placeholder="Monto total del préstamo (L)"><input type="number" id="prest-tasa" class="input-field" placeholder="Tasa de interés anual (%)"><div class="input-row"><input type="number" id="prest-cuotas" class="input-field" placeholder="Número de cuotas"><input type="number" id="prest-cuota-calc" class="input-field" placeholder="Cuota calculada" readonly></div><input type="date" id="prest-fecha-pago" class="input-field"><input type="number" id="prest-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><div id="prest-breakdown" class="loan-breakdown hidden"></div><button class="btn btn-primary" onclick="calculateLoan();savePrestamo()">Calcular y Guardar</button></div></div>
+<div id="modal-tarjeta" class="modal" onclick="closeModalIfBg(event,'modal-tarjeta')"><div class="modal-content"><h3>💳 Nueva Tarjeta de Crédito</h3><input type="text" id="tc-nombre" class="input-field" placeholder="Nombre (Ej. BAC Oro, Visa)"><div class="input-row"><input type="number" id="tc-corte" class="input-field" placeholder="Día de corte" min="1" max="31"><input type="number" id="tc-pago" class="input-field" placeholder="Día de pago" min="1" max="31"></div><input type="number" id="tc-limite" class="input-field" placeholder="Límite de crédito (L)"><input type="number" id="tc-saldo" class="input-field" placeholder="Saldo actual (L)" value="0"><button class="btn btn-primary" onclick="saveTarjeta()">Guardar Tarjeta</button></div></div>
+<div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="number" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
 
 <script>
-const LS_KEY='mifinanzashn_pro_v17';
+const LS_KEY='mifinanzashn_pro_v17_2';
 let savedState=JSON.parse(localStorage.getItem(LS_KEY));
-let state={
-  setup:false,
-  nombre:'',
-  saldoInicial:0,
-  transactions:[],
-  goals:[],
-  receivables:[],
-  payables:[],
-  prestamos:[],
-  tarjetas:[],
-  pagosRecurrentes:[],
-  budgetRules:{gastos:65,ahorro:20,extra:15}
-};
-
-// Merge con datos guardados
-if(savedState && typeof savedState==='object'){
-  Object.keys(state).forEach(key=>{
-    if(savedState[key]!==undefined){
-      if(Array.isArray(state[key]) && !Array.isArray(savedState[key])){
-        state[key]=[];
-      }else{
-        state[key]=savedState[key];
-      }
-    }
-  });
-}
-
-let appPIN=localStorage.getItem('finanzas_pin')||'';
-let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
+let state={setup:false,nombre:'',saldoInicial:0,transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[],budgetRules:{gastos:65,ahorro:20,extra:15}};
+if(savedState && typeof savedState==='object'){Object.keys(state).forEach(key=>{if(savedState[key]!==undefined){if(Array.isArray(state[key])&&!Array.isArray(savedState[key])){state[key]=[]}else{state[key]=savedState[key]}}})}
+let appPIN=localStorage.getItem('finanzas_pin')||'';let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
 const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
 const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
 const todayStr=()=>new Date().toISOString().split('T')[0];
 
-// === CATEGORÍAS ===
-const CATEGORIES={
-  vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},
-  transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},
-  alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},
-  ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},
-  prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},
-  seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},
-  impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},
-  ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},
-  regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},
-  personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}
-};
+const CATEGORIES={vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}};
 
-// === MENÚ HAMBURGUESA - CORREGIDO ===
-function toggleHamburger(){
-  const panel=document.getElementById('hamburgerPanel');
-  const overlay=document.getElementById('hamburgerOverlay');
-  panel.classList.toggle('active');
-  overlay.classList.toggle('active');
-  document.body.style.overflow=panel.classList.contains('active')?'hidden':'';
-}
+// === MENÚ HAMBURGUESA ===
+function toggleHamburger(){const panel=document.getElementById('hamburgerPanel');const overlay=document.getElementById('hamburgerOverlay');const isOpen=panel.classList.contains('active');if(isOpen){panel.classList.remove('active');overlay.classList.remove('active');document.body.style.overflow=''}else{panel.classList.add('active');overlay.classList.add('active');document.body.style.overflow='hidden'}}
 
 // === REGLAS DE PRESUPUESTO ===
-function saveBudgetRules(){
-  const gastos=parseInt(document.getElementById('rule-gastos').value)||0;
-  const ahorro=parseInt(document.getElementById('rule-ahorro').value)||0;
-  const extra=parseInt(document.getElementById('rule-extra').value)||0;
-  if(gastos+ahorro+extra!==100){document.getElementById('budget-total-warning').style.display='block';return}
-  state.budgetRules={gastos,ahorro,extra};save();closeModal('modal-budget-rules');renderBudgetRules();
-  alert(`✅ Reglas actualizadas\n\nGastos: ${gastos}%\nAhorro: ${ahorro}%\nExtra: ${extra}%`);
-}
-function renderBudgetRules(){
-  const rules=state.budgetRules||{gastos:65,ahorro:20,extra:15};
-  document.getElementById('budget-gastos-val').textContent=rules.gastos+'%';
-  document.getElementById('budget-ahorro-val').textContent=rules.ahorro+'%';
-  document.getElementById('budget-extra-val').textContent=rules.extra+'%';
-  document.getElementById('rule-gastos').value=rules.gastos;
-  document.getElementById('rule-ahorro').value=rules.ahorro;
-  document.getElementById('rule-extra').value=rules.extra;
-}
+function saveBudgetRules(){const gastos=parseInt(document.getElementById('rule-gastos').value)||0;const ahorro=parseInt(document.getElementById('rule-ahorro').value)||0;const extra=parseInt(document.getElementById('rule-extra').value)||0;if(gastos+ahorro+extra!==100){document.getElementById('budget-total-warning').style.display='block';return}state.budgetRules={gastos,ahorro,extra};save();closeModal('modal-budget-rules');renderBudgetRules();alert(`✅ Reglas actualizadas\n\nGastos: ${gastos}%\nAhorro: ${ahorro}%\nExtra: ${extra}%`)}
+function renderBudgetRules(){const rules=state.budgetRules||{gastos:65,ahorro:20,extra:15};document.getElementById('budget-gastos-val').textContent=rules.gastos+'%';document.getElementById('budget-ahorro-val').textContent=rules.ahorro+'%';document.getElementById('budget-extra-val').textContent=rules.extra+'%';document.getElementById('rule-gastos').value=rules.gastos;document.getElementById('rule-ahorro').value=rules.ahorro;document.getElementById('rule-extra').value=rules.extra}
 
 // === PWA INSTALL ===
 let deferredPrompt=null,pwaDismissed=localStorage.getItem('pwa_banner_dismissed')==='true',isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -623,7 +521,11 @@ function sendNotification(title,body){if(Notification.permission==='granted'){ne
 
 // === ONBOARDING ===
 function finishOnboarding(){const nombre=document.getElementById('ob-nombre').value.trim(),saldoInicial=parseFloat(document.getElementById('ob-salario').value)||0;if(!nombre||saldoInicial===0)return alert('Completa todos los campos');state={setup:true,nombre,saldoInicial,transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[],budgetRules:{gastos:65,ahorro:20,extra:15}};save();document.getElementById('onboarding').style.display='none';renderAll()}
-function toggleFabMenu(){const m=document.getElementById('fab-menu');m.style.display=m.style.display==='block'?'none':'block'}
+
+// === FAB MENU - CORREGIDO ===
+function toggleFabMenu(){const menu=document.getElementById('fab-menu');const fab=document.querySelector('.fab');const isHidden=menu.style.display==='none'||menu.style.display==='';const hamburgerPanel=document.getElementById('hamburgerPanel');const hamburgerOverlay=document.getElementById('hamburgerOverlay');if(hamburgerPanel.classList.contains('active')){hamburgerPanel.classList.remove('active');hamburgerOverlay.classList.remove('active');document.body.style.overflow=''}if(isHidden){menu.style.display='block';setTimeout(()=>{menu.style.opacity='1';menu.style.transform='translateY(0)'},10)}else{menu.style.display='none'}}
+document.addEventListener('click',(e)=>{const fab=document.querySelector('.fab');const fabMenu=document.getElementById('fab-menu');const hamburgerPanel=document.getElementById('hamburgerPanel');if(!fab.contains(e.target)&&!fabMenu.contains(e.target)){fabMenu.style.display='none'}if(!hamburgerPanel.contains(e.target)&&!e.target.closest('.hamburger-btn')&&!e.target.closest('.hamburger-overlay')){if(hamburgerPanel.classList.contains('active')){toggleHamburger()}}});
+let scrollTimeout;window.addEventListener('scroll',()=>{clearTimeout(scrollTimeout);scrollTimeout=setTimeout(()=>{document.getElementById('fab-menu').style.display='none'},500)});
 
 // === CÁLCULO DE PRÉSTAMOS ===
 function calculateLoan(){const P=parseFloat(document.getElementById('prest-monto').value)||0,r=(parseFloat(document.getElementById('prest-tasa').value)||0)/100/12,n=parseInt(document.getElementById('prest-cuotas').value)||1;let cuota=r===0?P/n:P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);document.getElementById('prest-cuota-calc').value=fL(cuota);const interes=P*r,capital=cuota-interes;document.getElementById('prest-breakdown').classList.remove('hidden');document.getElementById('prest-breakdown').innerHTML=`<div style="font-weight:600;margin-bottom:8px">Desglose primer pago:</div><div class="loan-breakdown-row"><span>Cuota mensual:</span><strong>${fL(cuota)}</strong></div><div class="loan-breakdown-row"><span>→ Interés:</span><span style="color:var(--red)">${fL(interes)}</span></div><div class="loan-breakdown-row"><span>→ Capital:</span><span style="color:var(--green)">${fL(capital)}</span></div><div class="loan-breakdown-row"><span>Total intereses:</span><span style="color:var(--amber)">${fL(cuota*n-P)}</span></div>`;return cuota}
@@ -691,7 +593,7 @@ function renderIngresos(){const ingresos=state.transactions.filter(t=>t.type==='
 // === HISTÓRICO ===
 function renderHistorico(){const chartContainer=document.getElementById('history-chart'),milestonesContainer=document.getElementById('history-milestones');if(!chartContainer)return;const monthly={};state.transactions.forEach(t=>{const m=new Date(t.date).toLocaleString('es-HN',{month:'short',year:'numeric'});if(!monthly[m])monthly[m]={income:0,expense:0};if(t.type==='income')monthly[m].income+=t.amount;else if(t.type==='expense')monthly[m].expense+=t.amount});const months=Object.keys(monthly).slice(-6),maxVal=Math.max(1,...Object.values(monthly).map(d=>Math.max(d.income,d.expense)));chartContainer.innerHTML=`<div class="history-chart">${months.map(m=>{const d=monthly[m],iH=(d.income/maxVal)*100,eH=(d.expense/maxVal)*100;return `<div class="history-bar"><div style="display:flex;gap:2px;height:80px;align-items:flex-end"><div class="history-bar-income" style="height:${iH}%" title="Ingresos: ${fL(d.income)}"></div><div class="history-bar-expense" style="height:${eH}%" title="Gastos: ${fL(d.expense)}"></div></div><span style="font-size:9px;color:var(--text2);transform:rotate(-45deg);transform-origin:left">${m}</span></div>`}).join('')}</div>`;if(!milestonesContainer)return;const completedGoals=state.goals.filter(g=>g.actual>=g.objetivo),paidLoans=state.prestamos.filter(p=>p.cuotasPagadas>=p.cuotasTotal);if(completedGoals.length===0&&paidLoans.length===0){milestonesContainer.innerHTML='<p style="text-align:center;color:var(--text2);padding:15px">Aún no hay hitos alcanzados</p>';return}milestonesContainer.innerHTML=[...completedGoals.map(g=>`<div style="padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:8px"><span style="color:var(--green);font-weight:700">✅</span> Meta "${g.nombre}" completada</div>`),...paidLoans.map(p=>`<div style="padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:8px"><span style="color:var(--green);font-weight:700">✅</span> Préstamo "${p.entidad}" saldado</div>`)].join('')}
 
-// === EXPORTAR REPORTE COMPLETO ===
+// === EXPORTAR REPORTE COMPLETO (basado en Excel) ===
 function exportFullReport(){let csv='Presupuesto mensual personal\n\n';const income=state.transactions.filter(t=>t.type==='income'),expense=state.transactions.filter(t=>t.type==='expense'),totalIncome=income.reduce((a,b)=>a+b.amount,0),totalExpense=expense.reduce((a,b)=>a+b.amount,0),balance=state.saldoInicial+totalIncome-totalExpense;csv+='INGRESOS MENSUALES\n';csv+='Tipo,Monto Previsto,Monto Real,Diferencia\n';csv+=`Salario,${fL(state.saldoInicial)},${fL(income.filter(t=>t.subcat==='salario').reduce((a,b)=>a+b.amount,0))},${fL(income.filter(t=>t.subcat==='salario').reduce((a,b)=>a+b.amount,0)-state.saldoInicial)}\n`;csv+=`Extra,0,${fL(income.filter(t=>t.subcat==='extra').reduce((a,b)=>a+b.amount,0))},${fL(income.filter(t=>t.subcat==='extra').reduce((a,b)=>a+b.amount,0))}\n`;csv+=`Total,${fL(state.saldoInicial)},${fL(totalIncome)},${fL(totalIncome-state.saldoInicial)}\n\n`;csv+='GASTOS POR CATEGORÍA\n';csv+='Categoría,Subcategoría,Costo Previsto,Costo Real,Diferencia\n';const byCat={};expense.forEach(t=>{const cat=t.cat||'Varios',sub=t.subcat||'General';if(!byCat[cat])byCat[cat]={};if(!byCat[cat][sub])byCat[cat][sub]=0;byCat[cat][sub]+=t.amount});Object.entries(CATEGORIES).forEach(([key,{label,sub}])=>{if(byCat[key]||key==='vivienda'){csv+=`\n${label.toUpperCase()}\n`;sub.forEach(s=>{const real=byCat[key]?.[s]||0;csv+=`${s},0,${fL(real)},${fL(-real)}\n`});const catTotal=Object.values(byCat[key]||{}).reduce((a,b)=>a+b,0);csv+=`Total,0,${fL(catTotal)},${fL(-catTotal)}\n`}});csv+=`\nRESUMEN FINAL\n`;csv+=`Total Ingresos,${fL(totalIncome)}\n`;csv+=`Total Gastos,${fL(totalExpense)}\n`;csv+=`Saldo Disponible,${fL(balance)}\n`;csv+=`Diferencia Total,${fL(totalIncome-totalExpense)}\n`;const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=`Presupuesto_mensual_${todayStr()}.csv`;document.body.appendChild(link);link.click();document.body.removeChild(link);alert('✅ Reporte exportado. Ábrelo en Excel para ver el formato completo con categorías.')}
 
 // === EXPORTAR/IMPORTAR ===
@@ -713,17 +615,12 @@ window.onload=()=>{
   if(!state.pagosRecurrentes||!Array.isArray(state.pagosRecurrentes))state.pagosRecurrentes=[];
   if(!state.prestamos||!Array.isArray(state.prestamos))state.prestamos=[];
   if(!state.budgetRules)state.budgetRules={gastos:65,ahorro:20,extra:15};
-  
   if(appPIN&&!recordarPIN){document.getElementById('modal-pin').style.display='flex';document.getElementById('pin-input').focus()}
   else if(appPIN&&recordarPIN){if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll();initPaymentNotifications()}}
   else{if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll();initPaymentNotifications()}}
-  
   const recordarEl=document.getElementById('recordar-pin');if(recordarEl)recordarEl.checked=recordarPIN;
   const btnConfigPIN=document.getElementById('btn-config-pin');if(btnConfigPIN)btnConfigPIN.textContent=appPIN?'Cambiar PIN':'Configurar PIN';
-  
   renderBudgetRules();
-  
-  // Asegurar que el menú hamburguesa esté cerrado al cargar
   document.getElementById('hamburgerPanel').classList.remove('active');
   document.getElementById('hamburgerOverlay').classList.remove('active');
 };
