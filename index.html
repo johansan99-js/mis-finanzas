@@ -10,6 +10,7 @@
 <title>Mis Finanzas HN - Pro Elite</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <style>
 :root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#232736;--bg4:#2d3147;--amber:#f0a500;--text:#f0eff4;--text2:#9b9eb5;--green:#2ecc8a;--red:#e85d5d;--blue:#4a9ef8;--purple:#9b7fe8;--border:#2d3147;--r:12px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -20,21 +21,22 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .card-receivable{border-left:4px solid var(--green)}
 .card-saving{border-left:4px solid var(--blue)}
 .card-security{border-left:4px solid var(--purple)}
-.btn{width:100%;padding:14px;border-radius:8px;border:none;font-weight:700;cursor:pointer;margin:5px 0;font-size:14px}
+.btn{width:100%;padding:14px;border-radius:8px;border:none;font-weight:700;cursor:pointer;margin:5px 0;font-size:14px;transition:0.2s}
+.btn:active{transform:scale(0.98)}
 .btn-primary{background:var(--amber);color:var(--bg)}
 .btn-secondary{background:var(--bg3);color:var(--text)}
 .btn-danger{background:var(--red);color:white}
-.input-field{width:100%;background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:8px;color:var(--text);margin-bottom:10px;font-size:14px}
+.input-field{width:100%;background:var(--bg3);border:1px solid var(--border);padding:14px;border-radius:8px;color:var(--text);margin-bottom:12px;font-size:14px}
 .input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:300;justify-content:center;align-items:center;padding:20px}
-.modal-content{background:var(--bg2);border-radius:var(--r);width:100%;max-width:380px;padding:20px;max-height:90vh;overflow-y:auto}
+.modal-content{background:var(--bg2);border-radius:var(--r);width:100%;max-width:380px;padding:25px;max-height:90vh;overflow-y:auto}
 .view{display:none;padding:20px;padding-top:70px;padding-bottom:100px}
 .view.active{display:block}
 .hidden{display:none!important}
-.balance-card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:15px}
-.balance-amount{font-size:32px;font-weight:700;margin:10px 0}
+.balance-card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:25px 20px;text-align:center;margin-bottom:15px}
+.balance-amount{font-size:36px;font-weight:800;margin:10px 0;letter-spacing:-1px}
 
-/* ESTILOS NUEVOS: SUPERVIVENCIA Y CHIPS HONDURAS */
+/* SUPERVIVENCIA Y CHIPS HONDURAS */
 .survival-box { background: linear-gradient(135deg, var(--bg3), #1e253a); border: 1px solid var(--amber); border-radius: var(--r); padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 .survival-number { font-size: 38px; font-weight: 800; color: var(--amber); display: block; margin: 5px 0; }
 .survival-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
@@ -266,7 +268,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="balance-card">
     <div style="font-size:12px;color:var(--text2)">Patrimonio Neto Disponible</div>
     <div class="balance-amount" id="balance-amount">L. 0.00</div>
-    <div id="balance-status" style="font-size:12px;color:var(--green)">Cargando...</div>
+    <div id="balance-status" style="font-size:12px;color:var(--green)"></div>
   </div>
 
   <div class="survival-box">
@@ -310,15 +312,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <div class="summary-box"><div class="summary-label">Extra</div><div class="summary-value" id="total-extra" style="color:var(--blue)">L. 0</div></div>
   </div>
   
-  <div class="chart-container">
-    <div class="chart-title">📊 Resumen del Mes</div>
-    <div class="chart-bars">
-      <div class="chart-bar"><div class="bar income-bar" id="bar-income" style="height:0%"></div><div class="bar-value" id="val-income">L. 0</div><div class="bar-label">Ingresos</div></div>
-      <div class="chart-bar"><div class="bar expense-bar" id="bar-expense" style="height:0%"></div><div class="bar-value" id="val-expense">L. 0</div><div class="bar-label">Gastos</div></div>
-      <div class="chart-bar"><div class="bar saving-bar" id="bar-saving" style="height:0%"></div><div class="bar-value" id="val-saving">L. 0</div><div class="bar-label">Ahorro</div></div>
-    </div>
-  </div>
-
   <h3 style="margin:20px 0 10px;font-size:14px">🎯 Metas de Ahorro</h3>
   <div id="dashboard-goals"></div>
   <h3 style="margin:20px 0 10px;font-size:14px">🔔 Alertas de Tarjetas</h3>
@@ -409,10 +402,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <span style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:var(--red);border-radius:2px"></div> Gastos</span>
     </div>
   </div>
-  <div class="card">
-    <h4 style="margin-bottom:10px">🎯 Hitos Alcanzados</h4>
-    <div id="history-milestones"></div>
-  </div>
   <button class="btn btn-secondary" onclick="exportFullReport()">📊 Exportar Reporte Completo (Excel)</button>
 </div>
 
@@ -423,7 +412,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <button class="btn btn-secondary" onclick="configurarPIN()" style="margin-bottom:10px">🔑 Cambiar PIN de Acceso</button>
     <button class="btn btn-secondary" onclick="exportDataEncriptado()" style="margin-bottom:10px">📥 Exportar Respaldo Cifrado</button>
     <button class="btn btn-secondary" onclick="exportToExcel()" style="margin-bottom:10px">📊 Descargar Excel Básico</button>
-    <button class="btn btn-secondary" onclick="exportFullReport()" style="margin-bottom:10px">📈 Exportar Reporte Completo</button>
     <div style="font-size:11px;color:var(--text2);margin-top:10px">
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <input type="checkbox" id="recordar-pin" onchange="toggleRecordarPIN()">
@@ -436,7 +424,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <button class="btn btn-secondary" onclick="exportData()" style="margin-bottom:10px">📥 Exportar JSON (Sin cifrar)</button>
     <input type="file" id="import-file" style="display:none" onchange="importData(event)">
     <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Importar Respaldo</button>
-    <p style="font-size:11px;color:var(--text2);margin-top:10px">💡 Recomendación: Exporta tu respaldo cada semana y guárdalo en un lugar seguro.</p>
   </div>
   <div class="security-notice">
     <h4>📋 Tu Privacidad</h4>
@@ -444,9 +431,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <li>✅ Datos 100% locales (localStorage)</li>
       <li>✅ Sin conexión a internet requerida</li>
       <li>✅ Sin servidores externos</li>
-      <li>✅ Sin cookies de rastreo</li>
-      <li>⚠️ Tú eres responsable de proteger tu dispositivo</li>
-      <li>⚠️ Sin respaldo en la nube = haz backups manuales</li>
     </ul>
   </div>
   <div class="card" style="border-color:var(--red)">
@@ -470,15 +454,31 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 
 <div id="modal-gasto" class="modal" onclick="closeModalIfBg(event,'modal-gasto')">
   <div class="modal-content">
-    <h3>📉 Nuevo Gasto (Honduras)</h3>
-    <p style="font-size:11px; color:var(--text2); margin-bottom:10px">Sugerencias rápidas:</p>
+    <h3>📉 Nuevo Gasto (SPS)</h3>
+    <p style="font-size:11px; color:var(--text2); margin-bottom:10px">Sugerencias rápidas San Pedro Sula:</p>
+    
     <div class="honduras-presets">
+        <div class="chip" onclick="setGastoPreset('Alimentación', 'Comisariato Los Andes', 'fijo')">🛒 Los Andes</div>
+        <div class="chip" onclick="setGastoPreset('Alimentación', 'Supermercados Colonial', 'fijo')">🛒 Colonial</div>
         <div class="chip" onclick="setGastoPreset('Alimentación', 'La Colonia', 'fijo')">🛒 La Colonia</div>
-        <div class="chip" onclick="setGastoPreset('Alimentación', 'Walmart/Paiz', 'fijo')">🛒 Walmart</div>
+        <div class="chip" onclick="setGastoPreset('Alimentación', 'Maxi Despensa', 'fijo')">🛒 Maxi Despensa</div>
+        <div class="chip" onclick="setGastoPreset('Alimentación', 'Supermercado El Faro', 'fijo')">🛒 El Faro</div>
         <div class="chip" onclick="setGastoPreset('Transporte', 'Texaco', 'fijo')">⛽ Texaco</div>
         <div class="chip" onclick="setGastoPreset('Transporte', 'Puma', 'fijo')">⛽ Puma</div>
-        <div class="chip" onclick="setGastoPreset('Ocio', 'Expresso Americano', 'extra')">☕ Expresso</div>
+        <div class="chip" onclick="setGastoPreset('Transporte', 'Uno', 'fijo')">⛽ Uno</div>
+        <div class="chip" onclick="setGastoPreset('Ocio', 'Circle K', 'extra')">🏪 Circle K</div>
+        <div class="chip" onclick="setGastoPreset('Ocio', 'Pronto', 'extra')">🏪 Pronto</div>
     </div>
+
+    <div style="background: var(--bg4); padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+        <p style="font-size: 11px; color: var(--text2); margin-bottom: 8px;">Extrae el total de tu factura automáticamente:</p>
+        <label for="ocr-input" class="btn btn-secondary" style="display: inline-block; width: 100%; margin: 0; cursor: pointer;">
+            📸 Escanear Recibo / Factura
+        </label>
+        <input type="file" id="ocr-input" accept="image/*" capture="environment" style="display: none;" onchange="procesarReciboOCR(event)">
+        <div id="ocr-status" style="font-size: 11px; color: var(--amber); margin-top: 8px; display: none;">Analizando imagen...</div>
+    </div>
+
     <input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)">
     <input type="text" id="gasto-cat" class="input-field" placeholder="Categoría">
     <input type="text" id="gasto-subcat" class="input-field" placeholder="Comercio / Subcategoría">
@@ -495,6 +495,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
         <option value="BAC">BAC Credomatic</option>
         <option value="Banpaís">Banpaís</option>
         <option value="Occidente">Occidente</option>
+        <option value="Banrural">Banrural</option>
     </select>
 
     <select id="gasto-pago" class="input-field" onchange="checkCreditCard()">
@@ -506,7 +507,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <option value="">Selecciona tarjeta...</option>
     </select>
     <button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveGasto()">Guardar</button>
+    <button class="btn btn-primary" onclick="saveGasto()">Guardar Movimiento</button>
   </div>
 </div>
 
@@ -520,21 +521,20 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="number" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
 
 <script>
-// MANTENEMOS LA LLAVE ORIGINAL PARA NO PERDER DATOS
+// MANTENEMOS LA LLAVE ORIGINAL
 const LS_KEY='mifinanzashn_pro_v17_2';
 let savedState=JSON.parse(localStorage.getItem(LS_KEY));
 let state={setup:false,nombre:'',saldoInicial:0,transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[],budgetRules:{gastos:65,ahorro:20,extra:15}};
 if(savedState && typeof savedState==='object'){Object.keys(state).forEach(key=>{if(savedState[key]!==undefined){if(Array.isArray(state[key])&&!Array.isArray(savedState[key])){state[key]=[]}else{state[key]=savedState[key]}}})}
 
-// --- SCRIPT DE MIGRACIÓN SEGURO ---
+// SCRIPT DE MIGRACIÓN SEGURO
 if (state.transactions && state.transactions.length > 0) {
     state.transactions.forEach(t => {
         if (t.type === 'expense' && !t.tipo) {
-            // Evita que el gráfico rompa con datos anteriores
             t.tipo = (t.cat === 'Vivienda' || t.cat === 'Alimentación' || t.cat === '🏠 Vivienda') ? 'fijo' : 'extra';
         }
     });
-    save(); // Guardar la migración silenciosamente
+    save(); 
 }
 
 let mainChart = null;
@@ -545,7 +545,59 @@ const todayStr=()=>new Date().toISOString().split('T')[0];
 
 const CATEGORIES={vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}};
 
-// === FUNCIONES NUEVAS: SUPERVIVENCIA Y GRÁFICO ===
+// === MOTOR DE ESCANEO DE RECIBOS (OCR) ===
+async function procesarReciboOCR(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('ocr-status');
+    const montoInput = document.getElementById('gasto-monto');
+    
+    statusEl.style.display = 'block';
+    statusEl.textContent = '⚙️ Cargando motor de lectura OCR...';
+    statusEl.style.color = 'var(--amber)';
+
+    try {
+        // Inicializar Tesseract.js para español
+        const worker = await Tesseract.createWorker('spa');
+        statusEl.textContent = '🔍 Escaneando montos de la factura...';
+        
+        const { data: { text } } = await worker.recognize(file);
+        
+        // RegEx orientada a las facturas CAI / SAR de Honduras
+        const regexTotal = /(?:TOTAL|TOT|L\.|L)\s*[:$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/gi;
+        
+        let coincidencias;
+        let mayorMonto = 0;
+
+        while ((coincidencias = regexTotal.exec(text)) !== null) {
+            let valor = parseFloat(coincidencias[1].replace(/,/g, ''));
+            if (!isNaN(valor) && valor > mayorMonto) {
+                mayorMonto = valor;
+            }
+        }
+
+        await worker.terminate();
+
+        if (mayorMonto > 0) {
+            montoInput.value = mayorMonto.toFixed(2);
+            statusEl.textContent = '✅ Total detectado: L. ' + mayorMonto.toFixed(2);
+            statusEl.style.color = 'var(--green)';
+        } else {
+            statusEl.textContent = '⚠️ No se encontró un total claro. Ingresa manualmente.';
+            statusEl.style.color = 'var(--red)';
+        }
+
+    } catch (error) {
+        console.error("Error en OCR:", error);
+        statusEl.textContent = '❌ Error al analizar la imagen. (Requiere internet la primera vez)';
+        statusEl.style.color = 'var(--red)';
+    }
+    
+    event.target.value = ''; // Limpiar input para permitir volver a escanear
+}
+
+// === FUNCIONES: SUPERVIVENCIA Y GRÁFICO ===
 function updateSurvivalIndex(balance) {
     const fijosMensual = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'fijo').reduce((a, b) => a + b.amount, 0) || 1; 
     const gastoDiario = fijosMensual / 30;
@@ -566,14 +618,21 @@ function renderDoughnutChart() {
     const fijos = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'fijo').reduce((a, b) => a + b.amount, 0);
     const extras = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'extra').reduce((a, b) => a + b.amount, 0);
 
+    const hasData = fijos > 0 || extras > 0;
+
     if(mainChart) mainChart.destroy();
+    
     mainChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Vital/Fijo', 'Ocio/Extra'],
-            datasets: [{ data: [fijos, extras], backgroundColor: ['#2ecc8a', '#e85d5d'], borderWidth: 0 }]
+            labels: hasData ? ['Vital/Fijo', 'Ocio/Extra'] : ['Sin datos'],
+            datasets: [{ 
+                data: hasData ? [fijos, extras] : [1], 
+                backgroundColor: hasData ? ['#2ecc8a', '#e85d5d'] : ['#2d3147'], 
+                borderWidth: 0 
+            }]
         },
-        options: { cutout: '70%', plugins: { legend: { position: 'bottom', labels: {color: '#9b9eb5'} } } }
+        options: { cutout: '70%', plugins: { legend: { position: 'bottom', labels: {color: '#9b9eb5'} }, tooltip: { enabled: hasData } } }
     });
 }
 
@@ -583,9 +642,9 @@ function setGastoPreset(cat, sub, tipo) {
     document.getElementById('gasto-tipo').value = tipo;
 }
 
-// === LÓGICA EXISTENTE REESCRITA CON MEJORAS ===
+// === LÓGICA EXISTENTE Y NAVEGACIÓN ===
 function toggleHamburger(){const panel=document.getElementById('hamburgerPanel');const overlay=document.getElementById('hamburgerOverlay');const isOpen=panel.classList.contains('active');if(isOpen){panel.classList.remove('active');overlay.classList.remove('active');document.body.style.overflow=''}else{panel.classList.add('active');overlay.classList.add('active');document.body.style.overflow='hidden'}}
-function saveBudgetRules(){const gastos=parseInt(document.getElementById('rule-gastos').value)||0;const ahorro=parseInt(document.getElementById('rule-ahorro').value)||0;const extra=parseInt(document.getElementById('rule-extra').value)||0;if(gastos+ahorro+extra!==100){document.getElementById('budget-total-warning').style.display='block';return}state.budgetRules={gastos,ahorro,extra};save();closeModal('modal-budget-rules');renderBudgetRules();alert(`✅ Reglas actualizadas\n\nGastos: ${gastos}%\nAhorro: ${ahorro}%\nExtra: ${extra}%`)}
+function saveBudgetRules(){const gastos=parseInt(document.getElementById('rule-gastos').value)||0;const ahorro=parseInt(document.getElementById('rule-ahorro').value)||0;const extra=parseInt(document.getElementById('rule-extra').value)||0;if(gastos+ahorro+extra!==100){document.getElementById('budget-total-warning').style.display='block';return}state.budgetRules={gastos,ahorro,extra};save();closeModal('modal-budget-rules');renderBudgetRules();alert(`✅ Reglas actualizadas`)}
 function renderBudgetRules(){const rules=state.budgetRules||{gastos:65,ahorro:20,extra:15};document.getElementById('budget-gastos-val').textContent=rules.gastos+'%';document.getElementById('budget-ahorro-val').textContent=rules.ahorro+'%';document.getElementById('budget-extra-val').textContent=rules.extra+'%';document.getElementById('rule-gastos').value=rules.gastos;document.getElementById('rule-ahorro').value=rules.ahorro;document.getElementById('rule-extra').value=rules.extra}
 
 let deferredPrompt=null,pwaDismissed=localStorage.getItem('pwa_banner_dismissed')==='true',isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -594,24 +653,21 @@ function showPwaBanner(){if(isAppInstalled()||pwaDismissed)return;if(isIOS){setT
 window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;setTimeout(showPwaBanner,5000)});
 document.getElementById('install-btn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;document.getElementById('pwa-banner').classList.add('hidden');deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;deferredPrompt=null});
 function dismissPwaBanner(){document.getElementById('pwa-banner').classList.add('hidden');localStorage.setItem('pwa_banner_dismissed','true');pwaDismissed=true}
-window.addEventListener('appinstalled',()=>{document.getElementById('pwa-banner').classList.add('hidden');localStorage.setItem('pwa_banner_dismissed','true');alert('🎉 ¡App instalada!')});
 
 function configurarPIN(){const nuevoPIN=prompt('Crea un PIN de 4 dígitos:\n(Deja en blanco para eliminar)');if(nuevoPIN===null)return;if(nuevoPIN===''){localStorage.removeItem('finanzas_pin');appPIN='';alert('🔓 PIN eliminado');return}if(!/^\d{4}$/.test(nuevoPIN)){alert('❌ Debe tener 4 números');return}localStorage.setItem('finanzas_pin',nuevoPIN);appPIN=nuevoPIN;alert('✅ PIN configurado')}
-function verificarPIN(){const intento=document.getElementById('pin-input').value;if(intento===appPIN){document.getElementById('modal-pin').style.display='none';document.getElementById('pin-input').value='';document.getElementById('pin-error').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll();initPaymentNotifications()}}else{document.getElementById('pin-error').style.display='block';document.getElementById('pin-input').value='';setTimeout(()=>document.getElementById('pin-error').style.display='none',3000)}}
-function olvidePIN(){if(confirm('¿Restablecer PIN?')){localStorage.removeItem('finanzas_pin');appPIN='';document.getElementById('modal-pin').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll();initPaymentNotifications()}}}
+function verificarPIN(){const intento=document.getElementById('pin-input').value;if(intento===appPIN){document.getElementById('modal-pin').style.display='none';document.getElementById('pin-input').value='';document.getElementById('pin-error').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}else{document.getElementById('pin-error').style.display='block';document.getElementById('pin-input').value='';setTimeout(()=>document.getElementById('pin-error').style.display='none',3000)}}
+function olvidePIN(){if(confirm('¿Restablecer PIN?')){localStorage.removeItem('finanzas_pin');appPIN='';document.getElementById('modal-pin').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}}
 function toggleRecordarPIN(){recordarPIN=document.getElementById('recordar-pin').checked;localStorage.setItem('finanzas_recordar',recordarPIN);}
 
-async function requestNotificationPermission(){if(!('Notification' in window))return false;if(Notification.permission==='granted')return true;if(Notification.permission!=='denied'){const permission=await Notification.requestPermission();return permission==='granted'}return false}
 function finishOnboarding(){const nombre=document.getElementById('ob-nombre').value.trim(),saldoInicial=parseFloat(document.getElementById('ob-salario').value)||0;if(!nombre||saldoInicial===0)return alert('Completa todos los campos');state={setup:true,nombre,saldoInicial,transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[],budgetRules:{gastos:65,ahorro:20,extra:15}};save();document.getElementById('onboarding').style.display='none';renderAll()}
 
 function toggleFabMenu(){const menu=document.getElementById('fab-menu');const isHidden=menu.style.display==='none'||menu.style.display==='';if(isHidden){menu.style.display='block';setTimeout(()=>{menu.style.opacity='1';menu.style.transform='translateY(0)'},10)}else{menu.style.display='none'}}
 document.addEventListener('click',(e)=>{const fab=document.querySelector('.fab');const fabMenu=document.getElementById('fab-menu');if(!fab.contains(e.target)&&!fabMenu.contains(e.target)){fabMenu.style.display='none'}});
 
 function calculateLoan(){const P=parseFloat(document.getElementById('prest-monto').value)||0,r=(parseFloat(document.getElementById('prest-tasa').value)||0)/100/12,n=parseInt(document.getElementById('prest-cuotas').value)||1;let cuota=r===0?P/n:P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);document.getElementById('prest-cuota-calc').value=fL(cuota);const interes=P*r,capital=cuota-interes;document.getElementById('prest-breakdown').classList.remove('hidden');document.getElementById('prest-breakdown').innerHTML=`<div class="loan-breakdown-row"><span>Cuota mensual:</span><strong>${fL(cuota)}</strong></div><div class="loan-breakdown-row"><span>→ Interés:</span><span style="color:var(--red)">${fL(interes)}</span></div>`;return cuota}
-
 function checkCreditCard(){const pagoType=document.getElementById('gasto-pago').value,tarjetaSelect=document.getElementById('gasto-tarjeta');if(pagoType==='credito'){tarjetaSelect.classList.remove('hidden');tarjetaSelect.innerHTML='<option value="">Selecciona tarjeta...</option>';state.tarjetas.forEach(t=>{tarjetaSelect.innerHTML+=`<option value="${t.id}">${t.nombre} (Saldo: ${fL(t.saldo)})</option>`})}else{tarjetaSelect.classList.add('hidden')}}
 
-// FUNCIÓN GUARDAR GASTO ACTUALIZADA
+// GUARDAR GASTO
 function saveGasto(){
     const monto=parseFloat(document.getElementById('gasto-monto').value),
           cat=document.getElementById('gasto-cat').value||'General',
@@ -638,6 +694,7 @@ function saveGasto(){
     renderAll();
     ['gasto-monto','gasto-cat','gasto-subcat','gasto-banco'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('gasto-tipo').value='extra';
+    document.getElementById('ocr-status').style.display='none'; // Reset OCR status
 }
 
 function saveIngreso(){const monto=parseFloat(document.getElementById('ingreso-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'income',amount:monto,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value,date:new Date().toISOString()});save();closeModal('modal-ingreso');renderAll();document.getElementById('ingreso-monto').value=''}
@@ -673,7 +730,7 @@ function reconcileBalance(){const real=parseFloat(document.getElementById('recon
 function renderGastos(){const gastos=state.transactions.filter(t=>t.type==='expense');document.getElementById('gastos-mes').textContent=fL(gastos.reduce((a,b)=>a+b.amount,0));document.getElementById('gastos-list').innerHTML=gastos.slice().reverse().map(t=>`<div class="card"><div>${t.cat} - ${t.subcat}</div><div style="color:var(--red)">-${fL(t.amount)}</div></div>`).join('')}
 function renderIngresos(){const ingresos=state.transactions.filter(t=>t.type==='income');document.getElementById('ingreso-salario').textContent=fL(ingresos.reduce((a,b)=>a+b.amount,0));document.getElementById('ingresos-list').innerHTML=ingresos.slice().reverse().map(t=>`<div class="card"><div>${t.cat}</div><div style="color:var(--green)">+${fL(t.amount)}</div></div>`).join('')}
 
-// FUNCION MAESTRA DEL DASHBOARD MODIFICADA
+// DASHBOARD MAESTRO
 function renderDashboard(){
     const normalTransactions=state.transactions.filter(t=>t.type!=='conciliacion');
     const income=normalTransactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
@@ -683,7 +740,7 @@ function renderDashboard(){
     
     document.getElementById('balance-amount').textContent=fL(balance);
     document.getElementById('balance-amount').style.color=balance>=0?'var(--green)':'var(--red)';
-    document.getElementById('balance-status').textContent=income>0?'Ingresos registrados':'Esperando ingresos';
+    document.getElementById('balance-status').textContent=income>0?'Basado en tus movimientos':'Esperando movimientos';
     document.getElementById('total-income').textContent=fL(income);
     document.getElementById('total-expense').textContent=fL(expense);
     document.getElementById('total-extra').textContent=fL(extra);
@@ -692,8 +749,6 @@ function renderDashboard(){
     document.getElementById('recent-history').innerHTML=recent.map(t=>`<div class="history-item"><div><div style="font-weight:600">${t.cat}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} ${t.banco?`(${t.banco})`:''}</div></div><div style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${fL(t.amount)}</div></div>`).join('')||'<p style="text-align:center;color:var(--text2)">Sin movimientos</p>';
     
     renderDashboardGoals();
-    
-    // INYECCIÓN DE LA NUEVA LÓGICA
     updateSurvivalIndex(balance);
     renderDoughnutChart();
 }
@@ -705,14 +760,10 @@ function exportDataEncriptado(){alert('Exportando cifrado...')}
 function exportToExcel(){alert('Exportando excel...')}
 function resetApp(){if(confirm('¿Borrar todo?')){localStorage.removeItem(LS_KEY);location.reload()}}
 
-function renderUpcomingPayments(){}
-function renderUpcomingReceivables(){}
-
 function switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.hamburger-item').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');toggleHamburger();if(v==='gastos')renderGastos();if(v==='ingresos')renderIngresos();if(v==='metas')renderMetas();if(v==='cobrar')renderCobrar();if(v==='pagar')renderPagar();if(v==='prestamos')renderPrestamos();if(v==='tarjetas')renderTarjetas();if(v==='pagos')renderPagosRecurrentes();if(v==='historico')renderHistorico()}
 function openModal(id){document.getElementById(id).style.display='flex';document.getElementById('fab-menu').style.display='none'}
 function closeModal(id){document.getElementById(id).style.display='none'}
 function closeModalIfBg(e,id){if(e.target.id===id)closeModal(id)}
-function initPaymentNotifications(){}
 
 function renderAll(){
     renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetas();renderPagosRecurrentes();renderHistorico();renderBudgetRules();
