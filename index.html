@@ -617,8 +617,7 @@ const todayStr=()=>new Date().toISOString().split('T')[0];
 
 const CATEGORIES={vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}};
 
-// ========== FUNCIÓN OCR OPTIMIZADA PARA GITHUB PAGES ==========
-// ========== FUNCIÓN OCR OPTIMIZADA PARA FACTURAS HONDUREÑAS ==========
+// ========== FUNCIÓN OCR MEJORADA (PRICESMART, NECHOS) + GUARDADO TEMPORAL DE IMAGEN ==========
 async function procesarReciboOCR(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -670,93 +669,65 @@ async function procesarReciboOCR(event) {
         
         const imageUrl = URL.createObjectURL(file);
         const { data: { text } } = await worker.recognize(imageUrl);
+        
+        // ***** GUARDAR IMAGEN TEMPORAL PARA ADJUNTAR *****
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            localStorage.setItem('temp_factura_imagen', e.target.result);
+        };
+        reader.readAsDataURL(file);
+        
         URL.revokeObjectURL(imageUrl);
         
         console.log('✅ Texto completo detectado:', text);
         
-        // ========== PATRONES ESPECÍFICOS PARA FACTURAS HONDUREÑAS ==========
         const lineas = text.split('\n');
         let mayorMonto = 0;
-        let montoDetectado = null;
         
-        console.log('📋 Analizando línea por línea...');
-        
-        // Estrategia 1: Buscar "TOTAL A PAGAR" y tomar el número de la misma línea o siguiente
+        // Estrategia 1: Buscar "TOTAL L." o "TOTAL A PAGAR"
         for (let i = 0; i < lineas.length; i++) {
             const linea = lineas[i].trim();
-            
-            // Buscar línea que contiene "TOTAL A PAGAR" o similar
-            if (linea.match(/TOTAL\s+A\s+PAGAR|TOTAL\s+PAGAR|TOTAL\s+FACTURA|IMPORTE\s+TOTAL/i)) {
-                console.log('🎯 Línea detectada con TOTAL:', linea);
-                
-                // Buscar número en la misma línea
-                const matchMismaLinea = linea.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/);
-                if (matchMismaLinea) {
-                    const valor = parseFloat(matchMismaLinea[1].replace(/,/g, ''));
-                    console.log('💰 Monto encontrado en misma línea:', valor);
+            if (linea.match(/TOTAL\s+L\.?\s*:?\s*\d|TOTAL\s+A\s+PAGAR|IMPORTE\s+TOTAL/i)) {
+                const match = linea.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/);
+                if (match) {
+                    const valor = parseFloat(match[1].replace(/,/g, ''));
                     if (valor > mayorMonto) mayorMonto = valor;
                 }
-                
-                // Buscar número en la siguiente línea
+                // Siguiente línea
                 if (i + 1 < lineas.length) {
-                    const siguienteLinea = lineas[i + 1].trim();
-                    console.log('📄 Siguiente línea:', siguienteLinea);
-                    const matchSiguienteLinea = siguienteLinea.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/);
-                    if (matchSiguienteLinea) {
-                        const valor = parseFloat(matchSiguienteLinea[1].replace(/,/g, ''));
-                        console.log('💰 Monto encontrado en siguiente línea:', valor);
+                    const sig = lineas[i + 1].trim();
+                    const matchSig = sig.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/);
+                    if (matchSig) {
+                        const valor = parseFloat(matchSig[1].replace(/,/g, ''));
                         if (valor > mayorMonto) mayorMonto = valor;
                     }
                 }
             }
         }
         
-        // Estrategia 2: Buscar patrones específicos en todo el texto
-        const patronesEspecificos = [
-            /TOTAL\s+A\s+PAGAR\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
-            /TOTAL\s+PAGAR\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
-            /IMPORTE\s+TOTAL\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
-            /TOTAL\s+FACTURA\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
-            /TOTAL\s*[:\s]*L\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
-            /A\s+PAGAR\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
-        ];
-        
-        for (const patron of patronesEspecificos) {
-            const matches = text.matchAll(new RegExp(patron.source, 'gi'));
-            for (const match of matches) {
-                const valorStr = match[1] || match[0];
-                const valor = parseFloat(valorStr.replace(/,/g, ''));
-                console.log(`🔍 Patrón detectado: ${patron} → ${valor}`);
-                if (!isNaN(valor) && valor > mayorMonto && valor < 1000000) {
-                    mayorMonto = valor;
+        // Estrategia 2: Patrones específicos
+        if (mayorMonto === 0) {
+            const patrones = [
+                /TOTAL\s+L\.?\s*:?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
+                /TOTAL\s+A\s+PAGAR\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
+                /A\s+PAGAR\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i
+            ];
+            for (const p of patrones) {
+                const match = text.match(p);
+                if (match) {
+                    const valor = parseFloat(match[1].replace(/,/g, ''));
+                    if (valor > mayorMonto) mayorMonto = valor;
                 }
             }
         }
         
-        // Estrategia 3: Buscar el último número grande que parezca un total
+        // Estrategia 3: Último número grande
         if (mayorMonto === 0) {
-            console.log('⚠️ Usando estrategia de último número grande...');
-            const todosLosNumeros = text.match(/\d{1,3}(?:,\d{3})*(?:\.\d{2})/g) || [];
-            const numeros = todosLosNumeros.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => n > 10 && n < 1000000);
-            
-            // Ordenar de mayor a menor
-            numeros.sort((a, b) => b - a);
-            console.log('🔢 Números encontrados (ordenados):', numeros.slice(0, 5));
-            
-            // El total suele ser el número más grande que aparece cerca del final
-            if (numeros.length > 0) {
-                // Buscar números que estén en las últimas 10 líneas
-                const ultimasLineas = lineas.slice(-10).join(' ');
-                const numerosFinales = ultimasLineas.match(/\d{1,3}(?:,\d{3})*(?:\.\d{2})/g) || [];
-                const numerosFinalesParsed = numerosFinales.map(n => parseFloat(n.replace(/,/g, '')));
-                
-                if (numerosFinalesParsed.length > 0) {
-                    mayorMonto = Math.max(...numerosFinalesParsed);
-                    console.log('💰 Monto detectado en líneas finales:', mayorMonto);
-                } else {
-                    mayorMonto = numeros[0];
-                    console.log('💰 Usando el número más grande:', mayorMonto);
-                }
+            const numeros = text.match(/\d{1,3}(?:,\d{3})*(?:\.\d{2})/g) || [];
+            const valores = numeros.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => n > 100 && n < 1000000);
+            if (valores.length) {
+                valores.sort((a,b) => b - a);
+                mayorMonto = valores[0];
             }
         }
         
@@ -767,57 +738,28 @@ async function procesarReciboOCR(event) {
             updateStatus(`✅ Total detectado: L. ${mayorMonto.toFixed(2)}`);
             statusEl.style.color = 'var(--green)';
             
-            // Auto-detectar comercio y categoría
             const textLower = text.toLowerCase();
-            if (textLower.includes('lubricantes') || textLower.includes('nechos')) {
+            if (textLower.includes('pricesmart')) {
+                document.getElementById('gasto-cat').value = 'Alimentación';
+                document.getElementById('gasto-subcat').value = 'PriceSmart';
+                document.getElementById('gasto-tipo').value = 'fijo';
+            } else if (textLower.includes('nechos') || textLower.includes('lubricantes')) {
                 document.getElementById('gasto-cat').value = 'Mantenimiento';
                 document.getElementById('gasto-subcat').value = 'NECHOS LUBRICANTES';
                 document.getElementById('gasto-tipo').value = 'fijo';
-                updateStatus(`✅ Total: L. ${mayorMonto.toFixed(2)} - NECHOS LUBRICANTES detectado`);
-            } else if (textLower.includes('price') || textLower.includes('pricesmart')) {
-                document.getElementById('gasto-cat').value = 'Alimentación';
-                document.getElementById('gasto-subcat').value = 'PriceSmart';
-            } else if (textLower.includes('andes')) {
+            } else if (textLower.includes('los andes')) {
                 document.getElementById('gasto-cat').value = 'Alimentación';
                 document.getElementById('gasto-subcat').value = 'Los Andes';
-            } else if (textLower.includes('colonial')) {
-                document.getElementById('gasto-cat').value = 'Alimentación';
-                document.getElementById('gasto-subcat').value = 'Colonial';
-            } else if (textLower.includes('shell') || textLower.includes('texaco') || textLower.includes('puma')) {
-                document.getElementById('gasto-cat').value = 'Transporte';
-                document.getElementById('gasto-subcat').value = 'Combustible';
             }
             
-            setTimeout(() => {
-                statusEl.style.display = 'none';
-            }, 5000);
-            
+            window.tempFacturaImagen = true;
+            setTimeout(() => statusEl.style.display = 'none', 5000);
         } else {
-            updateStatus('⚠️ No se detectó ningún monto. Por favor ingresa manualmente.', true);
-            console.warn('No se encontraron montos en el texto. Texto completo:', text);
-            
-            // Mostrar sugerencia al usuario
-            setTimeout(() => {
-                updateStatus('💡 Consejo: Asegúrate de que el TOTAL sea visible y con buena luz', false);
-                statusEl.style.color = 'var(--blue)';
-            }, 2000);
+            updateStatus('⚠️ No se detectó ningún monto. Ingresa manualmente.', true);
         }
-
     } catch (error) {
         console.error('❌ Error OCR:', error);
-        
-        let errorMsg = '❌ Error al procesar la imagen. ';
-        if (error.message.includes('Failed to fetch')) {
-            errorMsg += 'Problema de conexión. Verifica tu internet.';
-        } else if (error.message.includes('CORS')) {
-            errorMsg += 'Error de seguridad. Intenta con otra imagen.';
-        } else if (error.message.includes('Tesseract')) {
-            errorMsg += 'Recarga la página e intenta de nuevo.';
-        } else {
-            errorMsg += 'Asegúrate de tener buena conexión.';
-        }
-        
-        updateStatus(errorMsg, true);
+        updateStatus('❌ Error al procesar la imagen. Intenta de nuevo.', true);
     } finally {
         event.target.value = '';
     }
@@ -941,34 +883,61 @@ document.addEventListener('click',(e)=>{const fab=document.querySelector('.fab')
 function calculateLoan(){const P=parseFloat(document.getElementById('prest-monto').value)||0,r=(parseFloat(document.getElementById('prest-tasa').value)||0)/100/12,n=parseInt(document.getElementById('prest-cuotas').value)||1;let cuota=r===0?P/n:P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);document.getElementById('prest-cuota-calc').value=fL(cuota);const interes=P*r,capital=cuota-interes;document.getElementById('prest-breakdown').classList.remove('hidden');document.getElementById('prest-breakdown').innerHTML=`<div class="loan-breakdown-row"><span>Cuota mensual:</span><strong>${fL(cuota)}</strong></div><div class="loan-breakdown-row"><span>→ Interés:</span><span style="color:var(--red)">${fL(interes)}</span></div>`;return cuota}
 function checkCreditCard(){const pagoType=document.getElementById('gasto-pago').value,tarjetaSelect=document.getElementById('gasto-tarjeta');if(pagoType==='credito'){tarjetaSelect.classList.remove('hidden');tarjetaSelect.innerHTML='<option value="">Selecciona tarjeta...</option>';state.tarjetas.forEach(t=>{tarjetaSelect.innerHTML+=`<option value="${t.id}">${t.nombre} (Saldo: ${fL(t.saldo)})</option>`})}else{tarjetaSelect.classList.add('hidden')}}
 
-// ========== GUARDAR GASTO ==========
+// ========== GUARDAR GASTO CON FACTURA ADJUNTA ==========
 function saveGasto(){
-    const monto=parseFloat(document.getElementById('gasto-monto').value),
-          cat=document.getElementById('gasto-cat').value||'General',
-          subcat=document.getElementById('gasto-subcat').value||'',
-          pago=document.getElementById('gasto-pago').value,
-          tipo=document.getElementById('gasto-tipo').value||'extra',
-          banco=document.getElementById('gasto-banco').value||'';
+    const monto = parseFloat(document.getElementById('gasto-monto').value),
+          cat = document.getElementById('gasto-cat').value || 'General',
+          subcat = document.getElementById('gasto-subcat').value || '',
+          pago = document.getElementById('gasto-pago').value,
+          tipo = document.getElementById('gasto-tipo').value || 'extra',
+          banco = document.getElementById('gasto-banco').value || '';
           
-    if(!monto||monto<=0)return alert('Monto inválido');
+    if(!monto || monto <= 0) return alert('Monto inválido');
     
-    const transaction={id:Date.now(),type:'expense',amount:monto,cat:cat,subcat:subcat,pago:pago,tipo:tipo,banco:banco,date:new Date().toISOString()};
+    // Recuperar imagen temporal
+    const facturaImagen = localStorage.getItem('temp_factura_imagen') || null;
     
-    if(pago==='credito'){
-        const tarjetaId=parseInt(document.getElementById('gasto-tarjeta').value);
+    const transaction = {
+        id: Date.now(),
+        type: 'expense',
+        amount: monto,
+        cat: cat,
+        subcat: subcat,
+        pago: pago,
+        tipo: tipo,
+        banco: banco,
+        date: new Date().toISOString(),
+        facturaImagen: facturaImagen,        // NUEVO
+        numeroFactura: `FAC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}` // NUEVO
+    };
+    
+    if(pago === 'credito'){
+        const tarjetaId = parseInt(document.getElementById('gasto-tarjeta').value);
         if(tarjetaId){
-            const tarjeta=state.tarjetas.find(t=>t.id===tarjetaId);
-            if(tarjeta){tarjeta.saldo+=monto;transaction.tarjetaId=tarjetaId;transaction.tarjetaNombre=tarjeta.nombre}
+            const tarjeta = state.tarjetas.find(t => t.id === tarjetaId);
+            if(tarjeta){
+                tarjeta.saldo += monto;
+                transaction.tarjetaId = tarjetaId;
+                transaction.tarjetaNombre = tarjeta.nombre;
+            }
         }
     }
     
     state.transactions.push(transaction);
     save();
+    
+    // Limpiar imagen temporal
+    localStorage.removeItem('temp_factura_imagen');
+    window.tempFacturaImagen = false;
+    
     closeModal('modal-gasto');
     renderAll();
-    ['gasto-monto','gasto-cat','gasto-subcat','gasto-banco'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('gasto-tipo').value='extra';
-    document.getElementById('ocr-status').style.display='none';
+    
+    ['gasto-monto','gasto-cat','gasto-subcat','gasto-banco'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('gasto-tipo').value = 'extra';
+    document.getElementById('ocr-status').style.display = 'none';
+    
+    alert('✅ Gasto guardado. Factura adjuntada si fue escaneada.');
 }
 
 function saveIngreso(){const monto=parseFloat(document.getElementById('ingreso-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'income',amount:monto,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value,date:new Date().toISOString()});save();closeModal('modal-ingreso');renderAll();document.getElementById('ingreso-monto').value=''}
@@ -1078,7 +1047,41 @@ function marcarPagoRecurrente(id){const p=state.pagosRecurrentes.find(x=>x.id===
 function reconcileBalance(){const real=parseFloat(document.getElementById('reconcile-balance').value);if(!real&&real!==0)return;const curr=state.saldoInicial+state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0)-state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);state.saldoInicial+=(real-curr);save();renderAll();document.getElementById('reconcile-balance').value='';alert('✅ Conciliado')}
 
 // ========== RENDERIZADO DE VISTAS ==========
-function renderGastos(){const gastos=state.transactions.filter(t=>t.type==='expense');document.getElementById('gastos-mes').textContent=fL(gastos.reduce((a,b)=>a+b.amount,0));document.getElementById('gastos-list').innerHTML=gastos.slice().reverse().map(t=>`<div class="card"><div>${t.cat} - ${t.subcat}</div><div style="color:var(--red)">-${fL(t.amount)}</div></div>`).join('')}
+function renderGastos(){
+    const gastos = state.transactions.filter(t => t.type === 'expense');
+    const total = gastos.reduce((a,b) => a + b.amount, 0);
+    document.getElementById('gastos-mes').textContent = fL(total);
+    
+    const container = document.getElementById('gastos-list');
+    if (!container) return;
+    
+    container.innerHTML = gastos.slice().reverse().map(t => {
+        const tieneFactura = t.facturaImagen ? true : false;
+        return `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="flex:1;">
+                    <div style="font-weight:600">${t.cat} - ${t.subcat} ${tieneFactura?'🧾':''}</div>
+                    <div style="font-size:11px;color:var(--text2)">
+                        ${new Date(t.date).toLocaleDateString()} 
+                        ${t.banco ? '• ' + t.banco : ''} 
+                        ${t.numeroFactura ? '• Factura: ' + t.numeroFactura : ''}
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <div style="color:var(--red); font-weight:700; margin-right:10px;">-${fL(t.amount)}</div>
+                    ${tieneFactura ? `
+                        <button onclick="verFactura(${t.id})" style="background:none;border:none;color:var(--blue);cursor:pointer;margin-right:5px;" title="Ver factura">🧾</button>
+                        <button onclick="eliminarFactura(${t.id})" style="background:none;border:none;color:var(--red);cursor:pointer;margin-right:5px;" title="Eliminar factura">🗑️</button>
+                        <button onclick="reemplazarFactura(${t.id})" style="background:none;border:none;color:var(--green);cursor:pointer;" title="Reemplazar factura">🔄</button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
 function renderIngresos(){const ingresos=state.transactions.filter(t=>t.type==='income');document.getElementById('ingreso-salario').textContent=fL(ingresos.reduce((a,b)=>a+b.amount,0));document.getElementById('ingresos-list').innerHTML=ingresos.slice().reverse().map(t=>`<div class="card"><div>${t.cat}</div><div style="color:var(--green)">+${fL(t.amount)}</div></div>`).join('')}
 
 function renderDashboard(){
@@ -1095,8 +1098,24 @@ function renderDashboard(){
     document.getElementById('total-expense').textContent=fL(expense);
     document.getElementById('total-extra').textContent=fL(extra);
     
-    const recent=state.transactions.slice().reverse().slice(0,5);
-    document.getElementById('recent-history').innerHTML=recent.map(t=>`<div class="history-item"><div><div style="font-weight:600">${t.cat}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''} ${t.banco?`(${t.banco})`:''}</div></div><div style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${fL(t.amount)}</div></div>`).join('')||'<p style="text-align:center;color:var(--text2)">Sin movimientos</p>';
+    const recent = state.transactions.slice().reverse().slice(0,5);
+    document.getElementById('recent-history').innerHTML = recent.map(t => {
+        const tieneFactura = t.facturaImagen ? true : false;
+        return `
+        <div class="history-item">
+            <div>
+                <div style="font-weight:600">${t.cat} ${tieneFactura?'🧾':''}</div>
+                <div style="font-size:11px;color:var(--text2)">${t.subcat||''} ${t.banco?`(${t.banco})`:''}</div>
+            </div>
+            <div style="display:flex; align-items:center;">
+                <div style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}; margin-right:5px;">
+                    ${t.type==='income'?'+':'-'}${fL(t.amount)}
+                </div>
+                ${tieneFactura && t.type==='expense' ? `<button onclick="verFactura(${t.id})" style="background:none;border:none;color:var(--blue);cursor:pointer;" title="Ver factura">🧾</button>` : ''}
+            </div>
+        </div>
+        `;
+    }).join('') || '<p style="text-align:center;color:var(--text2)">Sin movimientos</p>';
     
     renderDashboardGoals();
     updateSurvivalIndex(balance);
@@ -1108,6 +1127,83 @@ function exportFullReport(){alert('Exportando reporte completo...')}
 function exportData(){const data=JSON.stringify(state);const a=document.createElement('a');a.href='data:text/json;charset=utf-8,'+encodeURIComponent(data);a.download='backup.json';a.click();}
 function exportDataEncriptado(){alert('Exportando cifrado...')}
 function resetApp(){if(confirm('¿Borrar todo?')){localStorage.removeItem(LS_KEY);location.reload()}}
+
+// ========== IMPORTAR DATOS ==========
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const imported = JSON.parse(e.target.result);
+            state = imported;
+            save();
+            location.reload();
+        } catch (err) {
+            alert('Archivo de respaldo inválido');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// ========== VISOR DE FACTURAS ==========
+function verFactura(id) {
+    const gasto = state.transactions.find(t => t.id === id);
+    if (!gasto || !gasto.facturaImagen) {
+        alert('No hay factura adjunta a este gasto.');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1000;display:flex;justify-content:center;align-items:center;padding:20px';
+    modal.innerHTML = `
+        <div style="position:relative;max-width:90%;max-height:90%">
+            <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:-40px;right:0;background:var(--red);color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer">✕ Cerrar</button>
+            <img src="${gasto.facturaImagen}" style="max-width:100%;max-height:90vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5)">
+            <div style="position:absolute;bottom:-40px;left:0;color:var(--text2);font-size:12px">Factura #${gasto.numeroFactura || 'N/A'} • ${new Date(gasto.date).toLocaleDateString()}</div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    const closeOnEsc = (e) => { if(e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', closeOnEsc); } };
+    document.addEventListener('keydown', closeOnEsc);
+}
+
+function eliminarFactura(id) {
+    const gasto = state.transactions.find(t => t.id === id);
+    if (!gasto || !gasto.facturaImagen) {
+        alert('No hay factura para eliminar.');
+        return;
+    }
+    if (confirm('¿Eliminar la factura adjunta a este gasto?')) {
+        gasto.facturaImagen = null;
+        save();
+        renderAll();
+        alert('✅ Factura eliminada');
+    }
+}
+
+function reemplazarFactura(id) {
+    const gasto = state.transactions.find(t => t.id === id);
+    if (!gasto) return;
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            gasto.facturaImagen = ev.target.result;
+            save();
+            renderAll();
+            alert('✅ Factura reemplazada');
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+}
 
 // ========== EXPORTACIÓN A EXCEL PROFESIONAL ==========
 function exportToExcelPro() {
