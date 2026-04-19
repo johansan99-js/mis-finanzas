@@ -618,6 +618,7 @@ const todayStr=()=>new Date().toISOString().split('T')[0];
 const CATEGORIES={vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}};
 
 // ========== FUNCIÓN OCR OPTIMIZADA PARA GITHUB PAGES ==========
+// ========== FUNCIÓN OCR OPTIMIZADA PARA FACTURAS HONDUREÑAS ==========
 async function procesarReciboOCR(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -671,72 +672,120 @@ async function procesarReciboOCR(event) {
         const { data: { text } } = await worker.recognize(imageUrl);
         URL.revokeObjectURL(imageUrl);
         
-        console.log('✅ Texto detectado:', text);
+        console.log('✅ Texto completo detectado:', text);
         
-        const patrones = [
-            /TOTAL\s*[:$]?\s*L\.?\s*([0-9,]+\.?[0-9]*)/i,
-            /TOTAL\s+A\s+PAGAR\s*[:$]?\s*L\.?\s*([0-9,]+\.?[0-9]*)/i,
-            /IMPORTE\s+TOTAL\s*[:$]?\s*L\.?\s*([0-9,]+\.?[0-9]*)/i,
-            /L\.\s*([0-9,]+\.?[0-9]{0,2})/g,
-            /(?:LPS|HNL)\s*[:$]?\s*([0-9,]+\.?[0-9]*)/i,
-            /(?:[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2}))/g
-        ];
-        
+        // ========== PATRONES ESPECÍFICOS PARA FACTURAS HONDUREÑAS ==========
+        const lineas = text.split('\n');
         let mayorMonto = 0;
-        let textoMontos = [];
+        let montoDetectado = null;
         
-        for (const patron of patrones) {
-            const regex = new RegExp(patron.source, patron.flags || 'gi');
-            let match;
+        console.log('📋 Analizando línea por línea...');
+        
+        // Estrategia 1: Buscar "TOTAL A PAGAR" y tomar el número de la misma línea o siguiente
+        for (let i = 0; i < lineas.length; i++) {
+            const linea = lineas[i].trim();
             
-            while ((match = regex.exec(text)) !== null) {
-                let valorStr = match[1] || match[0];
-                valorStr = valorStr.replace(/[^0-9.]/g, '');
+            // Buscar línea que contiene "TOTAL A PAGAR" o similar
+            if (linea.match(/TOTAL\s+A\s+PAGAR|TOTAL\s+PAGAR|TOTAL\s+FACTURA|IMPORTE\s+TOTAL/i)) {
+                console.log('🎯 Línea detectada con TOTAL:', linea);
                 
-                if (valorStr.includes(',')) {
-                    const partes = valorStr.split(',');
-                    if (partes.length === 2 && partes[1].length === 3) {
-                        valorStr = partes[0] + partes[1];
-                    } else {
-                        valorStr = valorStr.replace(/,/g, '');
-                    }
+                // Buscar número en la misma línea
+                const matchMismaLinea = linea.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/);
+                if (matchMismaLinea) {
+                    const valor = parseFloat(matchMismaLinea[1].replace(/,/g, ''));
+                    console.log('💰 Monto encontrado en misma línea:', valor);
+                    if (valor > mayorMonto) mayorMonto = valor;
                 }
                 
-                const valor = parseFloat(valorStr);
-                
-                if (!isNaN(valor) && valor > 0 && valor < 1000000) {
-                    textoMontos.push(valor);
-                    if (valor > mayorMonto) {
-                        mayorMonto = valor;
+                // Buscar número en la siguiente línea
+                if (i + 1 < lineas.length) {
+                    const siguienteLinea = lineas[i + 1].trim();
+                    console.log('📄 Siguiente línea:', siguienteLinea);
+                    const matchSiguienteLinea = siguienteLinea.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/);
+                    if (matchSiguienteLinea) {
+                        const valor = parseFloat(matchSiguienteLinea[1].replace(/,/g, ''));
+                        console.log('💰 Monto encontrado en siguiente línea:', valor);
+                        if (valor > mayorMonto) mayorMonto = valor;
                     }
                 }
             }
         }
         
-        console.log('💰 Montos encontrados:', textoMontos);
-        console.log('💵 Mayor monto:', mayorMonto);
+        // Estrategia 2: Buscar patrones específicos en todo el texto
+        const patronesEspecificos = [
+            /TOTAL\s+A\s+PAGAR\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
+            /TOTAL\s+PAGAR\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
+            /IMPORTE\s+TOTAL\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
+            /TOTAL\s+FACTURA\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
+            /TOTAL\s*[:\s]*L\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
+            /A\s+PAGAR\s*[:\s]*L?\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2}))/i,
+        ];
+        
+        for (const patron of patronesEspecificos) {
+            const matches = text.matchAll(new RegExp(patron.source, 'gi'));
+            for (const match of matches) {
+                const valorStr = match[1] || match[0];
+                const valor = parseFloat(valorStr.replace(/,/g, ''));
+                console.log(`🔍 Patrón detectado: ${patron} → ${valor}`);
+                if (!isNaN(valor) && valor > mayorMonto && valor < 1000000) {
+                    mayorMonto = valor;
+                }
+            }
+        }
+        
+        // Estrategia 3: Buscar el último número grande que parezca un total
+        if (mayorMonto === 0) {
+            console.log('⚠️ Usando estrategia de último número grande...');
+            const todosLosNumeros = text.match(/\d{1,3}(?:,\d{3})*(?:\.\d{2})/g) || [];
+            const numeros = todosLosNumeros.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => n > 10 && n < 1000000);
+            
+            // Ordenar de mayor a menor
+            numeros.sort((a, b) => b - a);
+            console.log('🔢 Números encontrados (ordenados):', numeros.slice(0, 5));
+            
+            // El total suele ser el número más grande que aparece cerca del final
+            if (numeros.length > 0) {
+                // Buscar números que estén en las últimas 10 líneas
+                const ultimasLineas = lineas.slice(-10).join(' ');
+                const numerosFinales = ultimasLineas.match(/\d{1,3}(?:,\d{3})*(?:\.\d{2})/g) || [];
+                const numerosFinalesParsed = numerosFinales.map(n => parseFloat(n.replace(/,/g, '')));
+                
+                if (numerosFinalesParsed.length > 0) {
+                    mayorMonto = Math.max(...numerosFinalesParsed);
+                    console.log('💰 Monto detectado en líneas finales:', mayorMonto);
+                } else {
+                    mayorMonto = numeros[0];
+                    console.log('💰 Usando el número más grande:', mayorMonto);
+                }
+            }
+        }
         
         await worker.terminate();
         
         if (mayorMonto > 0) {
             montoInput.value = mayorMonto.toFixed(2);
-            updateStatus(`✅ Total: L. ${mayorMonto.toFixed(2)}`);
+            updateStatus(`✅ Total detectado: L. ${mayorMonto.toFixed(2)}`);
             statusEl.style.color = 'var(--green)';
             
+            // Auto-detectar comercio y categoría
             const textLower = text.toLowerCase();
-            if (textLower.includes('price') || textLower.includes('pricesmart')) {
+            if (textLower.includes('lubricantes') || textLower.includes('nechos')) {
+                document.getElementById('gasto-cat').value = 'Mantenimiento';
+                document.getElementById('gasto-subcat').value = 'NECHOS LUBRICANTES';
+                document.getElementById('gasto-tipo').value = 'fijo';
+                updateStatus(`✅ Total: L. ${mayorMonto.toFixed(2)} - NECHOS LUBRICANTES detectado`);
+            } else if (textLower.includes('price') || textLower.includes('pricesmart')) {
                 document.getElementById('gasto-cat').value = 'Alimentación';
                 document.getElementById('gasto-subcat').value = 'PriceSmart';
-                updateStatus(`✅ Total: L. ${mayorMonto.toFixed(2)} - PriceSmart detectado`);
             } else if (textLower.includes('andes')) {
                 document.getElementById('gasto-cat').value = 'Alimentación';
                 document.getElementById('gasto-subcat').value = 'Los Andes';
             } else if (textLower.includes('colonial')) {
                 document.getElementById('gasto-cat').value = 'Alimentación';
                 document.getElementById('gasto-subcat').value = 'Colonial';
-            } else if (textLower.includes('shell')) {
+            } else if (textLower.includes('shell') || textLower.includes('texaco') || textLower.includes('puma')) {
                 document.getElementById('gasto-cat').value = 'Transporte';
-                document.getElementById('gasto-subcat').value = 'Shell';
+                document.getElementById('gasto-subcat').value = 'Combustible';
             }
             
             setTimeout(() => {
@@ -744,8 +793,14 @@ async function procesarReciboOCR(event) {
             }, 5000);
             
         } else {
-            updateStatus('⚠️ No se detectó ningún monto. Ingresa manualmente.', true);
-            console.warn('No se encontraron montos en el texto:', text);
+            updateStatus('⚠️ No se detectó ningún monto. Por favor ingresa manualmente.', true);
+            console.warn('No se encontraron montos en el texto. Texto completo:', text);
+            
+            // Mostrar sugerencia al usuario
+            setTimeout(() => {
+                updateStatus('💡 Consejo: Asegúrate de que el TOTAL sea visible y con buena luz', false);
+                statusEl.style.color = 'var(--blue)';
+            }, 2000);
         }
 
     } catch (error) {
