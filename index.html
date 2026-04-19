@@ -415,6 +415,8 @@ let rawKey = '';
 let appPINHash = localStorage.getItem('finanzas_pin_hash') || '';
 let mainChart = null;
 
+const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
+
 function save() {
     if (appPINHash && rawKey) {
         const ciphertext = CryptoJS.AES.encrypt(JSON.stringify(state), rawKey).toString();
@@ -425,16 +427,17 @@ function save() {
 }
 
 // ==========================================
-// 🔒 2. GESTIÓN DE AUTO-BLOQUEO
+// 🔒 2. GESTIÓN DE AUTO-BLOQUEO Y ACCESO
 // ==========================================
 let inactivityTimer;
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
     if (appPINHash) inactivityTimer = setTimeout(() => lockApp(), 3 * 60 * 1000); 
 }
+
 function lockApp() {
     if (appPINHash) {
-        rawKey = ''; // Destruir llave en memoria
+        rawKey = ''; 
         document.getElementById('modal-pin').style.display = 'flex';
         document.getElementById('pin-instruction').textContent = '🛡️ Bóveda bloqueada por seguridad tras 3 min de inactividad.';
         document.getElementById('pin-input').value = '';
@@ -452,7 +455,7 @@ function verificarPIN() {
         
         const storedData = localStorage.getItem(LS_KEY);
         if (storedData) {
-            if (storedData.startsWith('{')) { // Estaba plano, encriptamos
+            if (storedData.startsWith('{')) { 
                 state = Object.assign(state, JSON.parse(storedData)); save(); 
             } else {
                 try {
@@ -488,10 +491,9 @@ function olvidePIN() {
     }
 }
 
-// INICIALIZACIÓN
 window.onload = () => {
     const oldPlaintextPin = localStorage.getItem('finanzas_pin');
-    if (oldPlaintextPin) { // Migrar PIN plano a HASH
+    if (oldPlaintextPin) { 
         localStorage.setItem('finanzas_pin_hash', CryptoJS.SHA256(oldPlaintextPin).toString());
         localStorage.removeItem('finanzas_pin');
         appPINHash = localStorage.getItem('finanzas_pin_hash');
@@ -506,10 +508,8 @@ window.onload = () => {
     }
 };
 
-const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
-
 // ==========================================
-// 💡 3. MENTOR DE PROSPERIDAD (Delicadeza Financiera)
+// 💡 3. MENTOR DE PROSPERIDAD
 // ==========================================
 function actualizarGuiaMentor() {
     const totalGastoExtra = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'extra').reduce((a, b) => a + b.amount, 0);
@@ -518,7 +518,6 @@ function actualizarGuiaMentor() {
     const tituloEl = document.getElementById('mentor-titulo');
     const iconoEl = document.getElementById('mentor-icon');
 
-    // Métrica de Supervivencia
     const normalTx = state.transactions.filter(t => t.type !== 'conciliacion');
     const income = normalTx.filter(t => t.type === 'income').reduce((a,b) => a+b.amount, 0);
     const expense = normalTx.filter(t => t.type === 'expense').reduce((a,b) => a+b.amount, 0);
@@ -553,7 +552,6 @@ async function procesarReciboOCR(event) {
     try {
         const worker = await Tesseract.createWorker('spa');
         const { data: { text } } = await worker.recognize(file);
-        // Expresión regular ajustada para CAI Hondureño y tickets de supermercado
         const regexTotal = /(?:TOTAL|TOT|L\.|L)\s*[:$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/gi;
         let coincidencias, mayorMonto = 0;
         while ((coincidencias = regexTotal.exec(text)) !== null) {
@@ -573,19 +571,18 @@ async function procesarReciboOCR(event) {
 }
 
 // ==========================================
-// 📊 5. EXPORTACIÓN EXCEL DE GRADO EMPRESARIAL (ExcelJS)
+// 📊 5. EXPORTACIÓN EXCEL DE GRADO EMPRESARIAL
 // ==========================================
 async function exportFullReport() {
     if (state.transactions.length === 0) return alert("No hay suficientes datos registrados.");
     try {
         const btn = document.querySelector('button[onclick="exportFullReport()"]');
-        const textOrig = btn.innerHTML; btn.innerHTML = '⏳ Generando Libro Contable...'; btn.disabled = true;
+        btn.innerHTML = '⏳ Generando Libro Contable...'; btn.disabled = true;
 
         const wb = new ExcelJS.Workbook(); wb.creator = 'Mis Finanzas HN Pro Elite'; wb.created = new Date();
         const headerStyle = { font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A1D27' } }, alignment: { horizontal: 'center' } };
         const moneyFormat = '"L. "#,##0.00';
 
-        // HOJA 1: RESUMEN EJECUTIVO
         const wsResumen = wb.addWorksheet('Resumen');
         wsResumen.columns = [{ width: 25 }, { width: 20 }, { width: 5 }, { width: 40 }];
         wsResumen.getCell('A1').value = 'MÉTRICA'; wsResumen.getCell('B1').value = 'VALOR';
@@ -600,7 +597,6 @@ async function exportFullReport() {
         wsResumen.addRow(['Total Ingresos', tInc]).getCell(2).numFmt = moneyFormat;
         wsResumen.addRow(['Total Gastos', tExp]).getCell(2).numFmt = moneyFormat;
         
-        // Gráfico embebido
         const canvas = document.getElementById('mainChart');
         if (canvas) {
             wsResumen.getCell('D1').value = 'DISTRIBUCIÓN VITAL VS OCIO'; wsResumen.getCell('D1').style = headerStyle;
@@ -608,7 +604,6 @@ async function exportFullReport() {
             wsResumen.addImage(imgId, 'D2:G12'); 
         }
 
-        // HOJA 2: LIBRO MAYOR CON AUTOFILTROS
         const wsMov = wb.addWorksheet('Libro Mayor');
         wsMov.columns = [ { header: 'Fecha', key: 'fecha', width: 15 }, { header: 'Tipo', key: 'tipo', width: 12 }, { header: 'Naturaleza', key: 'nat', width: 15 }, { header: 'Categoría', key: 'cat', width: 25 }, { header: 'Comercio', key: 'subcat', width: 30 }, { header: 'Banco', key: 'banco', width: 15 }, { header: 'Monto', key: 'monto', width: 18 } ];
         wsMov.getRow(1).eachCell(cell => cell.style = headerStyle);
@@ -621,17 +616,16 @@ async function exportFullReport() {
         });
         wsMov.autoFilter = 'A1:G1'; 
 
-        // DESCARGA
         const buffer = await wb.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         saveAs(blob, `MisFinanzas_Auditoria_${new Date().toISOString().split('T')[0]}.xlsx`);
 
         btn.innerHTML = '📊 Exportar Reporte Empresarial (Excel)'; btn.disabled = false;
-    } catch (e) { alert('❌ Error generando Excel. Verifica conexión para dependencias.'); console.error(e); }
+    } catch (e) { alert('❌ Error generando Excel. Verifica conexión.'); console.error(e); }
 }
 
 // ==========================================
-// FUNCIONES GENERALES DE UI Y CRUD
+// ⚙️ 6. UI Y CRUD FUNCIONES 
 // ==========================================
 function updateSurvivalIndex(balance) {
     const fijos = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'fijo').reduce((a, b) => a + b.amount, 0) || 1; 
@@ -657,19 +651,86 @@ function setGastoPreset(cat, sub, tipo) { document.getElementById('gasto-cat').v
 function toggleHamburger(){const panel=document.getElementById('hamburgerPanel');const overlay=document.getElementById('hamburgerOverlay');if(panel.classList.contains('active')){panel.classList.remove('active');overlay.classList.remove('active');}else{panel.classList.add('active');overlay.classList.add('active');}}
 function finishOnboarding(){state.setup=true; state.nombre=document.getElementById('ob-nombre').value; state.saldoInicial=parseFloat(document.getElementById('ob-salario').value)||0; save(); document.getElementById('onboarding').style.display='none'; renderAll();}
 function toggleFabMenu(){const m=document.getElementById('fab-menu');m.style.display=m.style.display==='block'?'none':'block';}
-function saveGasto(){const monto=parseFloat(document.getElementById('gasto-monto').value); if(!monto)return; state.transactions.push({id:Date.now(), type:'expense', amount:monto, cat:document.getElementById('gasto-cat').value, subcat:document.getElementById('gasto-subcat').value, pago:document.getElementById('gasto-pago').value, tipo:document.getElementById('gasto-tipo').value, banco:document.getElementById('gasto-banco').value, date:new Date().toISOString()}); save(); closeModal('modal-gasto'); renderAll(); document.getElementById('gasto-monto').value=''; document.getElementById('ocr-status').style.display='none'; }
-function saveIngreso(){const m=parseFloat(document.getElementById('ingreso-monto').value); if(m){state.transactions.push({id:Date.now(),type:'income',amount:m,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value}); save(); closeModal('modal-ingreso'); renderAll();}}
-function saveMeta(){const n=document.getElementById('meta-nombre').value,o=parseFloat(document.getElementById('meta-objetivo').value); if(n&&o){state.goals.push({id:Date.now(),nombre:n,objetivo:o,actual:0}); save(); closeModal('modal-meta'); renderAll();}}
-function reconcileBalance(){const r=parseFloat(document.getElementById('reconcile-balance').value); if(r||r===0){const c=state.saldoInicial+state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0)-state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0); state.saldoInicial+=(r-c); save(); renderAll(); alert('✅ Ajuste Creado');}}
+function checkCreditCard(){const p=document.getElementById('gasto-pago').value,t=document.getElementById('gasto-tarjeta');if(p==='credito'){t.classList.remove('hidden');t.innerHTML='<option value="">Selecciona tarjeta...</option>';state.tarjetas.forEach(x=>{t.innerHTML+=`<option value="${x.id}">${x.nombre} (Deuda: ${fL(x.saldo)})</option>`})}else t.classList.add('hidden');}
+
+function saveGasto(){
+    const monto=parseFloat(document.getElementById('gasto-monto').value); if(!monto)return; 
+    const pago = document.getElementById('gasto-pago').value;
+    
+    if(pago === 'credito') {
+        const idT = parseInt(document.getElementById('gasto-tarjeta').value);
+        const t = state.tarjetas.find(x => x.id === idT);
+        if(t) t.saldo += monto;
+    }
+
+    state.transactions.push({id:Date.now(), type:'expense', amount:monto, cat:document.getElementById('gasto-cat').value, subcat:document.getElementById('gasto-subcat').value, pago:pago, tipo:document.getElementById('gasto-tipo').value, banco:document.getElementById('gasto-banco').value, date:new Date().toISOString()}); 
+    save(); closeModal('modal-gasto'); renderAll(); 
+    
+    ['gasto-monto','gasto-cat','gasto-subcat','gasto-banco','gasto-tarjeta'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('gasto-tipo').value='extra'; document.getElementById('gasto-pago').value='efectivo';
+    document.getElementById('ocr-status').style.display='none'; checkCreditCard();
+}
+
+function saveIngreso(){const m=parseFloat(document.getElementById('ingreso-monto').value); if(m){state.transactions.push({id:Date.now(),type:'income',amount:m,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value, date:new Date().toISOString()}); save(); closeModal('modal-ingreso'); renderAll(); document.getElementById('ingreso-monto').value='';}}
+function saveMeta(){const n=document.getElementById('meta-nombre').value,o=parseFloat(document.getElementById('meta-objetivo').value); if(n&&o){state.goals.push({id:Date.now(),nombre:n,objetivo:o,actual:0}); save(); closeModal('modal-meta'); renderAll(); ['meta-nombre','meta-objetivo'].forEach(id=>document.getElementById(id).value='');}}
+function saveCobrar(){const p=document.getElementById('cobrar-persona').value,m=parseFloat(document.getElementById('cobrar-monto').value); if(p&&m){state.receivables.push({id:Date.now(),persona:p,monto:m,pagado:0}); save(); closeModal('modal-cobrar'); renderAll(); ['cobrar-persona','cobrar-monto'].forEach(id=>document.getElementById(id).value='');}}
+function savePagar(){const c=document.getElementById('pagar-creditor').value,m=parseFloat(document.getElementById('pagar-monto').value); if(c&&m){state.payables.push({id:Date.now(),creditor:c,monto:m,pagado:0}); save(); closeModal('modal-pagar'); renderAll(); ['pagar-creditor','pagar-monto'].forEach(id=>document.getElementById(id).value='');}}
+function saveTarjeta(){const n=document.getElementById('tc-nombre').value; if(n){state.tarjetas.push({id:Date.now(),nombre:n,saldo:0}); save(); closeModal('modal-tarjeta'); renderAll(); document.getElementById('tc-nombre').value='';}}
+function savePagoRecurrente(){const s=document.getElementById('pago-servicio').value, m=parseFloat(document.getElementById('pago-monto').value), d=parseInt(document.getElementById('pago-dia').value); if(s&&m&&d){state.pagosRecurrentes.push({id:Date.now(),servicio:s,monto:m,dia:d}); save(); closeModal('modal-pago-recurrente'); renderAll(); ['pago-servicio','pago-monto','pago-dia'].forEach(id=>document.getElementById(id).value='');}}
+
+function savePrestamo(){
+    const entidad=document.getElementById('prest-entidad').value, monto=parseFloat(document.getElementById('prest-monto').value), tasa=parseFloat(document.getElementById('prest-tasa').value)||0, cuotas=parseInt(document.getElementById('prest-cuotas').value)||1;
+    if(entidad && monto){
+        const r = tasa/100/12;
+        const cuota = r===0 ? monto/cuotas : monto*(r*Math.pow(1+r,cuotas))/(Math.pow(1+r,cuotas)-1);
+        state.prestamos.push({id:Date.now(), entidad, monto, cuota, cuotasPagadas:0, cuotasTotal:cuotas});
+        save(); closeModal('modal-prestamo'); renderAll();
+        ['prest-entidad','prest-monto','prest-tasa','prest-cuotas'].forEach(id=>document.getElementById(id).value='');
+    }
+}
+
+function reconcileBalance(){const r=parseFloat(document.getElementById('reconcile-balance').value); if(r||r===0){const c=state.saldoInicial+state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0)-state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0); state.saldoInicial+=(r-c); save(); renderAll(); alert('✅ Ajuste Creado'); document.getElementById('reconcile-balance').value='';}}
 
 function renderDashboard(){
-    const normal=state.transactions.filter(t=>t.type!=='conciliacion');
-    const income=normal.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0), expense=normal.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
-    const balance=state.saldoInicial+income-expense;
-    document.getElementById('balance-amount').textContent=fL(balance); document.getElementById('total-income').textContent=fL(income); document.getElementById('total-expense').textContent=fL(expense);
-    document.getElementById('recent-history').innerHTML=state.transactions.slice().reverse().slice(0,5).map(t=>`<div class="history-item"><div><div style="font-weight:600">${t.cat}</div></div><div style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${fL(t.amount)}</div></div>`).join('');
+    const normal = state.transactions.filter(t=>t.type!=='conciliacion');
+    const income = normal.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
+    const expense = normal.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
+    const balance = state.saldoInicial+income-expense;
+    
+    const hoyStr = new Date().toISOString().split('T')[0];
+    const cobradoHoy = normal.filter(t => t.type === 'income' && t.date && t.date.startsWith(hoyStr)).reduce((a,b)=>a+b.amount,0);
+    const pagadoHoy = normal.filter(t => t.type === 'expense' && t.date && t.date.startsWith(hoyStr)).reduce((a,b)=>a+b.amount,0);
+    
+    document.getElementById('balance-amount').textContent = fL(balance); 
+    document.getElementById('total-income').textContent = fL(income); 
+    document.getElementById('total-expense').textContent = fL(expense);
+    document.getElementById('cobrado-hoy').textContent = fL(cobradoHoy);
+    document.getElementById('pagado-hoy').textContent = fL(pagadoHoy);
+    
+    document.getElementById('recent-history').innerHTML = state.transactions.slice().reverse().slice(0,5).map(t=>`<div class="history-item"><div><div style="font-weight:600">${t.cat}</div><div style="font-size:11px;color:var(--text2)">${t.subcat||''}</div></div><div style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${fL(t.amount)}</div></div>`).join('');
+    
     updateSurvivalIndex(balance); renderDoughnutChart(); actualizarGuiaMentor();
 }
+
+function renderMetas(){document.getElementById('metas-list').innerHTML=state.goals.map(g=>`<div class="card card-saving"><b>${g.nombre}</b>: ${fL(g.actual)} / ${fL(g.objetivo)}</div>`).join('');}
+function renderCobrar(){document.getElementById('cobrar-list').innerHTML=state.receivables.map(r=>`<div class="card card-receivable">${r.persona} debe ${fL(r.monto)}</div>`).join('');}
+function renderPagar(){document.getElementById('pagar-list').innerHTML=state.payables.map(p=>`<div class="card card-debt">Debo a ${p.creditor}: ${fL(p.monto)}</div>`).join('');}
+function renderPrestamos(){ document.getElementById('prestamos-list').innerHTML=state.prestamos.map(p=>`<div class="card card-debt"><div><b>${p.entidad}</b></div><div style="color:var(--red)">Deuda Total: ${fL(p.monto - (p.cuotasPagadas*p.cuota))}</div><div style="font-size:11px;color:var(--text2);margin-top:5px">Cuota mensual: ${fL(p.cuota)}</div></div>`).join(''); }
+function renderPagosRecurrentes(){ document.getElementById('pagos-list').innerHTML=state.pagosRecurrentes.map(p=>`<div class="card card-security"><div><b>${p.servicio}</b></div><div>Monto: ${fL(p.monto)} • Se paga el día ${p.dia}</div></div>`).join(''); }
+
+function renderTarjetas(){ document.getElementById('tarjetas-list').innerHTML=state.tarjetas.map(t=>`<div class="card card-credit"><div><b>${t.nombre}</b></div><div style="color:var(--red); font-size:18px; font-weight:bold; margin:5px 0">Deuda: ${fL(t.saldo)}</div><button class="btn btn-secondary" style="margin-top:10px" onclick="abonarTarjeta(${t.id})">💸 Abonar a Tarjeta</button></div>`).join(''); }
+function abonarTarjeta(id) {
+    const t = state.tarjetas.find(x=>x.id===id);
+    if(t) {
+        const abono = parseFloat(prompt(`Deuda actual: ${fL(t.saldo)}\n\n¿Cuánto abonaste/pagaste a esta tarjeta?`));
+        if(abono && abono > 0) {
+            t.saldo -= abono; if(t.saldo < 0) t.saldo = 0; 
+            state.transactions.push({id:Date.now(), type:'expense', amount:abono, cat:'Pago de Tarjeta', subcat:t.nombre, pago:'efectivo', tipo:'fijo', date:new Date().toISOString()});
+            save(); renderAll(); alert('✅ Pago registrado correctamente');
+        }
+    }
+}
+
 function exportDataEncriptado(){const d=localStorage.getItem(LS_KEY); if(d.startsWith('{'))return alert('No encriptada. Configura llave.'); const a=document.createElement('a'); a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(d); a.download='boveda_cifrada.aes'; a.click();}
 function exportDataPlano(){if(!confirm('⚠️ Vas a exportar tus datos en TEXTO PLANO sin seguridad. ¿Continuar?'))return; const a=document.createElement('a'); a.href='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(state)); a.download='datos_abiertos.json'; a.click();}
 function resetApp(){if(confirm('¿Destruir Bóveda? (Irreversible)')){localStorage.removeItem(LS_KEY);localStorage.removeItem('finanzas_pin_hash');location.reload();}}
@@ -677,7 +738,10 @@ function switchView(v){document.querySelectorAll('.view, .hamburger-item').forEa
 function openModal(id){document.getElementById(id).style.display='flex';document.getElementById('fab-menu').style.display='none';}
 function closeModal(id){document.getElementById(id).style.display='none';}
 function closeModalIfBg(e,id){if(e.target.id===id)closeModal(id);}
-function renderAll(){renderDashboard(); /* Funciones secundarias omitidas por brevedad */ }
+
+function renderAll(){
+    renderDashboard(); renderMetas(); renderCobrar(); renderPagar(); renderPrestamos(); renderTarjetas(); renderPagosRecurrentes();
+}
 </script>
 </body>
 </html>
