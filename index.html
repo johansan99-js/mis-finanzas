@@ -11,6 +11,8 @@
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<!-- NUEVA LIBRERÍA PARA EXCEL PROFESIONAL -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#232736;--bg4:#2d3147;--amber:#f0a500;--text:#f0eff4;--text2:#9b9eb5;--green:#2ecc8a;--red:#e85d5d;--blue:#4a9ef8;--purple:#9b7fe8;--border:#2d3147;--r:12px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -361,10 +363,21 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 </div>
 
 <div id="view-tarjetas" class="view">
-  <h2 style="margin-bottom:15px">💳 Tarjetas de Crédito</h2>
-  <p style="font-size:12px;color:var(--text2);margin-bottom:15px">Registra tus tarjetas para recibir alertas de corte y pago.</p>
+  <h2 style="margin-bottom:15px">💳 Gestión de Tarjetas</h2>
+  <div class="card" style="background:linear-gradient(135deg,var(--bg2),var(--bg3));margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:11px;color:var(--text2)">DEUDA TOTAL TARJETAS</div>
+        <div style="font-size:24px;font-weight:700;color:var(--red)" id="total-deuda-tc">L. 0.00</div>
+      </div>
+      <button class="btn btn-secondary" style="width:auto;padding:10px 20px" onclick="openModal('modal-tarjeta')">+ Agregar</button>
+    </div>
+  </div>
   <div id="tarjetas-list"></div>
-  <button class="btn btn-secondary" onclick="openModal('modal-tarjeta')">+ Agregar Tarjeta</button>
+  
+  <!-- NUEVA SECCIÓN: ALERTAS DE PAGO MÍNIMO -->
+  <h3 style="margin-top: 20px;">⚠️ Resumen de Pagos Mínimos</h3>
+  <div id="resumen-pagos-minimos" style="margin-bottom: 15px;"></div>
 </div>
 
 <div id="view-pagos" class="view">
@@ -402,7 +415,10 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <span style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:var(--red);border-radius:2px"></div> Gastos</span>
     </div>
   </div>
-  <button class="btn btn-secondary" onclick="exportFullReport()">📊 Exportar Reporte Completo (Excel)</button>
+  <button class="btn btn-primary" onclick="exportToExcelPro()" style="background: #1D6F42; color: white; margin-top: 15px;">
+    📊 Exportar Reporte Profesional (Excel)
+  </button>
+  <button class="btn btn-secondary" onclick="exportFullReport()" style="margin-top: 10px;">📋 Exportar Reporte Completo (CSV)</button>
 </div>
 
 <div id="view-config" class="view">
@@ -411,7 +427,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <h4 style="margin-bottom:10px;color:var(--purple)">🔐 Configuración de Seguridad</h4>
     <button class="btn btn-secondary" onclick="configurarPIN()" style="margin-bottom:10px">🔑 Cambiar PIN de Acceso</button>
     <button class="btn btn-secondary" onclick="exportDataEncriptado()" style="margin-bottom:10px">📥 Exportar Respaldo Cifrado</button>
-    <button class="btn btn-secondary" onclick="exportToExcel()" style="margin-bottom:10px">📊 Descargar Excel Básico</button>
+    <button class="btn btn-secondary" onclick="exportToExcelPro()" style="margin-bottom:10px; background: #1D6F42; color: white;">📊 Excel Profesional</button>
     <div style="font-size:11px;color:var(--text2);margin-top:10px">
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <input type="checkbox" id="recordar-pin" onchange="toggleRecordarPIN()">
@@ -521,12 +537,39 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <div id="modal-cobrar" class="modal" onclick="closeModalIfBg(event,'modal-cobrar')"><div class="modal-content"><h3>💰 Dinero que me deben</h3><input type="text" id="cobrar-persona" class="input-field" placeholder="¿Quién te debe?"><input type="number" id="cobrar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo.</p><input type="number" id="cobrar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="cobrar-fecha" class="input-field"><button class="btn btn-primary" onclick="saveCobrar()">Guardar</button></div></div>
 <div id="modal-pagar" class="modal" onclick="closeModalIfBg(event,'modal-pagar')"><div class="modal-content"><h3>💸 Lo que debo pagar</h3><input type="text" id="pagar-creditor" class="input-field" placeholder="¿A quién le debes?"><input type="number" id="pagar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo.</p><input type="number" id="pagar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="pagar-fecha" class="input-field"><button class="btn btn-secondary" onclick="savePagar()">Registrar</button></div></div>
 <div id="modal-prestamo" class="modal" onclick="closeModalIfBg(event,'modal-prestamo')"><div class="modal-content"><h3>🏦 Nuevo Préstamo Bancario</h3><input type="text" id="prest-entidad" class="input-field" placeholder="Entidad (Ej. BAC, Ficohsa, Familiar)"><input type="number" id="prest-monto" class="input-field" placeholder="Monto total del préstamo (L)"><input type="number" id="prest-tasa" class="input-field" placeholder="Tasa de interés anual (%)"><div class="input-row"><input type="number" id="prest-cuotas" class="input-field" placeholder="Número de cuotas"><input type="number" id="prest-cuota-calc" class="input-field" placeholder="Cuota calculada" readonly></div><input type="date" id="prest-fecha-pago" class="input-field"><input type="number" id="prest-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><div id="prest-breakdown" class="loan-breakdown hidden"></div><button class="btn btn-primary" onclick="calculateLoan();savePrestamo()">Calcular y Guardar</button></div></div>
-<div id="modal-tarjeta" class="modal" onclick="closeModalIfBg(event,'modal-tarjeta')"><div class="modal-content"><h3>💳 Nueva Tarjeta de Crédito</h3><input type="text" id="tc-nombre" class="input-field" placeholder="Nombre (Ej. BAC Oro, Visa)"><div class="input-row"><input type="number" id="tc-corte" class="input-field" placeholder="Día de corte" min="1" max="31"><input type="number" id="tc-pago" class="input-field" placeholder="Día de pago" min="1" max="31"></div><input type="number" id="tc-limite" class="input-field" placeholder="Límite de crédito (L)"><input type="number" id="tc-saldo" class="input-field" placeholder="Saldo actual (L)" value="0"><button class="btn btn-primary" onclick="saveTarjeta()">Guardar Tarjeta</button></div></div>
+<div id="modal-tarjeta" class="modal" onclick="closeModalIfBg(event,'modal-tarjeta')">
+  <div class="modal-content">
+    <h3>💳 Nueva Tarjeta de Crédito</h3>
+    <input type="text" id="tc-nombre" class="input-field" placeholder="Nombre (Ej. BAC Oro, Visa)">
+    
+    <div class="input-row">
+      <input type="number" id="tc-corte" class="input-field" placeholder="Día de corte" min="1" max="31">
+      <input type="number" id="tc-pago" class="input-field" placeholder="Día de pago" min="1" max="31">
+    </div>
+    
+    <!-- NUEVOS CAMPOS IMPORTANTES -->
+    <div class="input-row">
+      <input type="number" id="tc-limite" class="input-field" placeholder="Límite (L)">
+      <input type="number" id="tc-tasa" class="input-field" placeholder="Tasa Interés Anual (%)" value="48">
+    </div>
+    
+    <input type="number" id="tc-saldo" class="input-field" placeholder="Saldo actual (L)" value="0">
+    
+    <div style="background: var(--bg3); padding: 10px; border-radius: 8px; margin: 10px 0;">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="tc-calcular-minimo" checked>
+            <span style="font-size: 12px;">Calcular Pago Mínimo automático (5% del saldo)</span>
+        </label>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveTarjeta()">Guardar Tarjeta</button>
+  </div>
+</div>
 <div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="number" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
 
 <script>
-// MANTENEMOS LA LLAVE ORIGINAL
-const LS_KEY='mifinanzashn_pro_v17_2';
+// ========== VARIABLES GLOBALES Y ESTADO ==========
+const LS_KEY='mifinanzashn_pro_v18_1'; // Versión actualizada
 let savedState=JSON.parse(localStorage.getItem(LS_KEY));
 let state={setup:false,nombre:'',saldoInicial:0,transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[],budgetRules:{gastos:65,ahorro:20,extra:15}};
 if(savedState && typeof savedState==='object'){Object.keys(state).forEach(key=>{if(savedState[key]!==undefined){if(Array.isArray(state[key])&&!Array.isArray(savedState[key])){state[key]=[]}else{state[key]=savedState[key]}}})}
@@ -549,7 +592,7 @@ const todayStr=()=>new Date().toISOString().split('T')[0];
 
 const CATEGORIES={vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}};
 
-// === MOTOR DE ESCANEO DE RECIBOS (OCR) ===
+// ========== MOTOR DE ESCANEO DE RECIBOS (OCR) ==========
 async function procesarReciboOCR(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -562,13 +605,11 @@ async function procesarReciboOCR(event) {
     statusEl.style.color = 'var(--amber)';
 
     try {
-        // Inicializar Tesseract.js para español
         const worker = await Tesseract.createWorker('spa');
         statusEl.textContent = '🔍 Escaneando montos de la factura...';
         
         const { data: { text } } = await worker.recognize(file);
         
-        // RegEx orientada a las facturas CAI / SAR de Honduras
         const regexTotal = /(?:TOTAL|TOT|L\.|L)\s*[:$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/gi;
         
         let coincidencias;
@@ -598,10 +639,10 @@ async function procesarReciboOCR(event) {
         statusEl.style.color = 'var(--red)';
     }
     
-    event.target.value = ''; // Limpiar input para permitir volver a escanear
+    event.target.value = '';
 }
 
-// === FUNCIONES: SUPERVIVENCIA Y GRÁFICO ===
+// ========== FUNCIONES DE SUPERVIVENCIA Y GRÁFICO ==========
 function updateSurvivalIndex(balance) {
     const fijosMensual = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'fijo').reduce((a, b) => a + b.amount, 0) || 1; 
     const gastoDiario = fijosMensual / 30;
@@ -646,7 +687,7 @@ function setGastoPreset(cat, sub, tipo) {
     document.getElementById('gasto-tipo').value = tipo;
 }
 
-// === LÓGICA EXISTENTE Y NAVEGACIÓN ===
+// ========== LÓGICA DE NAVEGACIÓN Y UI ==========
 function toggleHamburger(){const panel=document.getElementById('hamburgerPanel');const overlay=document.getElementById('hamburgerOverlay');const isOpen=panel.classList.contains('active');if(isOpen){panel.classList.remove('active');overlay.classList.remove('active');document.body.style.overflow=''}else{panel.classList.add('active');overlay.classList.add('active');document.body.style.overflow='hidden'}}
 function saveBudgetRules(){const gastos=parseInt(document.getElementById('rule-gastos').value)||0;const ahorro=parseInt(document.getElementById('rule-ahorro').value)||0;const extra=parseInt(document.getElementById('rule-extra').value)||0;if(gastos+ahorro+extra!==100){document.getElementById('budget-total-warning').style.display='block';return}state.budgetRules={gastos,ahorro,extra};save();closeModal('modal-budget-rules');renderBudgetRules();alert(`✅ Reglas actualizadas`)}
 function renderBudgetRules(){const rules=state.budgetRules||{gastos:65,ahorro:20,extra:15};document.getElementById('budget-gastos-val').textContent=rules.gastos+'%';document.getElementById('budget-ahorro-val').textContent=rules.ahorro+'%';document.getElementById('budget-extra-val').textContent=rules.extra+'%';document.getElementById('rule-gastos').value=rules.gastos;document.getElementById('rule-ahorro').value=rules.ahorro;document.getElementById('rule-extra').value=rules.extra}
@@ -671,7 +712,7 @@ document.addEventListener('click',(e)=>{const fab=document.querySelector('.fab')
 function calculateLoan(){const P=parseFloat(document.getElementById('prest-monto').value)||0,r=(parseFloat(document.getElementById('prest-tasa').value)||0)/100/12,n=parseInt(document.getElementById('prest-cuotas').value)||1;let cuota=r===0?P/n:P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);document.getElementById('prest-cuota-calc').value=fL(cuota);const interes=P*r,capital=cuota-interes;document.getElementById('prest-breakdown').classList.remove('hidden');document.getElementById('prest-breakdown').innerHTML=`<div class="loan-breakdown-row"><span>Cuota mensual:</span><strong>${fL(cuota)}</strong></div><div class="loan-breakdown-row"><span>→ Interés:</span><span style="color:var(--red)">${fL(interes)}</span></div>`;return cuota}
 function checkCreditCard(){const pagoType=document.getElementById('gasto-pago').value,tarjetaSelect=document.getElementById('gasto-tarjeta');if(pagoType==='credito'){tarjetaSelect.classList.remove('hidden');tarjetaSelect.innerHTML='<option value="">Selecciona tarjeta...</option>';state.tarjetas.forEach(t=>{tarjetaSelect.innerHTML+=`<option value="${t.id}">${t.nombre} (Saldo: ${fL(t.saldo)})</option>`})}else{tarjetaSelect.classList.add('hidden')}}
 
-// GUARDAR GASTO
+// ========== GUARDAR GASTO ==========
 function saveGasto(){
     const monto=parseFloat(document.getElementById('gasto-monto').value),
           cat=document.getElementById('gasto-cat').value||'General',
@@ -698,7 +739,7 @@ function saveGasto(){
     renderAll();
     ['gasto-monto','gasto-cat','gasto-subcat','gasto-banco'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('gasto-tipo').value='extra';
-    document.getElementById('ocr-status').style.display='none'; // Reset OCR status
+    document.getElementById('ocr-status').style.display='none';
 }
 
 function saveIngreso(){const monto=parseFloat(document.getElementById('ingreso-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'income',amount:monto,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value,date:new Date().toISOString()});save();closeModal('modal-ingreso');renderAll();document.getElementById('ingreso-monto').value=''}
@@ -711,30 +752,106 @@ function deleteMeta(id){if(confirm('¿Eliminar?')){state.goals=state.goals.filte
 function renderMetas(){const container=document.getElementById('metas-list');if(!container)return;container.innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="font-weight:700">${g.nombre}</div><div style="font-size:12px;color:var(--text2)">${fL(g.actual)} de ${fL(g.objetivo)}</div><div style="height:8px;background:var(--bg4);border-radius:4px;margin:10px 0"><div style="width:${pct}%;height:100%;background:var(--green)"></div></div><button class="btn btn-primary" onclick="openAbono(${g.id})">💰 Abonar</button><button onclick="deleteMeta(${g.id})" style="background:none;border:none;color:var(--red);float:right;margin-top:10px">Eliminar</button></div>`}).join('')}
 function renderDashboardGoals(){const container=document.getElementById('dashboard-goals');if(!container)return;container.innerHTML=state.goals.slice(0,3).map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="goal-mini"><div class="goal-mini-header"><span>${g.nombre}</span><span>${pct.toFixed(0)}%</span></div><div class="goal-mini-bar"><div class="goal-mini-progress" style="width:${pct}%"></div></div></div>`}).join('')}
 
+// ========== COBRAR Y PAGAR (MEJORADO CON FLUJO DE CAJA) ==========
 function saveCobrar(){const persona=document.getElementById('cobrar-persona').value.trim(),monto=parseFloat(document.getElementById('cobrar-monto').value),pagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;if(!persona||!monto)return;state.receivables.push({id:Date.now(),persona,monto,pagado,fecha:document.getElementById('cobrar-fecha').value});save();closeModal('modal-cobrar');renderAll();}
 function renderCobrar(){const c=document.getElementById('cobrar-list');if(!c)return;c.innerHTML=state.receivables.map(r=>`<div class="card card-receivable"><div>${r.persona} • Pendiente: ${fL(r.monto-(r.pagado||0))}</div><button class="btn btn-primary" onclick="abonarCobrar(${r.id})">Abonar</button></div>`).join('')}
-function abonarCobrar(id){const r=state.receivables.find(x=>x.id===id);if(r){const m=parseFloat(prompt("Monto:"));if(m){r.pagado+=m;save();renderAll()}}}
+function abonarCobrar(id){
+    const r = state.receivables.find(x => x.id === id);
+    if (!r) return;
+    const pendiente = r.monto - (r.pagado || 0);
+    const m = parseFloat(prompt(`Monto a cobrar de ${r.persona}\nPendiente: ${fL(pendiente)}`));
+    if (m && m > 0) {
+        r.pagado = (r.pagado || 0) + m;
+        state.transactions.push({id: Date.now(),type: 'income',amount: m,cat: 'Cobro Deuda',subcat: `Cobro a ${r.persona}`,date: new Date().toISOString()});
+        save(); renderAll();
+    }
+}
 
 function savePagar(){const creditor=document.getElementById('pagar-creditor').value.trim(),monto=parseFloat(document.getElementById('pagar-monto').value),pagado=parseFloat(document.getElementById('pagar-pagado').value)||0;if(!creditor||!monto)return;state.payables.push({id:Date.now(),creditor,monto,pagado,fecha:document.getElementById('pagar-fecha').value});save();closeModal('modal-pagar');renderAll();}
 function renderPagar(){const c=document.getElementById('pagar-list');if(!c)return;c.innerHTML=state.payables.map(p=>`<div class="card card-debt"><div>${p.creditor} • Pendiente: ${fL(p.monto-(p.pagado||0))}</div><button class="btn btn-secondary" onclick="abonarPagar(${p.id})">Abonar</button></div>`).join('')}
-function abonarPagar(id){const p=state.payables.find(x=>x.id===id);if(p){const m=parseFloat(prompt("Monto:"));if(m){p.pagado+=m;save();renderAll()}}}
+function abonarPagar(id){
+    const p = state.payables.find(x => x.id === id);
+    if (!p) return;
+    const pendiente = p.monto - (p.pagado || 0);
+    const m = parseFloat(prompt(`Monto a pagar a ${p.creditor}\nPendiente: ${fL(pendiente)}`));
+    if (m && m > 0) {
+        p.pagado = (p.pagado || 0) + m;
+        state.transactions.push({id: Date.now(),type: 'expense',amount: m,cat: 'Pago Deuda',subcat: `Pago a ${p.creditor}`,tipo: 'fijo',date: new Date().toISOString()});
+        save(); renderAll();
+    }
+}
 
+// ========== PRÉSTAMOS ==========
 function savePrestamo(){const entidad=document.getElementById('prest-entidad').value,monto=parseFloat(document.getElementById('prest-monto').value);state.prestamos.push({id:Date.now(),entidad,monto,cuota:calculateLoan(),cuotasPagadas:0,cuotasTotal:parseInt(document.getElementById('prest-cuotas').value)});save();closeModal('modal-prestamo');renderAll();}
-function renderPrestamos(){const c=document.getElementById('prestamos-list');if(!c)return;c.innerHTML=state.prestamos.map(p=>`<div class="card card-debt"><div>${p.entidad} • Cuota: ${fL(p.cuota)}</div></div>`).join('')}
+function renderPrestamos(){
+    const c=document.getElementById('prestamos-list');if(!c)return;
+    let totalPrestado=0;
+    c.innerHTML=state.prestamos.map(p=>{
+        totalPrestado+=p.monto;
+        const cuotasPagadas=p.cuotasPagadas||0,progreso=(cuotasPagadas/p.cuotasTotal)*100,restante=p.monto-(p.cuota*cuotasPagadas);
+        return `<div class="card card-debt"><div class="debt-header"><div><div class="debt-title">${p.entidad}</div><div class="debt-meta">Cuota mensual: ${fL(p.cuota)}</div></div><div class="interest-badge">${p.cuotasPagadas||0}/${p.cuotasTotal} pagadas</div></div><div class="debt-progress"><div class="debt-progress-bar" style="width: ${progreso}%; background: var(--blue);"></div></div><div class="debt-stats"><div class="debt-stat"><span>Total Préstamo</span><strong>${fL(p.monto)}</strong></div><div class="debt-stat"><span>Saldo Aprox.</span><strong>${fL(restante)}</strong></div></div><button class="btn btn-secondary" style="width:100%; margin-top:10px;" onclick="pagarCuotaPrestamo(${p.id})">Registrar Pago de Cuota (${fL(p.cuota)})</button></div>`;
+    }).join('');
+    document.getElementById('total-prestamos').textContent=fL(totalPrestado);
+}
+function pagarCuotaPrestamo(id){
+    const prestamo=state.prestamos.find(p=>p.id===id);
+    if(!prestamo)return;
+    if(prestamo.cuotasPagadas>=prestamo.cuotasTotal)return alert('🎉 ¡Felicidades! Ya terminaste de pagar este préstamo.');
+    if(confirm(`¿Registrar pago de cuota por ${fL(prestamo.cuota)}?`)){
+        prestamo.cuotasPagadas=(prestamo.cuotasPagadas||0)+1;
+        state.transactions.push({id:Date.now(),type:'expense',amount:prestamo.cuota,cat:'Préstamo',subcat:`Cuota ${prestamo.entidad}`,tipo:'fijo',date:new Date().toISOString()});
+        save();renderAll();
+    }
+}
 
-function saveTarjeta(){const nombre=document.getElementById('tc-nombre').value,corte=parseInt(document.getElementById('tc-corte').value),pago=parseInt(document.getElementById('tc-pago').value),saldo=parseFloat(document.getElementById('tc-saldo').value)||0;state.tarjetas.push({id:Date.now(),nombre,corte,pago,saldo});save();closeModal('modal-tarjeta');renderAll();}
-function renderTarjetas(){const c=document.getElementById('tarjetas-list');if(!c)return;c.innerHTML=state.tarjetas.map(t=>`<div class="card card-credit"><div>${t.nombre} • Saldo: ${fL(t.saldo)}</div></div>`).join('')}
+// ========== TARJETAS (MEJORADO) ==========
+function saveTarjeta(){
+    const nombre=document.getElementById('tc-nombre').value.trim(),corte=parseInt(document.getElementById('tc-corte').value)||1,pago=parseInt(document.getElementById('tc-pago').value)||15,limite=parseFloat(document.getElementById('tc-limite').value)||0,saldo=parseFloat(document.getElementById('tc-saldo').value)||0,tasa=parseFloat(document.getElementById('tc-tasa').value)||48,calcMinimo=document.getElementById('tc-calcular-minimo').checked;
+    if(!nombre)return alert('Nombre requerido');
+    state.tarjetas.push({id:Date.now(),nombre,corte,pago,limite,saldo,tasaInteres:tasa,calcularMinimo:calcMinimo,historialPagos:[]});
+    save();closeModal('modal-tarjeta');renderAll();limpiarFormTarjeta();
+}
+function limpiarFormTarjeta(){['tc-nombre','tc-corte','tc-pago','tc-limite','tc-saldo','tc-tasa'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('tc-calcular-minimo').checked=true;}
+function renderTarjetas(){
+    const container=document.getElementById('tarjetas-list'),resumenContainer=document.getElementById('resumen-pagos-minimos');if(!container)return;
+    let totalDeuda=0,totalPagoMinimo=0;
+    container.innerHTML=state.tarjetas.map(t=>{
+        totalDeuda+=t.saldo;
+        const pagoMinimo=t.calcularMinimo?Math.max(t.saldo*0.05,100):0,interesMensual=t.saldo*(t.tasaInteres/100/12);totalPagoMinimo+=pagoMinimo;
+        const hoy=new Date().getDate();let estadoCorte='';if(hoy>=t.corte&&hoy<=t.pago)estadoCorte='🟡 En periodo de pago';else if(hoy>t.pago)estadoCorte='🔴 Pago vencido';
+        return `<div class="card card-credit"><div style="display: flex; justify-content: space-between; align-items: start;"><div><div style="font-weight:700; font-size:16px;">${t.nombre}</div><div style="font-size:11px; color: var(--text2);">📅 Corte: día ${t.corte} | 📅 Pago: día ${t.pago} <span style="color: ${hoy>t.pago?'var(--red)':'var(--green)'}">${estadoCorte}</span></div></div><div style="text-align: right;"><div style="font-weight: 700; color: var(--red);">${fL(t.saldo)}</div><div style="font-size: 10px;">Límite: ${fL(t.limite)}</div></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; background: var(--bg3); padding: 10px; border-radius: 8px;"><div><span style="font-size: 10px; color: var(--text2);">💸 Interés Est. (${t.tasaInteres}%):</span><span style="display: block; font-weight: 600; color: var(--red);">${fL(interesMensual)} / mes</span></div><div><span style="font-size: 10px; color: var(--text2);">⚠️ Pago Mínimo:</span><span style="display: block; font-weight: 600;">${fL(pagoMinimo)}</span></div></div><div class="debt-actions"><button class="btn btn-primary" style="padding: 8px;" onclick="pagarTarjeta(${t.id})">💳 Registrar Pago</button><button class="btn btn-secondary" style="padding: 8px;" onclick="ajustarSaldoTarjeta(${t.id})">✏️ Ajustar</button><button class="btn btn-danger" style="padding: 8px;" onclick="deleteTarjeta(${t.id})">🗑️</button></div></div>`;
+    }).join('');
+    document.getElementById('total-deuda-tc').textContent=fL(totalDeuda);
+    if(resumenContainer){
+        if(totalPagoMinimo>0){resumenContainer.innerHTML=`<div class="alert-card" style="border-left-color: var(--amber);"><div class="alert-icon">💳</div><div class="alert-content"><div class="alert-title">Pago Mínimo Total Recomendado</div><div class="alert-detail">Para mantener tus tarjetas al día, considera pagar al menos <strong>${fL(totalPagoMinimo)}</strong> este mes.</div></div></div>`;}
+        else{resumenContainer.innerHTML='<p style="font-size:12px; color:var(--text2); text-align:center;">Sin saldos en tarjetas de crédito.</p>';}
+    }
+}
+function pagarTarjeta(id){
+    const tarjeta=state.tarjetas.find(t=>t.id===id);if(!tarjeta)return;
+    const pagoMinimo=tarjeta.calcularMinimo?Math.max(tarjeta.saldo*0.05,100):0;
+    const montoStr=prompt(`Ingresa el monto a abonar a ${tarjeta.nombre}\nSaldo actual: ${fL(tarjeta.saldo)}\nPago mínimo sugerido: ${fL(pagoMinimo)}`,pagoMinimo.toFixed(2));
+    if(!montoStr)return;const monto=parseFloat(montoStr);if(isNaN(monto)||monto<=0)return alert('Monto inválido');
+    if(monto>tarjeta.saldo){if(!confirm(`Estás pagando ${fL(monto)} pero solo debes ${fL(tarjeta.saldo)}. ¿Deseas dejar la tarjeta con saldo a favor?`))return;}
+    tarjeta.saldo=Math.max(0,tarjeta.saldo-monto);
+    state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Pago Tarjeta',subcat:`Pago a ${tarjeta.nombre}`,pago:'efectivo',tipo:'fijo',date:new Date().toISOString(),notas:`Abono a tarjeta ${tarjeta.nombre}`});
+    save();renderAll();alert(`✅ Pago de ${fL(monto)} registrado.\nNuevo saldo de tarjeta: ${fL(tarjeta.saldo)}`);
+}
+function ajustarSaldoTarjeta(id){const tarjeta=state.tarjetas.find(t=>t.id===id);if(!tarjeta)return;const nuevoSaldo=parseFloat(prompt(`Saldo actual: ${fL(tarjeta.saldo)}\nNuevo saldo:`));if(!isNaN(nuevoSaldo)){tarjeta.saldo=nuevoSaldo;save();renderAll();}}
+function deleteTarjeta(id){if(confirm('¿Eliminar esta tarjeta? Se perderá el registro.')){state.tarjetas=state.tarjetas.filter(t=>t.id!==id);save();renderAll();}}
 
+// ========== PAGOS RECURRENTES ==========
 function savePagoRecurrente(){const servicio=document.getElementById('pago-servicio').value,monto=parseFloat(document.getElementById('pago-monto').value),dia=parseInt(document.getElementById('pago-dia').value);state.pagosRecurrentes.push({id:Date.now(),servicio,monto,dia,pagado:0});save();closeModal('modal-pago-recurrente');renderAll();}
 function renderPagosRecurrentes(){const c=document.getElementById('pagos-list');if(!c)return;c.innerHTML=state.pagosRecurrentes.map(p=>`<div class="card card-credit"><div>${p.servicio} • Día: ${p.dia}</div><button class="btn btn-primary" onclick="marcarPagoRecurrente(${p.id})">Pagado</button></div>`).join('')}
 function marcarPagoRecurrente(id){const p=state.pagosRecurrentes.find(x=>x.id===id);if(p){p.pagado+=p.monto;save();renderAll()}}
 
+// ========== CONCILIACIÓN ==========
 function reconcileBalance(){const real=parseFloat(document.getElementById('reconcile-balance').value);if(!real&&real!==0)return;const curr=state.saldoInicial+state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0)-state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);state.saldoInicial+=(real-curr);save();renderAll();document.getElementById('reconcile-balance').value='';alert('✅ Conciliado')}
 
+// ========== RENDERIZADO DE VISTAS ==========
 function renderGastos(){const gastos=state.transactions.filter(t=>t.type==='expense');document.getElementById('gastos-mes').textContent=fL(gastos.reduce((a,b)=>a+b.amount,0));document.getElementById('gastos-list').innerHTML=gastos.slice().reverse().map(t=>`<div class="card"><div>${t.cat} - ${t.subcat}</div><div style="color:var(--red)">-${fL(t.amount)}</div></div>`).join('')}
 function renderIngresos(){const ingresos=state.transactions.filter(t=>t.type==='income');document.getElementById('ingreso-salario').textContent=fL(ingresos.reduce((a,b)=>a+b.amount,0));document.getElementById('ingresos-list').innerHTML=ingresos.slice().reverse().map(t=>`<div class="card"><div>${t.cat}</div><div style="color:var(--green)">+${fL(t.amount)}</div></div>`).join('')}
 
-// DASHBOARD MAESTRO
 function renderDashboard(){
     const normalTransactions=state.transactions.filter(t=>t.type!=='conciliacion');
     const income=normalTransactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
@@ -758,12 +875,41 @@ function renderDashboard(){
 }
 
 function renderHistorico(){/* simplificado para espacio */}
-function exportFullReport(){alert('Exportando...')}
+function exportFullReport(){alert('Exportando reporte completo...')}
 function exportData(){const data=JSON.stringify(state);const a=document.createElement('a');a.href='data:text/json;charset=utf-8,'+encodeURIComponent(data);a.download='backup.json';a.click();}
 function exportDataEncriptado(){alert('Exportando cifrado...')}
-function exportToExcel(){alert('Exportando excel...')}
 function resetApp(){if(confirm('¿Borrar todo?')){localStorage.removeItem(LS_KEY);location.reload()}}
 
+// ========== EXPORTACIÓN A EXCEL PROFESIONAL ==========
+function exportToExcelPro() {
+    if (typeof XLSX === 'undefined') { alert("❌ Error: Librería de Excel no cargada."); return; }
+    try {
+        const wb = XLSX.utils.book_new();
+        const balanceActual = state.saldoInicial + state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0) - state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
+        const gastosFijos = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'fijo').reduce((a,b)=>a+b.amount,0);
+        const gastosExtra = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'extra').reduce((a,b)=>a+b.amount,0);
+        
+        // Portada
+        const resumenData = [["REPORTE FINANCIERO PROFESIONAL"],["Cliente", state.nombre],["Fecha", new Date().toLocaleDateString()],[],["INDICADORES"],["Patrimonio Neto", balanceActual],["Días Supervivencia", document.getElementById('survival-val')?.textContent||0],["Gastos Fijos", gastosFijos],["Gastos Extra", gastosExtra]];
+        const wsPortada = XLSX.utils.aoa_to_sheet(resumenData);
+        XLSX.utils.book_append_sheet(wb, wsPortada, "📊 Portada");
+
+        // Libro Mayor
+        const mayorData = state.transactions.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>({"Fecha":new Date(t.date).toLocaleDateString(),"Tipo":t.type==='income'?'INGRESO':'GASTO',"Categoría":t.cat,"Monto":t.type==='income'?t.amount:-t.amount,"Banco/Tarjeta":t.banco||t.tarjetaNombre||'N/A'}));
+        const wsMayor = XLSX.utils.json_to_sheet(mayorData);
+        XLSX.utils.book_append_sheet(wb, wsMayor, "📋 Libro Mayor");
+
+        // Deudas
+        const deudas = [...state.receivables.map(c=>({"Tipo":"COBRAR","Persona":c.persona,"Saldo":c.monto-(c.pagado||0)})),...state.payables.map(p=>({"Tipo":"PAGAR","Persona":p.creditor,"Saldo":p.monto-(p.pagado||0)}))];
+        if(deudas.length>0){const wsDeudas = XLSX.utils.json_to_sheet(deudas); XLSX.utils.book_append_sheet(wb, wsDeudas, "💰 Deudas");}
+
+        const nombreArchivo = `Finanzas_${state.nombre||'Usuario'}_${todayStr()}.xlsx`;
+        XLSX.writeFile(wb, nombreArchivo);
+        alert("✅ Reporte Profesional generado.");
+    } catch(e) { console.error(e); alert("Error al generar Excel."); }
+}
+
+// ========== NAVEGACIÓN Y MODALES ==========
 function switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.hamburger-item').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');toggleHamburger();if(v==='gastos')renderGastos();if(v==='ingresos')renderIngresos();if(v==='metas')renderMetas();if(v==='cobrar')renderCobrar();if(v==='pagar')renderPagar();if(v==='prestamos')renderPrestamos();if(v==='tarjetas')renderTarjetas();if(v==='pagos')renderPagosRecurrentes();if(v==='historico')renderHistorico()}
 function openModal(id){document.getElementById(id).style.display='flex';document.getElementById('fab-menu').style.display='none'}
 function closeModal(id){document.getElementById(id).style.display='none'}
@@ -773,6 +919,7 @@ function renderAll(){
     renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetas();renderPagosRecurrentes();renderHistorico();renderBudgetRules();
 }
 
+// ========== INICIALIZACIÓN ==========
 window.onload=()=>{
   if(!state.pagosRecurrentes)state.pagosRecurrentes=[];
   if(!state.prestamos)state.prestamos=[];
