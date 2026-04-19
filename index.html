@@ -10,7 +10,16 @@
 <title>Mis Finanzas HN - Pro Elite</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<!-- TESSERACT OPTIMIZADO PARA GITHUB PAGES -->
+<script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+<script>
+  // Configuración global para Tesseract en GitHub Pages
+  window.TESSERACT_CONFIG = {
+    workerPath: 'https://unpkg.com/tesseract.js@4.0.2/dist/worker.min.js',
+    langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+    corePath: 'https://unpkg.com/tesseract.js-core@4.0.2/tesseract-core.wasm.js'
+  };
+</script>
 <!-- NUEVA LIBRERÍA PARA EXCEL PROFESIONAL -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
@@ -435,6 +444,22 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       </label>
     </div>
   </div>
+  
+  <!-- NUEVA SECCIÓN: DIAGNÓSTICO OCR -->
+  <div class="card" style="margin-top: 15px;">
+    <h4 style="margin-bottom: 10px;">🔧 Diagnóstico OCR</h4>
+    <p style="font-size: 12px; color: var(--text2); margin-bottom: 10px;">
+      Si el escaneo de facturas no funciona, prueba esto:
+    </p>
+    <button class="btn btn-secondary" onclick="testOCR()" style="margin-bottom: 5px;">
+      🧪 Probar conexión OCR
+    </button>
+    <button class="btn btn-secondary" onclick="clearOCRCache()">
+      🗑️ Limpiar caché OCR
+    </button>
+    <div id="ocr-test-result" style="font-size: 11px; margin-top: 10px; color: var(--text2);"></div>
+  </div>
+  
   <div class="card">
     <h4 style="margin-bottom:10px">💾 Respaldo de Datos</h4>
     <button class="btn btn-secondary" onclick="exportData()" style="margin-bottom:10px">📥 Exportar JSON (Sin cifrar)</button>
@@ -592,7 +617,7 @@ const todayStr=()=>new Date().toISOString().split('T')[0];
 
 const CATEGORIES={vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}};
 
-// ========== MOTOR DE ESCANEO DE RECIBOS (OCR) ==========
+// ========== FUNCIÓN OCR OPTIMIZADA PARA GITHUB PAGES ==========
 async function procesarReciboOCR(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -601,45 +626,194 @@ async function procesarReciboOCR(event) {
     const montoInput = document.getElementById('gasto-monto');
     
     statusEl.style.display = 'block';
-    statusEl.textContent = '⚙️ Cargando motor de lectura OCR...';
     statusEl.style.color = 'var(--amber)';
+    
+    const updateStatus = (msg, isError = false) => {
+        statusEl.textContent = msg;
+        if (isError) statusEl.style.color = 'var(--red)';
+    };
 
     try {
-        const worker = await Tesseract.createWorker('spa');
-        statusEl.textContent = '🔍 Escaneando montos de la factura...';
+        updateStatus('📥 Verificando motor OCR...');
         
-        const { data: { text } } = await worker.recognize(file);
-        
-        const regexTotal = /(?:TOTAL|TOT|L\.|L)\s*[:$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/gi;
-        
-        let coincidencias;
-        let mayorMonto = 0;
-
-        while ((coincidencias = regexTotal.exec(text)) !== null) {
-            let valor = parseFloat(coincidencias[1].replace(/,/g, ''));
-            if (!isNaN(valor) && valor > mayorMonto) {
-                mayorMonto = valor;
-            }
+        if (typeof Tesseract === 'undefined') {
+            throw new Error('Tesseract no está cargado. Recarga la página.');
         }
 
-        await worker.terminate();
+        const workerOptions = {
+            logger: m => {
+                console.log('Tesseract:', m);
+                if (m.status === 'loading language traineddata') {
+                    updateStatus('📥 Descargando idioma español (30MB - solo primera vez)...');
+                    statusEl.style.color = 'var(--blue)';
+                } else if (m.status === 'initializing api') {
+                    updateStatus('⚙️ Inicializando reconocimiento...');
+                } else if (m.status === 'recognizing text') {
+                    const progress = m.progress ? Math.round(m.progress * 100) : 0;
+                    updateStatus(`🔍 Analizando imagen... ${progress}%`);
+                }
+            },
+            workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js',
+            langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+            corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core.wasm.js'
+        };
 
+        updateStatus('🚀 Iniciando motor OCR...');
+        const worker = await Tesseract.createWorker(workerOptions);
+        
+        updateStatus('🌐 Cargando idioma español...');
+        await worker.loadLanguage('spa');
+        await worker.initialize('spa');
+        
+        updateStatus('📸 Procesando imagen...');
+        
+        const imageUrl = URL.createObjectURL(file);
+        const { data: { text } } = await worker.recognize(imageUrl);
+        URL.revokeObjectURL(imageUrl);
+        
+        console.log('✅ Texto detectado:', text);
+        
+        const patrones = [
+            /TOTAL\s*[:$]?\s*L\.?\s*([0-9,]+\.?[0-9]*)/i,
+            /TOTAL\s+A\s+PAGAR\s*[:$]?\s*L\.?\s*([0-9,]+\.?[0-9]*)/i,
+            /IMPORTE\s+TOTAL\s*[:$]?\s*L\.?\s*([0-9,]+\.?[0-9]*)/i,
+            /L\.\s*([0-9,]+\.?[0-9]{0,2})/g,
+            /(?:LPS|HNL)\s*[:$]?\s*([0-9,]+\.?[0-9]*)/i,
+            /(?:[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2}))/g
+        ];
+        
+        let mayorMonto = 0;
+        let textoMontos = [];
+        
+        for (const patron of patrones) {
+            const regex = new RegExp(patron.source, patron.flags || 'gi');
+            let match;
+            
+            while ((match = regex.exec(text)) !== null) {
+                let valorStr = match[1] || match[0];
+                valorStr = valorStr.replace(/[^0-9.]/g, '');
+                
+                if (valorStr.includes(',')) {
+                    const partes = valorStr.split(',');
+                    if (partes.length === 2 && partes[1].length === 3) {
+                        valorStr = partes[0] + partes[1];
+                    } else {
+                        valorStr = valorStr.replace(/,/g, '');
+                    }
+                }
+                
+                const valor = parseFloat(valorStr);
+                
+                if (!isNaN(valor) && valor > 0 && valor < 1000000) {
+                    textoMontos.push(valor);
+                    if (valor > mayorMonto) {
+                        mayorMonto = valor;
+                    }
+                }
+            }
+        }
+        
+        console.log('💰 Montos encontrados:', textoMontos);
+        console.log('💵 Mayor monto:', mayorMonto);
+        
+        await worker.terminate();
+        
         if (mayorMonto > 0) {
             montoInput.value = mayorMonto.toFixed(2);
-            statusEl.textContent = '✅ Total detectado: L. ' + mayorMonto.toFixed(2);
+            updateStatus(`✅ Total: L. ${mayorMonto.toFixed(2)}`);
             statusEl.style.color = 'var(--green)';
+            
+            const textLower = text.toLowerCase();
+            if (textLower.includes('price') || textLower.includes('pricesmart')) {
+                document.getElementById('gasto-cat').value = 'Alimentación';
+                document.getElementById('gasto-subcat').value = 'PriceSmart';
+                updateStatus(`✅ Total: L. ${mayorMonto.toFixed(2)} - PriceSmart detectado`);
+            } else if (textLower.includes('andes')) {
+                document.getElementById('gasto-cat').value = 'Alimentación';
+                document.getElementById('gasto-subcat').value = 'Los Andes';
+            } else if (textLower.includes('colonial')) {
+                document.getElementById('gasto-cat').value = 'Alimentación';
+                document.getElementById('gasto-subcat').value = 'Colonial';
+            } else if (textLower.includes('shell')) {
+                document.getElementById('gasto-cat').value = 'Transporte';
+                document.getElementById('gasto-subcat').value = 'Shell';
+            }
+            
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+            
         } else {
-            statusEl.textContent = '⚠️ No se encontró un total claro. Ingresa manualmente.';
-            statusEl.style.color = 'var(--red)';
+            updateStatus('⚠️ No se detectó ningún monto. Ingresa manualmente.', true);
+            console.warn('No se encontraron montos en el texto:', text);
         }
 
     } catch (error) {
-        console.error("Error en OCR:", error);
-        statusEl.textContent = '❌ Error al analizar la imagen. (Requiere internet la primera vez)';
-        statusEl.style.color = 'var(--red)';
+        console.error('❌ Error OCR:', error);
+        
+        let errorMsg = '❌ Error al procesar la imagen. ';
+        if (error.message.includes('Failed to fetch')) {
+            errorMsg += 'Problema de conexión. Verifica tu internet.';
+        } else if (error.message.includes('CORS')) {
+            errorMsg += 'Error de seguridad. Intenta con otra imagen.';
+        } else if (error.message.includes('Tesseract')) {
+            errorMsg += 'Recarga la página e intenta de nuevo.';
+        } else {
+            errorMsg += 'Asegúrate de tener buena conexión.';
+        }
+        
+        updateStatus(errorMsg, true);
+    } finally {
+        event.target.value = '';
     }
+}
+
+// ========== FUNCIONES DE DIAGNÓSTICO OCR ==========
+async function testOCR() {
+    const resultEl = document.getElementById('ocr-test-result');
+    resultEl.textContent = '⏳ Probando conexión con Tesseract...';
+    resultEl.style.color = 'var(--amber)';
     
-    event.target.value = '';
+    try {
+        if (typeof Tesseract === 'undefined') {
+            throw new Error('Tesseract no está cargado');
+        }
+        
+        const worker = await Tesseract.createWorker('spa', 1, {
+            logger: m => {
+                if (m.status === 'loading language traineddata') {
+                    resultEl.textContent = '📥 Descargando datos de idioma...';
+                }
+            },
+            workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js',
+            langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+            corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core.wasm.js'
+        });
+        
+        await worker.terminate();
+        
+        resultEl.textContent = '✅ OCR funciona correctamente. Puedes escanear facturas.';
+        resultEl.style.color = 'var(--green)';
+        
+    } catch (error) {
+        console.error('Error en test OCR:', error);
+        resultEl.textContent = '❌ Error: ' + error.message;
+        resultEl.style.color = 'var(--red)';
+    }
+}
+
+function clearOCRCache() {
+    if (confirm('¿Limpiar caché del OCR? Esto forzará la descarga de nuevos archivos.')) {
+        const request = indexedDB.deleteDatabase('tesseract');
+        request.onsuccess = () => {
+            alert('✅ Caché limpiada. El próximo escaneo descargará los archivos nuevamente.');
+        };
+        request.onerror = () => {
+            alert('⚠️ No se pudo limpiar la caché automáticamente.');
+        };
+        
+        localStorage.removeItem('tesseract_last_load');
+    }
 }
 
 // ========== FUNCIONES DE SUPERVIVENCIA Y GRÁFICO ==========
