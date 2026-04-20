@@ -700,28 +700,76 @@ async function procesarReciboOCR(event) {
             montoInput.value = mayorMonto.toFixed(2);
             updateStatus(`✅ Total detectado: L. ${mayorMonto.toFixed(2)}`);
             statusEl.style.color = 'var(--green)';
-            const textLower = text.toLowerCase();
-            if (textLower.includes('pricesmart')) { document.getElementById('gasto-cat').value = 'Alimentación'; document.getElementById('gasto-subcat').value = 'PriceSmart'; document.getElementById('gasto-tipo').value = 'fijo'; }
-            else if (textLower.includes('nechos') || textLower.includes('lubricantes')) { document.getElementById('gasto-cat').value = 'Mantenimiento'; document.getElementById('gasto-subcat').value = 'NECHOS LUBRICANTES'; document.getElementById('gasto-tipo').value = 'fijo'; }
-            else if (textLower.includes('los andes')) { document.getElementById('gasto-cat').value = 'Alimentación'; document.getElementById('gasto-subcat').value = 'Los Andes'; }
-            else if (textLower.includes('little caesars') || textLower.includes('intur') || textLower.includes('pizza')) { document.getElementById('gasto-cat').value = 'Alimentación'; document.getElementById('gasto-subcat').value = 'Little Caesars'; document.getElementById('gasto-tipo').value = 'extra'; }
-            else if (textLower.includes('colonial')) { document.getElementById('gasto-cat').value = 'Alimentación'; document.getElementById('gasto-subcat').value = 'Colonial'; }
-            else if (textLower.includes('shell') || textLower.includes('texaco') || textLower.includes('puma')) { document.getElementById('gasto-cat').value = 'Transporte'; document.getElementById('gasto-subcat').value = 'Combustible'; }
-            window.tempFacturaImagen = true;
-            setTimeout(() => statusEl.style.display = 'none', 5000);
-        } else {
-            updateStatus('⚠️ No se detectó ningún monto. Por favor ingresa manualmente.', true);
-            console.warn('No se encontraron montos en el texto. Texto completo:', text);
-        }
-    } catch (error) {
-        console.error('❌ Error OCR:', error);
-        let errorMsg = '❌ Error al procesar la imagen. ';
-        if (error.message.includes('Failed to fetch')) errorMsg += 'Problema de conexión. Verifica tu internet.';
-        else if (error.message.includes('CORS')) errorMsg += 'Error de seguridad. Intenta con otra imagen.';
-        else if (error.message.includes('Tesseract')) errorMsg += 'Recarga la página e intenta de nuevo.';
-        else errorMsg += 'Asegúrate de tener buena conexión.';
-        updateStatus(errorMsg, true);
-    } finally { event.target.value = ''; }
+           // ========== AUTO-DETECCIÓN MEJORADA DE COMERCIO Y CATEGORÍA ==========
+const textLower = text.toLowerCase();
+let categoriaAsignada = '';
+let subcatAsignada = '';
+let tipoAsignado = 'extra'; // Por defecto es extra
+
+// Lista ampliada de palabras clave para Little Caesars
+if (textLower.includes('little caesars') || textLower.includes('little') && textLower.includes('caesars') ||
+    textLower.includes('intur') || textLower.includes('pizza') || textLower.includes('caesars')) {
+    categoriaAsignada = 'Alimentación';
+    subcatAsignada = 'Little Caesars';
+    tipoAsignado = 'extra';
+}
+// PriceSmart
+else if (textLower.includes('pricesmart')) {
+    categoriaAsignada = 'Alimentación';
+    subcatAsignada = 'PriceSmart';
+    tipoAsignado = 'fijo';
+}
+// NECHOS Lubricantes
+else if (textLower.includes('nechos') || textLower.includes('lubricantes')) {
+    categoriaAsignada = 'Mantenimiento';
+    subcatAsignada = 'NECHOS LUBRICANTES';
+    tipoAsignado = 'fijo';
+}
+// Los Andes
+else if (textLower.includes('los andes') || textLower.includes('andes')) {
+    categoriaAsignada = 'Alimentación';
+    subcatAsignada = 'Los Andes';
+    tipoAsignado = 'fijo';
+}
+// Colonial
+else if (textLower.includes('colonial')) {
+    categoriaAsignada = 'Alimentación';
+    subcatAsignada = 'Colonial';
+    tipoAsignado = 'fijo';
+}
+// La Colonia
+else if (textLower.includes('la colonia')) {
+    categoriaAsignada = 'Alimentación';
+    subcatAsignada = 'La Colonia';
+    tipoAsignado = 'fijo';
+}
+// Maxi Despensa
+else if (textLower.includes('maxi despensa') || textLower.includes('maxi')) {
+    categoriaAsignada = 'Alimentación';
+    subcatAsignada = 'Maxi Despensa';
+    tipoAsignado = 'fijo';
+}
+// Gasolineras
+else if (textLower.includes('shell') || textLower.includes('texaco') || textLower.includes('puma') || textLower.includes('uno')) {
+    categoriaAsignada = 'Transporte';
+    subcatAsignada = 'Combustible';
+    tipoAsignado = 'fijo';
+}
+// Circle K / Pronto
+else if (textLower.includes('circle k') || textLower.includes('pronto')) {
+    categoriaAsignada = 'Ocio';
+    subcatAsignada = textLower.includes('circle') ? 'Circle K' : 'Pronto';
+    tipoAsignado = 'extra';
+}
+
+// Asignar los valores si se detectó algo
+if (categoriaAsignada) {
+    document.getElementById('gasto-cat').value = categoriaAsignada;
+    document.getElementById('gasto-subcat').value = subcatAsignada;
+    document.getElementById('gasto-tipo').value = tipoAsignado;
+    updateStatus(`✅ Total: L. ${mayorMonto.toFixed(2)} - ${subcatAsignada} detectado`);
+} else {
+    updateStatus(`✅ Total: L. ${mayorMonto.toFixed(2)} - Comercio no reconocido`);
 }
 
 // ========== FUNCIONES DE DIAGNÓSTICO OCR ==========
