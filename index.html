@@ -1249,6 +1249,13 @@ window.onload=()=>{
       .then(reg => console.log('✅ Service Worker registrado', reg))
       .catch(err => console.error('❌ Error al registrar SW:', err));
   }
-</script>
+  <script>
+  // Registro del Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/mis-finanzas/sw.js')
+      .then(reg => console.log('✅ Service Worker registrado', reg))
+      .catch(err => console.error('❌ Error al registrar SW:', err));
+  }
 </body>
+</script>
 </html>
