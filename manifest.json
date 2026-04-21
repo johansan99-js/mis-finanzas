@@ -1,24 +1,15 @@
 {
-  "name": "Mis Finanzas HN Pro",
-  "short_name": "Finanzas HN",
-  "description": "Gestión financiera personal con OCR para facturas hondureñas",
+  "name": "Mis Finanzas HN",
+  "short_name": "FinanzasHN",
   "start_url": "/mis-finanzas/",
   "scope": "/mis-finanzas/",
   "display": "standalone",
-  "theme_color": "#0f1117",
-  "background_color": "#0f1117",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-192.png", 
       "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ],
-  "orientation": "portrait",
-  "categories": ["finance", "productivity"]
+  ]
 }
