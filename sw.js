@@ -1,84 +1,65 @@
-const CACHE_NAME = 'misfinanzas-secure-v7';
+const CACHE_NAME = 'misfinanzas-secure-v8';
+
+// Agregamos la ruta principal './' y los iconos al caché crítico
 const ASSETS = [
+  './', 
   './index.html',
   './manifest.json',
-  './offline.html'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Instalación: Cachear archivos estáticos
+// Instalación: Cacheo "A prueba de fallos"
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('✅ Archivos cacheados');
-        return cache.addAll(ASSETS);
-      })
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('✅ Intentando cachear archivos clave...');
+      // Promise.allSettled asegura que el SW se instale aunque falte 1 archivo
+      return Promise.allSettled(
+        ASSETS.map(url => 
+          cache.add(url).catch(err => console.warn(`⚠️ Omitiendo ${url}: no encontrado`))
+        )
+      );
+    }).then(() => self.skipWaiting())
   );
 });
 
-// Activación: Limpiar cachés antiguas
+// Activación: Limpiar cachés viejas
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => 
       Promise.all(
         cacheNames
           .filter(name => name !== CACHE_NAME)
-          .map(name => {
-            console.log('🗑️ Eliminando caché antigua:', name);
-            return caches.delete(name);
-          })
+          .map(name => caches.delete(name))
       )
     ).then(() => self.clients.claim())
   );
 });
 
-// Fetch: Servir desde caché o red
+// Fetch: Lógica robusta para Offline
 self.addEventListener('fetch', event => {
-  // Navegación principal
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => caches.match('./index.html'))
-    );
-    return;
-  }
-  
-  // Otros recursos
+  // Ignorar peticiones que no sean GET (como envíos de formularios)
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request)
-      .then(cached => {
-        if (cached) return cached;
-        return fetch(event.request)
-          .then(response => {
-            // Clonar respuesta para cachear
-            const clone = response.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => cache.put(event.request, clone));
-            return response;
-          })
-          .catch(() => caches.match('./offline.html'));
-      })
-  );
-});
+    caches.match(event.request).then(cachedResponse => {
+      // 1. Si está en caché, devuélvelo
+      if (cachedResponse) return cachedResponse;
 
-// Notificaciones Push
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({type: 'window'})
-      .then(clientsList => {
-        // Si ya hay una ventana abierta, enfócala
-        if (clientsList.length > 0) {
-          return clientsList[0].focus();
+      // 2. Si no, búscalo en internet y guárdalo en caché
+      return fetch(event.request).then(response => {
+        if(response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
-        // Si no, abrir nueva ventana
-        return clients.openWindow('./index.html');
-      })
+        return response;
+      }).catch(() => {
+        // 3. Si no hay internet y falla, devuelve siempre el index.html
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+      });
+    })
   );
-});
-
-// Manejo de errores de notificación
-self.addEventListener('notificationerror', event => {
-  console.log('❌ Error en notificación:', event);
 });
