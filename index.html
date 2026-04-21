@@ -1233,17 +1233,26 @@ function renderAll(){
 }
 
 // ========== INICIALIZACIÓN ==========
-window.onload=()=>{
-  if(!state.pagosRecurrentes)state.pagosRecurrentes=[];
-  if(!state.prestamos)state.prestamos=[];
-  if(!state.budgetRules)state.budgetRules={gastos:65,ahorro:20,extra:15};
-  if(appPIN&&!recordarPIN){document.getElementById('modal-pin').style.display='flex';document.getElementById('pin-input').focus()}
-  else if(appPIN&&recordarPIN){if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}
-  else{if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}
-  const recordarEl=document.getElementById('recordar-pin');if(recordarEl)recordarEl.checked=recordarPIN;
+window.onload = () => {
+  if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+  if (!state.prestamos) state.prestamos = [];
+  if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+  if (appPIN && !recordarPIN) {
+    document.getElementById('modal-pin').style.display = 'flex';
+    document.getElementById('pin-input').focus();
+  } else if (appPIN && recordarPIN) {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  } else {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  }
+  const recordarEl = document.getElementById('recordar-pin');
+  if (recordarEl) recordarEl.checked = recordarPIN;
   renderBudgetRules();
-<script>
-// Registro del Service Worker (debe estar FUERA del window.onload, o dentro pero sin etiquetas HTML)
+};
+
+// Registro del Service Worker (fuera del window.onload)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
     .then(reg => console.log('✅ Service Worker registrado', reg))
