@@ -1252,7 +1252,7 @@ window.onload = () => {
   renderBudgetRules();
 };
 
-// Registro del Service Worker (fuera del window.onload)
+// Registro del Service Worker (fuera del window.onload, aquí sí va)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
     .then(reg => console.log('✅ Service Worker registrado', reg))
