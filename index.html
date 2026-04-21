@@ -1231,7 +1231,6 @@ function closeModalIfBg(e,id){if(e.target.id===id)closeModal(id)}
 function renderAll(){
     renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetas();renderPagosRecurrentes();renderHistorico();renderBudgetRules();
 }
-
 // ========== INICIALIZACIÓN ==========
 window.onload = () => {
   if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
