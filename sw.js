@@ -1,64 +1,74 @@
 const CACHE_NAME = 'misfinanzas-secure-v8';
 
-// Agregamos la ruta principal './' y los iconos al caché crítico
+// Rutas absolutas relativas al scope del SW (/mis-finanzas/)
 const ASSETS = [
-  './', 
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+  '/mis-finanzas/',
+  '/mis-finanzas/index.html',
+  '/mis-finanzas/manifest.json',
+  '/mis-finanzas/icon-192.png',
+  '/mis-finanzas/icon-512.png'
 ];
 
-// Instalación: Cacheo "A prueba de fallos"
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('✅ Intentando cachear archivos clave...');
-      // Promise.allSettled asegura que el SW se instale aunque falte 1 archivo
+      console.log('✅ Cacheando assets críticos...');
       return Promise.allSettled(
         ASSETS.map(url => 
-          cache.add(url).catch(err => console.warn(`⚠️ Omitiendo ${url}: no encontrado`))
+          cache.add(url).catch(err => console.warn(`⚠️ No se pudo cachear ${url}:`, err))
         )
       );
     }).then(() => self.skipWaiting())
   );
 });
 
-// Activación: Limpiar cachés viejas
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => 
       Promise.all(
         cacheNames
           .filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
+          .map(name => {
+            console.log('🗑️ Eliminando caché antiguo:', name);
+            return caches.delete(name);
+          })
       )
     ).then(() => self.clients.claim())
   );
 });
 
-// Fetch: Lógica robusta para Offline
 self.addEventListener('fetch', event => {
-  // Ignorar peticiones que no sean GET (como envíos de formularios)
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
-      // 1. Si está en caché, devuélvelo
       if (cachedResponse) return cachedResponse;
 
-      // 2. Si no, búscalo en internet y guárdalo en caché
       return fetch(event.request).then(response => {
-        if(response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        // Solo cachear respuestas exitosas
+        if (response && response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone).catch(err => {
+              console.warn('⚠️ No se pudo guardar en caché:', err);
+            });
+          });
         }
         return response;
       }).catch(() => {
-        // 3. Si no hay internet y falla, devuelve siempre el index.html
+        // Fallback robusto para navegación offline
         if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
+          // Intentar con ruta absoluta primero, luego relativa
+          return caches.match('/mis-finanzas/index.html')
+            .then(res => res || caches.match('./index.html'))
+            .then(res => res || caches.match('index.html'));
         }
+        // Para otros recursos, retornar error de red
+        return new Response('Offline - Recurso no disponible', { 
+          status: 503, 
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'text/plain' }
+        });
       });
     })
   );
