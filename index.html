@@ -1242,7 +1242,13 @@ window.onload=()=>{
   else{if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}
   const recordarEl=document.getElementById('recordar-pin');if(recordarEl)recordarEl.checked=recordarPIN;
   renderBudgetRules();
-};
+  <script>
+  // Registro del Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('✅ Service Worker registrado', reg))
+      .catch(err => console.error('❌ Error al registrar SW:', err));
+  }
 </script>
 </body>
 </html>
