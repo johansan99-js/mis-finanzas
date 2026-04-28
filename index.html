@@ -10,18 +10,1058 @@
 <meta name="theme-color" content="#0f1117">
 <title>Mis Finanzas HN - Pro Elite</title>
 <link rel="manifest" href="manifest.json">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
+
+// ========== MEJORAS CRÍTICAS ==========
+
+// 1. PIN CON SESSION STORAGE (No pedir en cada reload)
+function verificarPINmejorado() {
+  if (appPIN && !recordarPIN) {
+    // Verificar si ya pasó PIN en esta sesión
+    const pinVerificado = sessionStorage.getItem('pinVerificado');
+    if (!pinVerificado) {
+      document.getElementById('modal-pin').style.display = 'flex';
+      document.getElementById('pin-input').focus();
+    } else {
+      if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+      else renderAll();
+    }
+  } else if (appPIN && recordarPIN) {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  } else {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  }
+}
+
+// Validar PIN correctamente
+function validarPINmejorado() {
+  const pinInput = document.getElementById('pin-input');
+  const pin = pinInput.value;
+  
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+    alert('❌ PIN debe ser 4 dígitos');
+    pinInput.value = '';
+    return;
+  }
+  
+  if (pin !== appPIN) {
+    alert('❌ PIN incorrecto');
+    pinInput.value = '';
+    return;
+  }
+  
+  // ✅ PIN correcto: guardar en sesión
+  sessionStorage.setItem('pinVerificado', 'true');
+  document.getElementById('modal-pin').style.display = 'none';
+  
+  if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+  else renderAll();
+}
+
+// 2. SISTEMA DE PAPELERA (Soft delete)
+function eliminarGastoConPapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id);
+  if (!gasto) return;
+  
+  if (confirm('¿Eliminar este gasto? Puedes recuperarlo desde la papelera.')) {
+    gasto.deletedAt = new Date().toISOString();
+    save();
+    renderAll();
+    alert('✅ Eliminado. Ve a Papelera para restaurar.');
+  }
+}
+
+function restaurarGastoDePapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id && t.deletedAt);
+  if (!gasto) return;
+  
+  gasto.deletedAt = null;
+  save();
+  renderAll();
+  alert('✅ Gasto restaurado');
+}
+
+function vaciarPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt);
+  if (deleted.length === 0) {
+    alert('Papelera vacía');
+    return;
+  }
+  
+  if (confirm(\`¿Eliminar permanentemente \${deleted.length} gastos?\`)) {
+    state.transactions = state.transactions.filter(t => !t.deletedAt);
+    save();
+    renderAll();
+    alert('✅ Papelera vacía');
+  }
+}
+
+function renderPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt).sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  const html = deleted.length === 0 
+    ? '<p style="text-align:center;color:var(--text2)">Papelera vacía</p>'
+    : deleted.map(t => \`
+      <div class="trash-item">
+        <div>
+          <strong>\${t.cat}</strong> - L.\${t.amount.toFixed(2)}<br/>
+          <small style="color:var(--text2)">\${new Date(t.date).toLocaleDateString()}</small>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="btn" style="width:auto;padding:8px 12px;margin:0" onclick="restaurarGastoDePapelera('\${t.id}')">♻️ Restaurar</button>
+        </div>
+      </div>
+    \`).join('');
+  
+  document.getElementById('trash-list').innerHTML = html;
+  
+  if (deleted.length > 0) {
+    document.getElementById('empty-trash-btn').style.display = 'block';
+  }
+}
+
+// 3. ALERTAS DE PRESUPUESTO (80% y 100%)
+function verificarAlertas() {
+  const ingresos = state.transactions.filter(t => t.type === 'income').reduce((a,b) => a+b.amount, 0);
+  const gastos = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const porcentajeGastado = ingresos > 0 ? (gastos / ingresos) * 100 : 0;
+  const alertasDiv = document.getElementById('budget-alerts');
+  
+  if (!alertasDiv) return;
+  
+  let html = '';
+  if (porcentajeGastado >= 100) {
+    html += \`
+      <div class="alert-budget-critical">
+        <span style="font-size:20px">🚨</span>
+        <div class="alert-content">
+          <div class="alert-title">¡PRESUPUESTO EXCEDIDO!</div>
+          <div class="alert-detail">Has gastado L.\${gastos.toFixed(2)} de L.\${ingresos.toFixed(2)} disponibles (\${porcentajeGastado.toFixed(0)}%)</div>
+        </div>
+      </div>
+    \`;
+  } else if (porcentajeGastado >= 80) {
+    html += \`
+      <div class="alert-budget-warning">
+        <span style="font-size:20px">⚠️</span>
+        <div class="alert-content">
+          <div class="alert-title">Presupuesto al \${Math.round(porcentajeGastado)}%</div>
+          <div class="alert-detail">Te quedan L.\${(ingresos - gastos).toFixed(2)} para gastar</div>
+        </div>
+      </div>
+    \`;
+  }
+  
+  alertasDiv.innerHTML = html;
+}
+
+// 4. PROYECCIÓN DE FLUJO DE CAJA
+function calcularProyeccionCaja() {
+  const balance = state.saldoInicial + 
+    state.transactions.filter(t => t.type === 'income' && !t.deletedAt).reduce((a,b) => a+b.amount, 0) - 
+    state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const gastos30 = state.transactions
+    .filter(t => t.type === 'expense' && !t.deletedAt && 
+            new Date(t.date) > new Date(Date.now() - 30*24*60*60*1000))
+    .reduce((a,b) => a+b.amount, 0);
+  
+  const diasPromedio = gastos30 > 0 ? 30 : 1;
+  const gastoDiario = gastos30 / diasPromedio;
+  const diasSupervivencia = gastoDiario > 0 ? Math.floor(balance / gastoDiario) : 999;
+  
+  const proyectDiv = document.getElementById('cashflow-projection');
+  if (proyectDiv && diasSupervivencia < 999) {
+    proyectDiv.innerHTML = \`
+      <div class="cashflow-projection">
+        <span class="cashflow-number">\${diasSupervivencia}</span>
+        <span class="cashflow-label">Días hasta fin de fondos</span>
+        <small style="color:var(--text2)">Con gasto promedio de L.\${gastoDiario.toFixed(2)}/día</small>
+      </div>
+    \`;
+  }
+}
+
+// 5. DETECCIÓN DE DUPLICADOS
+function detectarDuplicados() {
+  const recentTransactions = state.transactions
+    .filter(t => !t.deletedAt)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 20);
+  
+  const duplicadosHtml = [];
+  
+  for (let i = 0; i < recentTransactions.length - 1; i++) {
+    const t1 = recentTransactions[i];
+    for (let j = i + 1; j < recentTransactions.length; j++) {
+      const t2 = recentTransactions[j];
+      
+      // Detectar si son el mismo gasto (misma cantidad, categoría, fecha cercana)
+      const mismaCantidad = t1.amount === t2.amount;
+      const mismaCategoria = t1.cat === t2.cat;
+      const fechaCercana = Math.abs(new Date(t1.date) - new Date(t2.date)) < 5*60*1000; // 5 minutos
+      
+      if (mismaCantidad && mismaCategoria && fechaCercana) {
+        duplicadosHtml.push(\`
+          <div class="duplicate-warning">
+            <strong>⚠️ Duplicado posible:</strong> \${t1.cat} L.\${t1.amount} 
+            <button onclick="eliminarGastoConPapelera('\${t2.id}')" class="btn" style="width:auto;padding:5px 10px;margin:0;font-size:11px">Eliminar</button>
+          </div>
+        \`);
+      }
+    }
+  }
+  
+  const duplicadosDiv = document.getElementById('duplicates-alert');
+  if (duplicadosDiv && duplicadosHtml.length > 0) {
+    duplicadosDiv.innerHTML = duplicadosHtml.join('');
+    duplicadosDiv.style.display = 'block';
+  }
+}
+
+// 6. VALIDACIÓN MEJORADA DE ENTRADA
+function validarMonto(input) {
+  // Permitir solo números y punto decimal
+  const valor = input.value.replace(/[^0-9.]/g, '');
+  
+  // Evitar múltiples puntos
+  const partes = valor.split('.');
+  if (partes.length > 2) {
+    input.value = partes[0] + '.' + partes.slice(1).join('');
+  } else {
+    input.value = valor;
+  }
+  
+  // Límitar a 2 decimales
+  if (partes[1] && partes[1].length > 2) {
+    input.value = partes[0] + '.' + partes[1].slice(0, 2);
+  }
+}
+
+function validarEntrada(input, tipo = 'number') {
+  if (tipo === 'number') {
+    input.value = input.value.replace(/[^0-9.]/g, '');
+  } else if (tipo === 'text') {
+    // Solo letras y espacios
+    input.value = input.value.replace(/[^a-záéíóúñ\s]/gi, '');
+  }
+}
+
+// 7. VER TUTORIAL NUEVAMENTE
+function mostrarTutorialDeNuevo() {
+  document.getElementById('onboarding').style.display = 'flex';
+}
+
+// Actualizar window.onload
+// window.onload = () => { // COMENTADO: Ver mejoras al final
+  if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+  if (!state.prestamos) state.prestamos = [];
+  if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+  
+  verificarPINmejorado(); // Usar nueva función de PIN
+  renderBudgetRules();
+  
+  // Verificar alertas y duplicados después de renderizar
+  setTimeout(() => {
+    verificarAlertas();
+    detectarDuplicados();
+    calcularProyeccionCaja();
+  }, 500);
+};
+\n</script>
 <!-- Tesseract OCR -->
-<script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js">
+
+// ========== MEJORAS CRÍTICAS ==========
+
+// 1. PIN CON SESSION STORAGE (No pedir en cada reload)
+function verificarPINmejorado() {
+  if (appPIN && !recordarPIN) {
+    // Verificar si ya pasó PIN en esta sesión
+    const pinVerificado = sessionStorage.getItem('pinVerificado');
+    if (!pinVerificado) {
+      document.getElementById('modal-pin').style.display = 'flex';
+      document.getElementById('pin-input').focus();
+    } else {
+      if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+      else renderAll();
+    }
+  } else if (appPIN && recordarPIN) {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  } else {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  }
+}
+
+// Validar PIN correctamente
+function validarPINmejorado() {
+  const pinInput = document.getElementById('pin-input');
+  const pin = pinInput.value;
+  
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+    alert('❌ PIN debe ser 4 dígitos');
+    pinInput.value = '';
+    return;
+  }
+  
+  if (pin !== appPIN) {
+    alert('❌ PIN incorrecto');
+    pinInput.value = '';
+    return;
+  }
+  
+  // ✅ PIN correcto: guardar en sesión
+  sessionStorage.setItem('pinVerificado', 'true');
+  document.getElementById('modal-pin').style.display = 'none';
+  
+  if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+  else renderAll();
+}
+
+// 2. SISTEMA DE PAPELERA (Soft delete)
+function eliminarGastoConPapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id);
+  if (!gasto) return;
+  
+  if (confirm('¿Eliminar este gasto? Puedes recuperarlo desde la papelera.')) {
+    gasto.deletedAt = new Date().toISOString();
+    save();
+    renderAll();
+    alert('✅ Eliminado. Ve a Papelera para restaurar.');
+  }
+}
+
+function restaurarGastoDePapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id && t.deletedAt);
+  if (!gasto) return;
+  
+  gasto.deletedAt = null;
+  save();
+  renderAll();
+  alert('✅ Gasto restaurado');
+}
+
+function vaciarPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt);
+  if (deleted.length === 0) {
+    alert('Papelera vacía');
+    return;
+  }
+  
+  if (confirm(\`¿Eliminar permanentemente \${deleted.length} gastos?\`)) {
+    state.transactions = state.transactions.filter(t => !t.deletedAt);
+    save();
+    renderAll();
+    alert('✅ Papelera vacía');
+  }
+}
+
+function renderPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt).sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  const html = deleted.length === 0 
+    ? '<p style="text-align:center;color:var(--text2)">Papelera vacía</p>'
+    : deleted.map(t => \`
+      <div class="trash-item">
+        <div>
+          <strong>\${t.cat}</strong> - L.\${t.amount.toFixed(2)}<br/>
+          <small style="color:var(--text2)">\${new Date(t.date).toLocaleDateString()}</small>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="btn" style="width:auto;padding:8px 12px;margin:0" onclick="restaurarGastoDePapelera('\${t.id}')">♻️ Restaurar</button>
+        </div>
+      </div>
+    \`).join('');
+  
+  document.getElementById('trash-list').innerHTML = html;
+  
+  if (deleted.length > 0) {
+    document.getElementById('empty-trash-btn').style.display = 'block';
+  }
+}
+
+// 3. ALERTAS DE PRESUPUESTO (80% y 100%)
+function verificarAlertas() {
+  const ingresos = state.transactions.filter(t => t.type === 'income').reduce((a,b) => a+b.amount, 0);
+  const gastos = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const porcentajeGastado = ingresos > 0 ? (gastos / ingresos) * 100 : 0;
+  const alertasDiv = document.getElementById('budget-alerts');
+  
+  if (!alertasDiv) return;
+  
+  let html = '';
+  if (porcentajeGastado >= 100) {
+    html += \`
+      <div class="alert-budget-critical">
+        <span style="font-size:20px">🚨</span>
+        <div class="alert-content">
+          <div class="alert-title">¡PRESUPUESTO EXCEDIDO!</div>
+          <div class="alert-detail">Has gastado L.\${gastos.toFixed(2)} de L.\${ingresos.toFixed(2)} disponibles (\${porcentajeGastado.toFixed(0)}%)</div>
+        </div>
+      </div>
+    \`;
+  } else if (porcentajeGastado >= 80) {
+    html += \`
+      <div class="alert-budget-warning">
+        <span style="font-size:20px">⚠️</span>
+        <div class="alert-content">
+          <div class="alert-title">Presupuesto al \${Math.round(porcentajeGastado)}%</div>
+          <div class="alert-detail">Te quedan L.\${(ingresos - gastos).toFixed(2)} para gastar</div>
+        </div>
+      </div>
+    \`;
+  }
+  
+  alertasDiv.innerHTML = html;
+}
+
+// 4. PROYECCIÓN DE FLUJO DE CAJA
+function calcularProyeccionCaja() {
+  const balance = state.saldoInicial + 
+    state.transactions.filter(t => t.type === 'income' && !t.deletedAt).reduce((a,b) => a+b.amount, 0) - 
+    state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const gastos30 = state.transactions
+    .filter(t => t.type === 'expense' && !t.deletedAt && 
+            new Date(t.date) > new Date(Date.now() - 30*24*60*60*1000))
+    .reduce((a,b) => a+b.amount, 0);
+  
+  const diasPromedio = gastos30 > 0 ? 30 : 1;
+  const gastoDiario = gastos30 / diasPromedio;
+  const diasSupervivencia = gastoDiario > 0 ? Math.floor(balance / gastoDiario) : 999;
+  
+  const proyectDiv = document.getElementById('cashflow-projection');
+  if (proyectDiv && diasSupervivencia < 999) {
+    proyectDiv.innerHTML = \`
+      <div class="cashflow-projection">
+        <span class="cashflow-number">\${diasSupervivencia}</span>
+        <span class="cashflow-label">Días hasta fin de fondos</span>
+        <small style="color:var(--text2)">Con gasto promedio de L.\${gastoDiario.toFixed(2)}/día</small>
+      </div>
+    \`;
+  }
+}
+
+// 5. DETECCIÓN DE DUPLICADOS
+function detectarDuplicados() {
+  const recentTransactions = state.transactions
+    .filter(t => !t.deletedAt)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 20);
+  
+  const duplicadosHtml = [];
+  
+  for (let i = 0; i < recentTransactions.length - 1; i++) {
+    const t1 = recentTransactions[i];
+    for (let j = i + 1; j < recentTransactions.length; j++) {
+      const t2 = recentTransactions[j];
+      
+      // Detectar si son el mismo gasto (misma cantidad, categoría, fecha cercana)
+      const mismaCantidad = t1.amount === t2.amount;
+      const mismaCategoria = t1.cat === t2.cat;
+      const fechaCercana = Math.abs(new Date(t1.date) - new Date(t2.date)) < 5*60*1000; // 5 minutos
+      
+      if (mismaCantidad && mismaCategoria && fechaCercana) {
+        duplicadosHtml.push(\`
+          <div class="duplicate-warning">
+            <strong>⚠️ Duplicado posible:</strong> \${t1.cat} L.\${t1.amount} 
+            <button onclick="eliminarGastoConPapelera('\${t2.id}')" class="btn" style="width:auto;padding:5px 10px;margin:0;font-size:11px">Eliminar</button>
+          </div>
+        \`);
+      }
+    }
+  }
+  
+  const duplicadosDiv = document.getElementById('duplicates-alert');
+  if (duplicadosDiv && duplicadosHtml.length > 0) {
+    duplicadosDiv.innerHTML = duplicadosHtml.join('');
+    duplicadosDiv.style.display = 'block';
+  }
+}
+
+// 6. VALIDACIÓN MEJORADA DE ENTRADA
+function validarMonto(input) {
+  // Permitir solo números y punto decimal
+  const valor = input.value.replace(/[^0-9.]/g, '');
+  
+  // Evitar múltiples puntos
+  const partes = valor.split('.');
+  if (partes.length > 2) {
+    input.value = partes[0] + '.' + partes.slice(1).join('');
+  } else {
+    input.value = valor;
+  }
+  
+  // Límitar a 2 decimales
+  if (partes[1] && partes[1].length > 2) {
+    input.value = partes[0] + '.' + partes[1].slice(0, 2);
+  }
+}
+
+function validarEntrada(input, tipo = 'number') {
+  if (tipo === 'number') {
+    input.value = input.value.replace(/[^0-9.]/g, '');
+  } else if (tipo === 'text') {
+    // Solo letras y espacios
+    input.value = input.value.replace(/[^a-záéíóúñ\s]/gi, '');
+  }
+}
+
+// 7. VER TUTORIAL NUEVAMENTE
+function mostrarTutorialDeNuevo() {
+  document.getElementById('onboarding').style.display = 'flex';
+}
+
+// Actualizar window.onload
+// window.onload = () => { // COMENTADO: Ver mejoras al final
+  if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+  if (!state.prestamos) state.prestamos = [];
+  if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+  
+  verificarPINmejorado(); // Usar nueva función de PIN
+  renderBudgetRules();
+  
+  // Verificar alertas y duplicados después de renderizar
+  setTimeout(() => {
+    verificarAlertas();
+    detectarDuplicados();
+    calcularProyeccionCaja();
+  }, 500);
+};
+\n</script>
 <script>
   window.TESSERACT_CONFIG = {
     workerPath: 'https://unpkg.com/tesseract.js@4.0.2/dist/worker.min.js',
     langPath: 'https://tessdata.projectnaptha.com/4.0.0',
     corePath: 'https://unpkg.com/tesseract.js-core@4.0.2/tesseract-core.wasm.js'
   };
-</script>
+
+
+// ========== MEJORAS CRÍTICAS ==========
+
+// 1. PIN CON SESSION STORAGE (No pedir en cada reload)
+function verificarPINmejorado() {
+  if (appPIN && !recordarPIN) {
+    // Verificar si ya pasó PIN en esta sesión
+    const pinVerificado = sessionStorage.getItem('pinVerificado');
+    if (!pinVerificado) {
+      document.getElementById('modal-pin').style.display = 'flex';
+      document.getElementById('pin-input').focus();
+    } else {
+      if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+      else renderAll();
+    }
+  } else if (appPIN && recordarPIN) {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  } else {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  }
+}
+
+// Validar PIN correctamente
+function validarPINmejorado() {
+  const pinInput = document.getElementById('pin-input');
+  const pin = pinInput.value;
+  
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+    alert('❌ PIN debe ser 4 dígitos');
+    pinInput.value = '';
+    return;
+  }
+  
+  if (pin !== appPIN) {
+    alert('❌ PIN incorrecto');
+    pinInput.value = '';
+    return;
+  }
+  
+  // ✅ PIN correcto: guardar en sesión
+  sessionStorage.setItem('pinVerificado', 'true');
+  document.getElementById('modal-pin').style.display = 'none';
+  
+  if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+  else renderAll();
+}
+
+// 2. SISTEMA DE PAPELERA (Soft delete)
+function eliminarGastoConPapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id);
+  if (!gasto) return;
+  
+  if (confirm('¿Eliminar este gasto? Puedes recuperarlo desde la papelera.')) {
+    gasto.deletedAt = new Date().toISOString();
+    save();
+    renderAll();
+    alert('✅ Eliminado. Ve a Papelera para restaurar.');
+  }
+}
+
+function restaurarGastoDePapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id && t.deletedAt);
+  if (!gasto) return;
+  
+  gasto.deletedAt = null;
+  save();
+  renderAll();
+  alert('✅ Gasto restaurado');
+}
+
+function vaciarPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt);
+  if (deleted.length === 0) {
+    alert('Papelera vacía');
+    return;
+  }
+  
+  if (confirm(\`¿Eliminar permanentemente \${deleted.length} gastos?\`)) {
+    state.transactions = state.transactions.filter(t => !t.deletedAt);
+    save();
+    renderAll();
+    alert('✅ Papelera vacía');
+  }
+}
+
+function renderPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt).sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  const html = deleted.length === 0 
+    ? '<p style="text-align:center;color:var(--text2)">Papelera vacía</p>'
+    : deleted.map(t => \`
+      <div class="trash-item">
+        <div>
+          <strong>\${t.cat}</strong> - L.\${t.amount.toFixed(2)}<br/>
+          <small style="color:var(--text2)">\${new Date(t.date).toLocaleDateString()}</small>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="btn" style="width:auto;padding:8px 12px;margin:0" onclick="restaurarGastoDePapelera('\${t.id}')">♻️ Restaurar</button>
+        </div>
+      </div>
+    \`).join('');
+  
+  document.getElementById('trash-list').innerHTML = html;
+  
+  if (deleted.length > 0) {
+    document.getElementById('empty-trash-btn').style.display = 'block';
+  }
+}
+
+// 3. ALERTAS DE PRESUPUESTO (80% y 100%)
+function verificarAlertas() {
+  const ingresos = state.transactions.filter(t => t.type === 'income').reduce((a,b) => a+b.amount, 0);
+  const gastos = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const porcentajeGastado = ingresos > 0 ? (gastos / ingresos) * 100 : 0;
+  const alertasDiv = document.getElementById('budget-alerts');
+  
+  if (!alertasDiv) return;
+  
+  let html = '';
+  if (porcentajeGastado >= 100) {
+    html += \`
+      <div class="alert-budget-critical">
+        <span style="font-size:20px">🚨</span>
+        <div class="alert-content">
+          <div class="alert-title">¡PRESUPUESTO EXCEDIDO!</div>
+          <div class="alert-detail">Has gastado L.\${gastos.toFixed(2)} de L.\${ingresos.toFixed(2)} disponibles (\${porcentajeGastado.toFixed(0)}%)</div>
+        </div>
+      </div>
+    \`;
+  } else if (porcentajeGastado >= 80) {
+    html += \`
+      <div class="alert-budget-warning">
+        <span style="font-size:20px">⚠️</span>
+        <div class="alert-content">
+          <div class="alert-title">Presupuesto al \${Math.round(porcentajeGastado)}%</div>
+          <div class="alert-detail">Te quedan L.\${(ingresos - gastos).toFixed(2)} para gastar</div>
+        </div>
+      </div>
+    \`;
+  }
+  
+  alertasDiv.innerHTML = html;
+}
+
+// 4. PROYECCIÓN DE FLUJO DE CAJA
+function calcularProyeccionCaja() {
+  const balance = state.saldoInicial + 
+    state.transactions.filter(t => t.type === 'income' && !t.deletedAt).reduce((a,b) => a+b.amount, 0) - 
+    state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const gastos30 = state.transactions
+    .filter(t => t.type === 'expense' && !t.deletedAt && 
+            new Date(t.date) > new Date(Date.now() - 30*24*60*60*1000))
+    .reduce((a,b) => a+b.amount, 0);
+  
+  const diasPromedio = gastos30 > 0 ? 30 : 1;
+  const gastoDiario = gastos30 / diasPromedio;
+  const diasSupervivencia = gastoDiario > 0 ? Math.floor(balance / gastoDiario) : 999;
+  
+  const proyectDiv = document.getElementById('cashflow-projection');
+  if (proyectDiv && diasSupervivencia < 999) {
+    proyectDiv.innerHTML = \`
+      <div class="cashflow-projection">
+        <span class="cashflow-number">\${diasSupervivencia}</span>
+        <span class="cashflow-label">Días hasta fin de fondos</span>
+        <small style="color:var(--text2)">Con gasto promedio de L.\${gastoDiario.toFixed(2)}/día</small>
+      </div>
+    \`;
+  }
+}
+
+// 5. DETECCIÓN DE DUPLICADOS
+function detectarDuplicados() {
+  const recentTransactions = state.transactions
+    .filter(t => !t.deletedAt)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 20);
+  
+  const duplicadosHtml = [];
+  
+  for (let i = 0; i < recentTransactions.length - 1; i++) {
+    const t1 = recentTransactions[i];
+    for (let j = i + 1; j < recentTransactions.length; j++) {
+      const t2 = recentTransactions[j];
+      
+      // Detectar si son el mismo gasto (misma cantidad, categoría, fecha cercana)
+      const mismaCantidad = t1.amount === t2.amount;
+      const mismaCategoria = t1.cat === t2.cat;
+      const fechaCercana = Math.abs(new Date(t1.date) - new Date(t2.date)) < 5*60*1000; // 5 minutos
+      
+      if (mismaCantidad && mismaCategoria && fechaCercana) {
+        duplicadosHtml.push(\`
+          <div class="duplicate-warning">
+            <strong>⚠️ Duplicado posible:</strong> \${t1.cat} L.\${t1.amount} 
+            <button onclick="eliminarGastoConPapelera('\${t2.id}')" class="btn" style="width:auto;padding:5px 10px;margin:0;font-size:11px">Eliminar</button>
+          </div>
+        \`);
+      }
+    }
+  }
+  
+  const duplicadosDiv = document.getElementById('duplicates-alert');
+  if (duplicadosDiv && duplicadosHtml.length > 0) {
+    duplicadosDiv.innerHTML = duplicadosHtml.join('');
+    duplicadosDiv.style.display = 'block';
+  }
+}
+
+// 6. VALIDACIÓN MEJORADA DE ENTRADA
+function validarMonto(input) {
+  // Permitir solo números y punto decimal
+  const valor = input.value.replace(/[^0-9.]/g, '');
+  
+  // Evitar múltiples puntos
+  const partes = valor.split('.');
+  if (partes.length > 2) {
+    input.value = partes[0] + '.' + partes.slice(1).join('');
+  } else {
+    input.value = valor;
+  }
+  
+  // Límitar a 2 decimales
+  if (partes[1] && partes[1].length > 2) {
+    input.value = partes[0] + '.' + partes[1].slice(0, 2);
+  }
+}
+
+function validarEntrada(input, tipo = 'number') {
+  if (tipo === 'number') {
+    input.value = input.value.replace(/[^0-9.]/g, '');
+  } else if (tipo === 'text') {
+    // Solo letras y espacios
+    input.value = input.value.replace(/[^a-záéíóúñ\s]/gi, '');
+  }
+}
+
+// 7. VER TUTORIAL NUEVAMENTE
+function mostrarTutorialDeNuevo() {
+  document.getElementById('onboarding').style.display = 'flex';
+}
+
+// Actualizar window.onload
+// window.onload = () => { // COMENTADO: Ver mejoras al final
+  if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+  if (!state.prestamos) state.prestamos = [];
+  if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+  
+  verificarPINmejorado(); // Usar nueva función de PIN
+  renderBudgetRules();
+  
+  // Verificar alertas y duplicados después de renderizar
+  setTimeout(() => {
+    verificarAlertas();
+    detectarDuplicados();
+    calcularProyeccionCaja();
+  }, 500);
+};
+\n</script>
 <!-- SheetJS para Excel -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js">
+
+// ========== MEJORAS CRÍTICAS ==========
+
+// 1. PIN CON SESSION STORAGE (No pedir en cada reload)
+function verificarPINmejorado() {
+  if (appPIN && !recordarPIN) {
+    // Verificar si ya pasó PIN en esta sesión
+    const pinVerificado = sessionStorage.getItem('pinVerificado');
+    if (!pinVerificado) {
+      document.getElementById('modal-pin').style.display = 'flex';
+      document.getElementById('pin-input').focus();
+    } else {
+      if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+      else renderAll();
+    }
+  } else if (appPIN && recordarPIN) {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  } else {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  }
+}
+
+// Validar PIN correctamente
+function validarPINmejorado() {
+  const pinInput = document.getElementById('pin-input');
+  const pin = pinInput.value;
+  
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+    alert('❌ PIN debe ser 4 dígitos');
+    pinInput.value = '';
+    return;
+  }
+  
+  if (pin !== appPIN) {
+    alert('❌ PIN incorrecto');
+    pinInput.value = '';
+    return;
+  }
+  
+  // ✅ PIN correcto: guardar en sesión
+  sessionStorage.setItem('pinVerificado', 'true');
+  document.getElementById('modal-pin').style.display = 'none';
+  
+  if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+  else renderAll();
+}
+
+// 2. SISTEMA DE PAPELERA (Soft delete)
+function eliminarGastoConPapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id);
+  if (!gasto) return;
+  
+  if (confirm('¿Eliminar este gasto? Puedes recuperarlo desde la papelera.')) {
+    gasto.deletedAt = new Date().toISOString();
+    save();
+    renderAll();
+    alert('✅ Eliminado. Ve a Papelera para restaurar.');
+  }
+}
+
+function restaurarGastoDePapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id && t.deletedAt);
+  if (!gasto) return;
+  
+  gasto.deletedAt = null;
+  save();
+  renderAll();
+  alert('✅ Gasto restaurado');
+}
+
+function vaciarPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt);
+  if (deleted.length === 0) {
+    alert('Papelera vacía');
+    return;
+  }
+  
+  if (confirm(\`¿Eliminar permanentemente \${deleted.length} gastos?\`)) {
+    state.transactions = state.transactions.filter(t => !t.deletedAt);
+    save();
+    renderAll();
+    alert('✅ Papelera vacía');
+  }
+}
+
+function renderPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt).sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  const html = deleted.length === 0 
+    ? '<p style="text-align:center;color:var(--text2)">Papelera vacía</p>'
+    : deleted.map(t => \`
+      <div class="trash-item">
+        <div>
+          <strong>\${t.cat}</strong> - L.\${t.amount.toFixed(2)}<br/>
+          <small style="color:var(--text2)">\${new Date(t.date).toLocaleDateString()}</small>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="btn" style="width:auto;padding:8px 12px;margin:0" onclick="restaurarGastoDePapelera('\${t.id}')">♻️ Restaurar</button>
+        </div>
+      </div>
+    \`).join('');
+  
+  document.getElementById('trash-list').innerHTML = html;
+  
+  if (deleted.length > 0) {
+    document.getElementById('empty-trash-btn').style.display = 'block';
+  }
+}
+
+// 3. ALERTAS DE PRESUPUESTO (80% y 100%)
+function verificarAlertas() {
+  const ingresos = state.transactions.filter(t => t.type === 'income').reduce((a,b) => a+b.amount, 0);
+  const gastos = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const porcentajeGastado = ingresos > 0 ? (gastos / ingresos) * 100 : 0;
+  const alertasDiv = document.getElementById('budget-alerts');
+  
+  if (!alertasDiv) return;
+  
+  let html = '';
+  if (porcentajeGastado >= 100) {
+    html += \`
+      <div class="alert-budget-critical">
+        <span style="font-size:20px">🚨</span>
+        <div class="alert-content">
+          <div class="alert-title">¡PRESUPUESTO EXCEDIDO!</div>
+          <div class="alert-detail">Has gastado L.\${gastos.toFixed(2)} de L.\${ingresos.toFixed(2)} disponibles (\${porcentajeGastado.toFixed(0)}%)</div>
+        </div>
+      </div>
+    \`;
+  } else if (porcentajeGastado >= 80) {
+    html += \`
+      <div class="alert-budget-warning">
+        <span style="font-size:20px">⚠️</span>
+        <div class="alert-content">
+          <div class="alert-title">Presupuesto al \${Math.round(porcentajeGastado)}%</div>
+          <div class="alert-detail">Te quedan L.\${(ingresos - gastos).toFixed(2)} para gastar</div>
+        </div>
+      </div>
+    \`;
+  }
+  
+  alertasDiv.innerHTML = html;
+}
+
+// 4. PROYECCIÓN DE FLUJO DE CAJA
+function calcularProyeccionCaja() {
+  const balance = state.saldoInicial + 
+    state.transactions.filter(t => t.type === 'income' && !t.deletedAt).reduce((a,b) => a+b.amount, 0) - 
+    state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const gastos30 = state.transactions
+    .filter(t => t.type === 'expense' && !t.deletedAt && 
+            new Date(t.date) > new Date(Date.now() - 30*24*60*60*1000))
+    .reduce((a,b) => a+b.amount, 0);
+  
+  const diasPromedio = gastos30 > 0 ? 30 : 1;
+  const gastoDiario = gastos30 / diasPromedio;
+  const diasSupervivencia = gastoDiario > 0 ? Math.floor(balance / gastoDiario) : 999;
+  
+  const proyectDiv = document.getElementById('cashflow-projection');
+  if (proyectDiv && diasSupervivencia < 999) {
+    proyectDiv.innerHTML = \`
+      <div class="cashflow-projection">
+        <span class="cashflow-number">\${diasSupervivencia}</span>
+        <span class="cashflow-label">Días hasta fin de fondos</span>
+        <small style="color:var(--text2)">Con gasto promedio de L.\${gastoDiario.toFixed(2)}/día</small>
+      </div>
+    \`;
+  }
+}
+
+// 5. DETECCIÓN DE DUPLICADOS
+function detectarDuplicados() {
+  const recentTransactions = state.transactions
+    .filter(t => !t.deletedAt)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 20);
+  
+  const duplicadosHtml = [];
+  
+  for (let i = 0; i < recentTransactions.length - 1; i++) {
+    const t1 = recentTransactions[i];
+    for (let j = i + 1; j < recentTransactions.length; j++) {
+      const t2 = recentTransactions[j];
+      
+      // Detectar si son el mismo gasto (misma cantidad, categoría, fecha cercana)
+      const mismaCantidad = t1.amount === t2.amount;
+      const mismaCategoria = t1.cat === t2.cat;
+      const fechaCercana = Math.abs(new Date(t1.date) - new Date(t2.date)) < 5*60*1000; // 5 minutos
+      
+      if (mismaCantidad && mismaCategoria && fechaCercana) {
+        duplicadosHtml.push(\`
+          <div class="duplicate-warning">
+            <strong>⚠️ Duplicado posible:</strong> \${t1.cat} L.\${t1.amount} 
+            <button onclick="eliminarGastoConPapelera('\${t2.id}')" class="btn" style="width:auto;padding:5px 10px;margin:0;font-size:11px">Eliminar</button>
+          </div>
+        \`);
+      }
+    }
+  }
+  
+  const duplicadosDiv = document.getElementById('duplicates-alert');
+  if (duplicadosDiv && duplicadosHtml.length > 0) {
+    duplicadosDiv.innerHTML = duplicadosHtml.join('');
+    duplicadosDiv.style.display = 'block';
+  }
+}
+
+// 6. VALIDACIÓN MEJORADA DE ENTRADA
+function validarMonto(input) {
+  // Permitir solo números y punto decimal
+  const valor = input.value.replace(/[^0-9.]/g, '');
+  
+  // Evitar múltiples puntos
+  const partes = valor.split('.');
+  if (partes.length > 2) {
+    input.value = partes[0] + '.' + partes.slice(1).join('');
+  } else {
+    input.value = valor;
+  }
+  
+  // Límitar a 2 decimales
+  if (partes[1] && partes[1].length > 2) {
+    input.value = partes[0] + '.' + partes[1].slice(0, 2);
+  }
+}
+
+function validarEntrada(input, tipo = 'number') {
+  if (tipo === 'number') {
+    input.value = input.value.replace(/[^0-9.]/g, '');
+  } else if (tipo === 'text') {
+    // Solo letras y espacios
+    input.value = input.value.replace(/[^a-záéíóúñ\s]/gi, '');
+  }
+}
+
+// 7. VER TUTORIAL NUEVAMENTE
+function mostrarTutorialDeNuevo() {
+  document.getElementById('onboarding').style.display = 'flex';
+}
+
+// Actualizar window.onload
+// window.onload = () => { // COMENTADO: Ver mejoras al final
+  if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+  if (!state.prestamos) state.prestamos = [];
+  if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+  
+  verificarPINmejorado(); // Usar nueva función de PIN
+  renderBudgetRules();
+  
+  // Verificar alertas y duplicados después de renderizar
+  setTimeout(() => {
+    verificarAlertas();
+    detectarDuplicados();
+    calcularProyeccionCaja();
+  }, 500);
+};
+\n</script>
 <style>
 :root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#232736;--bg4:#2d3147;--amber:#f0a500;--text:#f0eff4;--text2:#9b9eb5;--green:#2ecc8a;--red:#e85d5d;--blue:#4a9ef8;--purple:#9b7fe8;--border:#2d3147;--r:12px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -164,7 +1204,120 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   .fab{width:65px;height:65px;font-size:32px}
   .hamburger-item{padding:18px 15px;min-height:55px}
 }
-</style>
+
+/* === MEJORAS: ACCESIBILIDAD Y CLARIDAD === */
+.tooltip-icon { 
+  display: inline-block; 
+  width: 16px; 
+  height: 16px; 
+  background: var(--blue); 
+  color: white; 
+  border-radius: 50%; 
+  text-align: center; 
+  line-height: 16px; 
+  font-size: 12px; 
+  font-weight: bold; 
+  cursor: help; 
+  position: relative; 
+}
+.tooltip-icon:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg4);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 1000;
+  border: 1px solid var(--border);
+}
+.card-debt { border-left: 4px solid var(--red); }
+.card-credit { border-left: 4px solid var(--green); } /* MEJORADO: verde es mejor para crédito */
+.card-receivable { border-left: 4px solid var(--green); }
+.card-saving { border-left: 4px solid var(--blue); }
+.card-security { border-left: 4px solid var(--purple); }
+.button-with-tooltip { position: relative; }
+.alert-budget-warning {
+  background: rgba(240, 165, 0, 0.15);
+  border: 1px solid var(--amber);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--r);
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.alert-budget-critical {
+  background: rgba(232, 93, 93, 0.15);
+  border: 1px solid var(--red);
+  border-left: 4px solid var(--red);
+  border-radius: var(--r);
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: pulse 2s infinite;
+}
+.trash-section {
+  background: var(--bg3);
+  border-left: 4px solid var(--text2);
+  border-radius: var(--r);
+  padding: 15px;
+  margin: 15px 0;
+}
+.trash-item {
+  background: var(--bg4);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cashflow-projection {
+  background: linear-gradient(135deg, var(--bg3), var(--bg4));
+  border: 1px solid var(--blue);
+  border-radius: var(--r);
+  padding: 15px;
+  margin: 15px 0;
+  text-align: center;
+}
+.cashflow-number {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--blue);
+  display: block;
+  margin: 10px 0;
+}
+.cashflow-label {
+  font-size: 11px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.duplicate-warning {
+  background: rgba(240, 165, 0, 0.1);
+  border: 1px solid var(--amber);
+  border-radius: 6px;
+  padding: 10px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--text);
+}
+.fab-label {
+  position: absolute;
+  bottom: -25px;
+  font-size: 10px;
+  color: var(--text2);
+  white-space: nowrap;
+}
+\n</style>
 </head>
 <body>
 
@@ -1232,7 +2385,7 @@ function renderAll(){
     renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetas();renderPagosRecurrentes();renderHistorico();renderBudgetRules();
 }
 // ========== INICIALIZACIÓN ==========
-window.onload = () => {
+// window.onload = () => { // COMENTADO: Ver mejoras al final
   if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
   if (!state.prestamos) state.prestamos = [];
   if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
@@ -1257,6 +2410,266 @@ if ('serviceWorker' in navigator) {
     .then(reg => console.log('✅ Service Worker registrado', reg))
     .catch(err => console.error('❌ Error al registrar SW:', err));
 }
-</script>
+
+
+// ========== MEJORAS CRÍTICAS ==========
+
+// 1. PIN CON SESSION STORAGE (No pedir en cada reload)
+function verificarPINmejorado() {
+  if (appPIN && !recordarPIN) {
+    // Verificar si ya pasó PIN en esta sesión
+    const pinVerificado = sessionStorage.getItem('pinVerificado');
+    if (!pinVerificado) {
+      document.getElementById('modal-pin').style.display = 'flex';
+      document.getElementById('pin-input').focus();
+    } else {
+      if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+      else renderAll();
+    }
+  } else if (appPIN && recordarPIN) {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  } else {
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  }
+}
+
+// Validar PIN correctamente
+function validarPINmejorado() {
+  const pinInput = document.getElementById('pin-input');
+  const pin = pinInput.value;
+  
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+    alert('❌ PIN debe ser 4 dígitos');
+    pinInput.value = '';
+    return;
+  }
+  
+  if (pin !== appPIN) {
+    alert('❌ PIN incorrecto');
+    pinInput.value = '';
+    return;
+  }
+  
+  // ✅ PIN correcto: guardar en sesión
+  sessionStorage.setItem('pinVerificado', 'true');
+  document.getElementById('modal-pin').style.display = 'none';
+  
+  if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+  else renderAll();
+}
+
+// 2. SISTEMA DE PAPELERA (Soft delete)
+function eliminarGastoConPapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id);
+  if (!gasto) return;
+  
+  if (confirm('¿Eliminar este gasto? Puedes recuperarlo desde la papelera.')) {
+    gasto.deletedAt = new Date().toISOString();
+    save();
+    renderAll();
+    alert('✅ Eliminado. Ve a Papelera para restaurar.');
+  }
+}
+
+function restaurarGastoDePapelera(id) {
+  const gasto = state.transactions.find(t => t.id === id && t.deletedAt);
+  if (!gasto) return;
+  
+  gasto.deletedAt = null;
+  save();
+  renderAll();
+  alert('✅ Gasto restaurado');
+}
+
+function vaciarPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt);
+  if (deleted.length === 0) {
+    alert('Papelera vacía');
+    return;
+  }
+  
+  if (confirm(\`¿Eliminar permanentemente \${deleted.length} gastos?\`)) {
+    state.transactions = state.transactions.filter(t => !t.deletedAt);
+    save();
+    renderAll();
+    alert('✅ Papelera vacía');
+  }
+}
+
+function renderPapelera() {
+  const deleted = state.transactions.filter(t => t.deletedAt).sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  const html = deleted.length === 0 
+    ? '<p style="text-align:center;color:var(--text2)">Papelera vacía</p>'
+    : deleted.map(t => \`
+      <div class="trash-item">
+        <div>
+          <strong>\${t.cat}</strong> - L.\${t.amount.toFixed(2)}<br/>
+          <small style="color:var(--text2)">\${new Date(t.date).toLocaleDateString()}</small>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="btn" style="width:auto;padding:8px 12px;margin:0" onclick="restaurarGastoDePapelera('\${t.id}')">♻️ Restaurar</button>
+        </div>
+      </div>
+    \`).join('');
+  
+  document.getElementById('trash-list').innerHTML = html;
+  
+  if (deleted.length > 0) {
+    document.getElementById('empty-trash-btn').style.display = 'block';
+  }
+}
+
+// 3. ALERTAS DE PRESUPUESTO (80% y 100%)
+function verificarAlertas() {
+  const ingresos = state.transactions.filter(t => t.type === 'income').reduce((a,b) => a+b.amount, 0);
+  const gastos = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const porcentajeGastado = ingresos > 0 ? (gastos / ingresos) * 100 : 0;
+  const alertasDiv = document.getElementById('budget-alerts');
+  
+  if (!alertasDiv) return;
+  
+  let html = '';
+  if (porcentajeGastado >= 100) {
+    html += \`
+      <div class="alert-budget-critical">
+        <span style="font-size:20px">🚨</span>
+        <div class="alert-content">
+          <div class="alert-title">¡PRESUPUESTO EXCEDIDO!</div>
+          <div class="alert-detail">Has gastado L.\${gastos.toFixed(2)} de L.\${ingresos.toFixed(2)} disponibles (\${porcentajeGastado.toFixed(0)}%)</div>
+        </div>
+      </div>
+    \`;
+  } else if (porcentajeGastado >= 80) {
+    html += \`
+      <div class="alert-budget-warning">
+        <span style="font-size:20px">⚠️</span>
+        <div class="alert-content">
+          <div class="alert-title">Presupuesto al \${Math.round(porcentajeGastado)}%</div>
+          <div class="alert-detail">Te quedan L.\${(ingresos - gastos).toFixed(2)} para gastar</div>
+        </div>
+      </div>
+    \`;
+  }
+  
+  alertasDiv.innerHTML = html;
+}
+
+// 4. PROYECCIÓN DE FLUJO DE CAJA
+function calcularProyeccionCaja() {
+  const balance = state.saldoInicial + 
+    state.transactions.filter(t => t.type === 'income' && !t.deletedAt).reduce((a,b) => a+b.amount, 0) - 
+    state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+  
+  const gastos30 = state.transactions
+    .filter(t => t.type === 'expense' && !t.deletedAt && 
+            new Date(t.date) > new Date(Date.now() - 30*24*60*60*1000))
+    .reduce((a,b) => a+b.amount, 0);
+  
+  const diasPromedio = gastos30 > 0 ? 30 : 1;
+  const gastoDiario = gastos30 / diasPromedio;
+  const diasSupervivencia = gastoDiario > 0 ? Math.floor(balance / gastoDiario) : 999;
+  
+  const proyectDiv = document.getElementById('cashflow-projection');
+  if (proyectDiv && diasSupervivencia < 999) {
+    proyectDiv.innerHTML = \`
+      <div class="cashflow-projection">
+        <span class="cashflow-number">\${diasSupervivencia}</span>
+        <span class="cashflow-label">Días hasta fin de fondos</span>
+        <small style="color:var(--text2)">Con gasto promedio de L.\${gastoDiario.toFixed(2)}/día</small>
+      </div>
+    \`;
+  }
+}
+
+// 5. DETECCIÓN DE DUPLICADOS
+function detectarDuplicados() {
+  const recentTransactions = state.transactions
+    .filter(t => !t.deletedAt)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 20);
+  
+  const duplicadosHtml = [];
+  
+  for (let i = 0; i < recentTransactions.length - 1; i++) {
+    const t1 = recentTransactions[i];
+    for (let j = i + 1; j < recentTransactions.length; j++) {
+      const t2 = recentTransactions[j];
+      
+      // Detectar si son el mismo gasto (misma cantidad, categoría, fecha cercana)
+      const mismaCantidad = t1.amount === t2.amount;
+      const mismaCategoria = t1.cat === t2.cat;
+      const fechaCercana = Math.abs(new Date(t1.date) - new Date(t2.date)) < 5*60*1000; // 5 minutos
+      
+      if (mismaCantidad && mismaCategoria && fechaCercana) {
+        duplicadosHtml.push(\`
+          <div class="duplicate-warning">
+            <strong>⚠️ Duplicado posible:</strong> \${t1.cat} L.\${t1.amount} 
+            <button onclick="eliminarGastoConPapelera('\${t2.id}')" class="btn" style="width:auto;padding:5px 10px;margin:0;font-size:11px">Eliminar</button>
+          </div>
+        \`);
+      }
+    }
+  }
+  
+  const duplicadosDiv = document.getElementById('duplicates-alert');
+  if (duplicadosDiv && duplicadosHtml.length > 0) {
+    duplicadosDiv.innerHTML = duplicadosHtml.join('');
+    duplicadosDiv.style.display = 'block';
+  }
+}
+
+// 6. VALIDACIÓN MEJORADA DE ENTRADA
+function validarMonto(input) {
+  // Permitir solo números y punto decimal
+  const valor = input.value.replace(/[^0-9.]/g, '');
+  
+  // Evitar múltiples puntos
+  const partes = valor.split('.');
+  if (partes.length > 2) {
+    input.value = partes[0] + '.' + partes.slice(1).join('');
+  } else {
+    input.value = valor;
+  }
+  
+  // Límitar a 2 decimales
+  if (partes[1] && partes[1].length > 2) {
+    input.value = partes[0] + '.' + partes[1].slice(0, 2);
+  }
+}
+
+function validarEntrada(input, tipo = 'number') {
+  if (tipo === 'number') {
+    input.value = input.value.replace(/[^0-9.]/g, '');
+  } else if (tipo === 'text') {
+    // Solo letras y espacios
+    input.value = input.value.replace(/[^a-záéíóúñ\s]/gi, '');
+  }
+}
+
+// 7. VER TUTORIAL NUEVAMENTE
+function mostrarTutorialDeNuevo() {
+  document.getElementById('onboarding').style.display = 'flex';
+}
+
+// Actualizar window.onload
+// window.onload = () => { // COMENTADO: Ver mejoras al final
+  if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+  if (!state.prestamos) state.prestamos = [];
+  if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+  
+  verificarPINmejorado(); // Usar nueva función de PIN
+  renderBudgetRules();
+  
+  // Verificar alertas y duplicados después de renderizar
+  setTimeout(() => {
+    verificarAlertas();
+    detectarDuplicados();
+    calcularProyeccionCaja();
+  }, 500);
+};
+\n</script>
 </body>
 </html>
