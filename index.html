@@ -165,144 +165,21 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   .hamburger-item{padding:18px 15px;min-height:55px}
 }
 
-
-/* === MEJORAS: ACCESIBILIDAD Y CLARIDAD === */
-.tooltip-icon { 
-  display: inline-block; 
-  width: 16px; 
-  height: 16px; 
-  background: var(--blue); 
-  color: white; 
-  border-radius: 50%; 
-  text-align: center; 
-  line-height: 16px; 
-  font-size: 12px; 
-  font-weight: bold; 
-  cursor: help; 
-  position: relative; 
-  margin-left: 5px;
-}
-.tooltip-icon:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--bg4);
-  color: var(--text);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-  white-space: nowrap;
-  z-index: 1000;
-  border: 1px solid var(--border);
-}
-
-/* Card credit ahora es VERDE (más intuitivo) */
-.card-credit { border-left: 4px solid var(--green) !important; }
-
-/* Alertas de presupuesto */
-.alert-budget-warning {
-  background: rgba(240, 165, 0, 0.15);
-  border: 1px solid var(--amber);
-  border-left: 4px solid var(--amber);
-  border-radius: var(--r);
-  padding: 12px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.alert-budget-critical {
-  background: rgba(232, 93, 93, 0.15);
-  border: 1px solid var(--red);
-  border-left: 4px solid var(--red);
-  border-radius: var(--r);
-  padding: 12px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  animation: pulse 2s infinite;
-}
-
-/* Papelera */
-.trash-section {
-  background: var(--bg3);
-  border-left: 4px solid var(--text2);
-  border-radius: var(--r);
-  padding: 15px;
-  margin: 15px 0;
-}
-.trash-item {
-  background: var(--bg4);
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
-.trash-item small {
-  color: var(--text2);
-  font-size: 11px;
-}
-.btn-restore {
-  width: auto !important;
-  padding: 8px 12px !important;
-  margin: 0 !important;
-  font-size: 12px !important;
-  background: var(--green);
-  color: white;
-}
-
-/* Proyección de flujo de caja */
-.cashflow-projection {
-  background: linear-gradient(135deg, var(--bg3), var(--bg4));
-  border: 1px solid var(--blue);
-  border-radius: var(--r);
-  padding: 15px;
-  margin: 15px 0;
-  text-align: center;
-}
-.cashflow-number {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--blue);
-  display: block;
-  margin: 10px 0;
-}
-.cashflow-label {
-  font-size: 11px;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Detección de duplicados */
-.duplicate-warning {
-  background: rgba(240, 165, 0, 0.1);
-  border: 1px solid var(--amber);
-  border-radius: 6px;
-  padding: 10px;
-  margin: 10px 0;
-  font-size: 12px;
-  color: var(--text);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-.btn-duplicate-action {
-  width: auto !important;
-  padding: 6px 10px !important;
-  margin: 0 !important;
-  font-size: 11px !important;
-  background: var(--red);
-  color: white;
-}
-
+/* === MEJORAS V1.1: ACCESIBILIDAD Y CLARIDAD === */
+.tooltip-icon { display:inline-block; width:16px; height:16px; background:var(--blue); color:white; border-radius:50%; text-align:center; line-height:16px; font-size:12px; font-weight:bold; cursor:help; position:relative; margin-left:5px; }
+.tooltip-icon:hover::after { content:attr(data-tooltip); position:absolute; bottom:125%; left:50%; transform:translateX(-50%); background:var(--bg4); color:var(--text); padding:8px 12px; border-radius:6px; font-size:11px; white-space:nowrap; z-index:1000; border:1px solid var(--border); }
+.card-credit { border-left:4px solid var(--green) !important; }
+.alert-budget-warning { background:rgba(240,165,0,0.15); border:1px solid var(--amber); border-left:4px solid var(--amber); border-radius:var(--r); padding:12px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+.alert-budget-critical { background:rgba(232,93,93,0.15); border:1px solid var(--red); border-left:4px solid var(--red); border-radius:var(--r); padding:12px; margin-bottom:10px; display:flex; align-items:center; gap:10px; animation:pulse 2s infinite; }
+.trash-section { background:var(--bg3); border-left:4px solid var(--text2); border-radius:var(--r); padding:15px; margin:15px 0; }
+.trash-item { background:var(--bg4); padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+.trash-item small { color:var(--text2); font-size:11px; }
+.btn-restore { width:auto !important; padding:8px 12px !important; margin:0 !important; font-size:12px !important; background:var(--green); color:white; }
+.cashflow-projection { background:linear-gradient(135deg,var(--bg3),var(--bg4)); border:1px solid var(--blue); border-radius:var(--r); padding:15px; margin:15px 0; text-align:center; }
+.cashflow-number { font-size:28px; font-weight:800; color:var(--blue); display:block; margin:10px 0; }
+.cashflow-label { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
+.duplicate-warning { background:rgba(240,165,0,0.1); border:1px solid var(--amber); border-radius:6px; padding:10px; margin:10px 0; font-size:12px; color:var(--text); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.btn-duplicate-action { width:auto !important; padding:6px 10px !important; margin:0 !important; font-size:11px !important; background:var(--red); color:white; }
 </style>
 </head>
 <body>
@@ -937,8 +814,48 @@ async function procesarReciboOCR(event) {
     }
 }
 // ========== FUNCIONES DE DIAGNÓSTICO OCR ==========
-async function testOCR() { /* ... igual que antes ... */ }
-function clearOCRCache() { /* ... igual que antes ... */ }
+async function testOCR() {
+    const resultEl = document.getElementById('ocr-test-result');
+    if (!resultEl) return;
+    resultEl.innerHTML = '🔄 Probando OCR...';
+    resultEl.style.color = 'var(--amber)';
+    try {
+        if (typeof Tesseract === 'undefined') throw new Error('Tesseract no esta cargado');
+        resultEl.innerHTML = '✅ Tesseract cargado<br>📦 Version: ' + (Tesseract.version || 'OK') + '<br>✅ OCR listo para usar';
+        resultEl.style.color = 'var(--green)';
+    } catch (error) {
+        resultEl.innerHTML = '❌ Error: ' + error.message + '<br>💡 Recarga la pagina';
+        resultEl.style.color = 'var(--red)';
+    }
+}
+function clearOCRCache() {
+    try {
+        const keys = Object.keys(localStorage);
+        let removed = 0;
+        keys.forEach(key => {
+            if (key.includes('tesseract') || key.includes('ocr') || key.includes('temp_factura')) {
+                localStorage.removeItem(key);
+                removed++;
+            }
+        });
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => {
+                    if (name.includes('tesseract') || name.includes('ocr')) caches.delete(name);
+                });
+            });
+        }
+        const resultEl = document.getElementById('ocr-test-result');
+        if (resultEl) {
+            resultEl.innerHTML = '✅ Cache OCR limpiado (' + removed + ' elementos)<br>💡 Recarga la pagina';
+            resultEl.style.color = 'var(--green)';
+        } else {
+            alert('✅ Cache OCR limpiado: ' + removed + ' elementos');
+        }
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+}
   
 // ========== FUNCIONES DE SUPERVIVENCIA Y GRÁFICO ==========
 function updateSurvivalIndex(balance) {
@@ -1249,10 +1166,153 @@ function renderDashboard(){
     renderDoughnutChart();
 }
 
-function renderHistorico(){/* simplificado para espacio */}
-function exportFullReport(){alert('Exportando reporte completo...')}
+function renderHistorico() {
+    const chartContainer = document.getElementById('history-chart');
+    if (!chartContainer) return;
+    const meses = {};
+    const ahora = new Date();
+    for (let i = 5; i >= 0; i--) {
+        const fecha = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+        const key = fecha.getFullYear() + '-' + String(fecha.getMonth() + 1).padStart(2, '0');
+        const nombreMes = fecha.toLocaleDateString('es-HN', { month: 'short', year: '2-digit' });
+        meses[key] = { nombre: nombreMes, ingresos: 0, gastos: 0 };
+    }
+    state.transactions.forEach(t => {
+        if (t.deletedAt) return;
+        const fecha = new Date(t.date);
+        const key = fecha.getFullYear() + '-' + String(fecha.getMonth() + 1).padStart(2, '0');
+        if (meses[key]) {
+            if (t.type === 'income') meses[key].ingresos += t.amount;
+            else if (t.type === 'expense') meses[key].gastos += t.amount;
+        }
+    });
+    let maxValor = 0;
+    Object.values(meses).forEach(m => {
+        if (m.ingresos > maxValor) maxValor = m.ingresos;
+        if (m.gastos > maxValor) maxValor = m.gastos;
+    });
+    if (maxValor === 0) {
+        chartContainer.innerHTML = '<p style="text-align:center;color:var(--text2);padding:20px">Sin datos para mostrar</p>';
+        return;
+    }
+    let html = '';
+    Object.values(meses).forEach(mes => {
+        const altIngresos = (mes.ingresos / maxValor) * 100;
+        const altGastos = (mes.gastos / maxValor) * 100;
+        html += '<div class="history-bar">';
+        html += '<div style="display:flex;gap:3px;align-items:flex-end;height:100px">';
+        html += '<div style="width:8px;height:' + altIngresos + 'px;background:var(--green);border-radius:2px 2px 0 0;min-height:2px" title="Ingresos: L.' + mes.ingresos.toFixed(2) + '"></div>';
+        html += '<div style="width:8px;height:' + altGastos + 'px;background:var(--red);border-radius:2px 2px 0 0;min-height:2px" title="Gastos: L.' + mes.gastos.toFixed(2) + '"></div>';
+        html += '</div>';
+        html += '<span style="font-size:10px;color:var(--text2);margin-top:5px">' + mes.nombre + '</span>';
+        html += '</div>';
+    });
+    chartContainer.innerHTML = html;
+}
+function exportFullReport() {
+    try {
+        let csv = 'REPORTE FINANCIERO COMPLETO\n';
+        csv += 'Cliente: ' + (state.nombre || 'Usuario') + '\n';
+        csv += 'Fecha: ' + new Date().toLocaleDateString() + '\n\n';
+        const ingresos = state.transactions.filter(t => t.type === 'income' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+        const gastos = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt).reduce((a,b) => a+b.amount, 0);
+        const balance = state.saldoInicial + ingresos - gastos;
+        csv += 'RESUMEN\n';
+        csv += 'Saldo Inicial,L.' + state.saldoInicial.toFixed(2) + '\n';
+        csv += 'Total Ingresos,L.' + ingresos.toFixed(2) + '\n';
+        csv += 'Total Gastos,L.' + gastos.toFixed(2) + '\n';
+        csv += 'Balance Actual,L.' + balance.toFixed(2) + '\n\n';
+        csv += 'TRANSACCIONES\n';
+        csv += 'Fecha,Tipo,Categoria,Subcategoria,Monto,Banco/Tarjeta\n';
+        const txOrdenadas = state.transactions.filter(t => !t.deletedAt).sort((a, b) => new Date(b.date) - new Date(a.date));
+        txOrdenadas.forEach(t => {
+            const fecha = new Date(t.date).toLocaleDateString();
+            const tipo = t.type === 'income' ? 'INGRESO' : 'GASTO';
+            const cat = (t.cat || '').replace(/,/g, ';');
+            const subcat = (t.subcat || '').replace(/,/g, ';');
+            const monto = t.type === 'income' ? '+' + t.amount.toFixed(2) : '-' + t.amount.toFixed(2);
+            const banco = (t.banco || t.tarjetaNombre || '').replace(/,/g, ';');
+            csv += fecha + ',' + tipo + ',' + cat + ',' + subcat + ',' + monto + ',' + banco + '\n';
+        });
+        csv += '\n';
+        if (state.receivables && state.receivables.length > 0) {
+            csv += 'CUENTAS POR COBRAR\nPersona,Monto Total,Pagado,Pendiente\n';
+            state.receivables.forEach(r => {
+                const pendiente = r.monto - (r.pagado || 0);
+                csv += r.persona + ',' + r.monto.toFixed(2) + ',' + (r.pagado || 0).toFixed(2) + ',' + pendiente.toFixed(2) + '\n';
+            });
+            csv += '\n';
+        }
+        if (state.payables && state.payables.length > 0) {
+            csv += 'CUENTAS POR PAGAR\nAcreedor,Monto Total,Pagado,Pendiente\n';
+            state.payables.forEach(p => {
+                const pendiente = p.monto - (p.pagado || 0);
+                csv += p.creditor + ',' + p.monto.toFixed(2) + ',' + (p.pagado || 0).toFixed(2) + ',' + pendiente.toFixed(2) + '\n';
+            });
+            csv += '\n';
+        }
+        if (state.tarjetas && state.tarjetas.length > 0) {
+            csv += 'TARJETAS DE CREDITO\nNombre,Saldo,Limite,Tasa,Dia Corte,Dia Pago\n';
+            state.tarjetas.forEach(t => {
+                csv += t.nombre + ',' + t.saldo.toFixed(2) + ',' + (t.limite || 0).toFixed(2) + ',' + (t.tasaInteres || 0) + '%,' + t.corte + ',' + t.pago + '\n';
+            });
+        }
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Finanzas_' + (state.nombre || 'Usuario') + '_' + todayStr() + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('✅ Reporte CSV generado');
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+}
 function exportData(){const data=JSON.stringify(state);const a=document.createElement('a');a.href='data:text/json;charset=utf-8,'+encodeURIComponent(data);a.download='backup.json';a.click();}
-function exportDataEncriptado(){alert('Exportando cifrado...')}
+function exportDataEncriptado() {
+    try {
+        const password = prompt('🔐 Crea una contrasena para cifrar el respaldo:\n(Minimo 6 caracteres - GUARDALA)');
+        if (!password || password.length < 6) {
+            alert('❌ Contrasena invalida');
+            return;
+        }
+        const confirmar = prompt('🔐 Confirma la contrasena:');
+        if (password !== confirmar) {
+            alert('❌ Las contrasenas no coinciden');
+            return;
+        }
+        const data = JSON.stringify(state);
+        let cifrado = '';
+        for (let i = 0; i < data.length; i++) {
+            const charCode = data.charCodeAt(i) ^ password.charCodeAt(i % password.length);
+            cifrado += String.fromCharCode(charCode);
+        }
+        const cifradoBase64 = btoa(unescape(encodeURIComponent(cifrado)));
+        const archivoFinal = {
+            version: '1.0',
+            tipo: 'finanzas-hn-encriptado',
+            fecha: new Date().toISOString(),
+            cliente: state.nombre || 'Usuario',
+            datos: cifradoBase64
+        };
+        const blob = new Blob([JSON.stringify(archivoFinal, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Backup_Encriptado_' + todayStr() + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('✅ Respaldo cifrado generado.\n⚠️ NO OLVIDES TU CONTRASENA');
+    } catch (error) {
+        alert('❌ Error: ' + error.message);
+    }
+}
 function resetApp(){if(confirm('¿Borrar todo?')){localStorage.removeItem(LS_KEY);location.reload()}}
 
 // ========== IMPORTAR DATOS ==========
@@ -1402,8 +1462,6 @@ if ('serviceWorker' in navigator) {
 // ========== MEJORAS CRITICAS v1.1 ==========
 // ========================================================
 
-// 1. PIN CON SESSION STORAGE (No pedir en cada reload)
-// ========================================================
 function verificarPINmejorado() {
   if (appPIN && !recordarPIN) {
     var pinVerificado = sessionStorage.getItem('pinVerificado');
@@ -1423,49 +1481,39 @@ function verificarPINmejorado() {
   }
 }
 
-// Validar PIN y guardar en sessionStorage
-function validarPINmejorado() {
-  var pinInput = document.getElementById('pin-input');
-  var pin = pinInput.value;
-  
-  if (pin.length !== 4 || !/^[0-9]+$/.test(pin)) {
-    alert('PIN debe ser exactamente 4 digitos');
-    pinInput.value = '';
-    return;
+// Sobrescribir verificarPIN para usar sessionStorage
+var verificarPINoriginal = verificarPIN;
+verificarPIN = function() {
+  const intento = document.getElementById('pin-input').value;
+  if (intento === appPIN) {
+    sessionStorage.setItem('pinVerificado', 'true');
+    document.getElementById('modal-pin').style.display = 'none';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-error').style.display = 'none';
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+  } else {
+    document.getElementById('pin-error').style.display = 'block';
+    document.getElementById('pin-input').value = '';
+    setTimeout(function() { document.getElementById('pin-error').style.display = 'none'; }, 3000);
   }
-  
-  if (pin !== appPIN) {
-    alert('PIN incorrecto');
-    pinInput.value = '';
-    return;
-  }
-  
-  // PIN correcto: guardar en sesion (dura mientras este abierta)
-  sessionStorage.setItem('pinVerificado', 'true');
-  document.getElementById('modal-pin').style.display = 'none';
-  
-  if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
-  else renderAll();
-}
+};
 
-// 2. SISTEMA DE PAPELERA (Soft Delete)
-// ========================================================
+// SISTEMA DE PAPELERA
 function eliminarGastoConPapelera(id) {
   var gasto = state.transactions.find(function(t) { return t.id === id; });
   if (!gasto) return;
-  
   if (confirm('Eliminar este gasto? Puedes recuperarlo desde la papelera.')) {
     gasto.deletedAt = new Date().toISOString();
     save();
     renderAll();
-    alert('Eliminado. Ve a Papelera para restaurar si lo necesitas.');
+    alert('Eliminado. Ve a Configuracion > Papelera para restaurar si lo necesitas.');
   }
 }
 
 function restaurarGastoDePapelera(id) {
-  var gasto = state.transactions.find(function(t) { return t.id === id && t.deletedAt; });
+  var gasto = state.transactions.find(function(t) { return t.id == id && t.deletedAt; });
   if (!gasto) return;
-  
   gasto.deletedAt = null;
   save();
   renderAll();
@@ -1474,11 +1522,7 @@ function restaurarGastoDePapelera(id) {
 
 function vaciarPapelera() {
   var deleted = state.transactions.filter(function(t) { return t.deletedAt; });
-  if (deleted.length === 0) {
-    alert('Papelera vacia');
-    return;
-  }
-  
+  if (deleted.length === 0) { alert('Papelera vacia'); return; }
   if (confirm('Eliminar permanentemente ' + deleted.length + ' gastos? Esta accion NO se puede deshacer.')) {
     state.transactions = state.transactions.filter(function(t) { return !t.deletedAt; });
     save();
@@ -1490,97 +1534,55 @@ function vaciarPapelera() {
 function renderPapelera() {
   var deleted = state.transactions.filter(function(t) { return t.deletedAt; })
     .sort(function(a, b) { return new Date(b.deletedAt) - new Date(a.deletedAt); });
-  
   var trashList = document.getElementById('trash-list');
   if (!trashList) return;
-  
   if (deleted.length === 0) {
-    trashList.innerHTML = '<p style="text-align:center;color:var(--text2);padding:20px">Papelera vacia</p>';
+    trashList.innerHTML = '<p style="text-align:center;color:var(--text2);padding:10px;font-size:12px">Papelera vacia</p>';
     var emptyBtn = document.getElementById('empty-trash-btn');
     if (emptyBtn) emptyBtn.style.display = 'none';
     return;
   }
-  
   var html = '';
   for (var i = 0; i < deleted.length; i++) {
     var t = deleted[i];
     html += '<div class="trash-item">';
-    html += '<div><strong>' + t.cat + '</strong> - L.' + t.amount.toFixed(2);
+    html += '<div><strong>' + (t.cat || 'Sin categoria') + '</strong> - L.' + t.amount.toFixed(2);
     html += '<br/><small>' + new Date(t.date).toLocaleDateString() + '</small></div>';
-    html += '<button class="btn btn-restore" onclick="restaurarGastoDePapelera(\'' + t.id + '\')">Restaurar</button>';
+    html += '<button class="btn btn-restore" onclick="restaurarGastoDePapelera(' + t.id + ')">Restaurar</button>';
     html += '</div>';
   }
   trashList.innerHTML = html;
-  
   var emptyBtn = document.getElementById('empty-trash-btn');
   if (emptyBtn) emptyBtn.style.display = 'block';
 }
 
-// 3. ALERTAS DE PRESUPUESTO (80% y 100%)
-// ========================================================
+// ALERTAS DE PRESUPUESTO
 function verificarAlertasPresupuesto() {
-  var ingresos = state.transactions
-    .filter(function(t) { return t.type === 'income' && !t.deletedAt; })
-    .reduce(function(a, b) { return a + b.amount; }, 0);
-    
-  var gastos = state.transactions
-    .filter(function(t) { return t.type === 'expense' && !t.deletedAt; })
-    .reduce(function(a, b) { return a + b.amount; }, 0);
-  
+  var ingresos = state.transactions.filter(function(t) { return t.type === 'income' && !t.deletedAt; }).reduce(function(a, b) { return a + b.amount; }, 0);
+  var gastos = state.transactions.filter(function(t) { return t.type === 'expense' && !t.deletedAt; }).reduce(function(a, b) { return a + b.amount; }, 0);
   var porcentaje = ingresos > 0 ? (gastos / ingresos) * 100 : 0;
   var alertasDiv = document.getElementById('budget-alerts');
-  
   if (!alertasDiv) return;
-  
   var html = '';
   if (porcentaje >= 100) {
-    html = '<div class="alert-budget-critical">';
-    html += '<span style="font-size:20px">🚨</span>';
-    html += '<div class="alert-content">';
-    html += '<div class="alert-title">PRESUPUESTO EXCEDIDO!</div>';
-    html += '<div class="alert-detail">Gastaste L.' + gastos.toFixed(2) + ' de L.' + ingresos.toFixed(2) + ' (' + porcentaje.toFixed(0) + '%)</div>';
-    html += '</div></div>';
+    html = '<div class="alert-budget-critical"><span style="font-size:20px">🚨</span><div class="alert-content"><div class="alert-title">PRESUPUESTO EXCEDIDO!</div><div class="alert-detail">Gastaste L.' + gastos.toFixed(2) + ' de L.' + ingresos.toFixed(2) + ' (' + porcentaje.toFixed(0) + '%)</div></div></div>';
   } else if (porcentaje >= 80) {
-    html = '<div class="alert-budget-warning">';
-    html += '<span style="font-size:20px">⚠️</span>';
-    html += '<div class="alert-content">';
-    html += '<div class="alert-title">Presupuesto al ' + Math.round(porcentaje) + '%</div>';
-    html += '<div class="alert-detail">Te quedan L.' + (ingresos - gastos).toFixed(2) + ' para gastar</div>';
-    html += '</div></div>';
+    html = '<div class="alert-budget-warning"><span style="font-size:20px">⚠️</span><div class="alert-content"><div class="alert-title">Presupuesto al ' + Math.round(porcentaje) + '%</div><div class="alert-detail">Te quedan L.' + (ingresos - gastos).toFixed(2) + ' para gastar</div></div></div>';
   }
-  
   alertasDiv.innerHTML = html;
 }
 
-// 4. PROYECCION DE FLUJO DE CAJA
-// ========================================================
+// PROYECCION DE FLUJO DE CAJA
 function calcularProyeccionCaja() {
-  var ingresos = state.transactions
-    .filter(function(t) { return t.type === 'income' && !t.deletedAt; })
-    .reduce(function(a, b) { return a + b.amount; }, 0);
-    
-  var gastos = state.transactions
-    .filter(function(t) { return t.type === 'expense' && !t.deletedAt; })
-    .reduce(function(a, b) { return a + b.amount; }, 0);
-  
+  var ingresos = state.transactions.filter(function(t) { return t.type === 'income' && !t.deletedAt; }).reduce(function(a, b) { return a + b.amount; }, 0);
+  var gastos = state.transactions.filter(function(t) { return t.type === 'expense' && !t.deletedAt; }).reduce(function(a, b) { return a + b.amount; }, 0);
   var balance = (state.saldoInicial || 0) + ingresos - gastos;
-  
-  // Calcular gasto promedio diario de los ultimos 30 dias
   var hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  var gastosUltimos30 = state.transactions
-    .filter(function(t) { 
-      return t.type === 'expense' && 
-             !t.deletedAt && 
-             new Date(t.date) > hace30dias; 
-    })
-    .reduce(function(a, b) { return a + b.amount; }, 0);
-  
+  var gastosUltimos30 = state.transactions.filter(function(t) { return t.type === 'expense' && !t.deletedAt && new Date(t.date) > hace30dias; }).reduce(function(a, b) { return a + b.amount; }, 0);
   var gastoDiario = gastosUltimos30 / 30;
   var diasSupervivencia = gastoDiario > 0 ? Math.floor(balance / gastoDiario) : 999;
-  
   var proyectDiv = document.getElementById('cashflow-projection');
   if (!proyectDiv) return;
-  
   if (diasSupervivencia < 999 && balance > 0) {
     var html = '<div class="cashflow-projection">';
     html += '<span class="cashflow-number">' + diasSupervivencia + '</span>';
@@ -1593,43 +1595,32 @@ function calcularProyeccionCaja() {
   }
 }
 
-// 5. DETECCION DE DUPLICADOS
-// ========================================================
+// DETECCION DE DUPLICADOS
 function detectarDuplicados() {
-  var recientes = state.transactions
-    .filter(function(t) { return !t.deletedAt; })
-    .sort(function(a, b) { return new Date(b.date) - new Date(a.date); })
-    .slice(0, 20);
-  
+  var recientes = state.transactions.filter(function(t) { return !t.deletedAt; }).sort(function(a, b) { return new Date(b.date) - new Date(a.date); }).slice(0, 20);
   var duplicadosHtml = [];
   var procesados = {};
-  
   for (var i = 0; i < recientes.length - 1; i++) {
     var t1 = recientes[i];
     if (procesados[t1.id]) continue;
-    
     for (var j = i + 1; j < recientes.length; j++) {
       var t2 = recientes[j];
       if (procesados[t2.id]) continue;
-      
       var mismaCantidad = t1.amount === t2.amount;
       var mismaCategoria = t1.cat === t2.cat;
-      var fechaCercana = Math.abs(new Date(t1.date) - new Date(t2.date)) < 5 * 60 * 1000; // 5 minutos
-      
+      var fechaCercana = Math.abs(new Date(t1.date) - new Date(t2.date)) < 5 * 60 * 1000;
       if (mismaCantidad && mismaCategoria && fechaCercana) {
         var html = '<div class="duplicate-warning">';
         html += '<span><strong>⚠️ Duplicado posible:</strong> ' + t1.cat + ' L.' + t1.amount + '</span>';
-        html += '<button class="btn btn-duplicate-action" onclick="eliminarGastoConPapelera(\'' + t2.id + '\')">Eliminar</button>';
+        html += '<button class="btn btn-duplicate-action" onclick="eliminarGastoConPapelera(' + t2.id + ')">Eliminar</button>';
         html += '</div>';
         duplicadosHtml.push(html);
         procesados[t2.id] = true;
       }
     }
   }
-  
   var duplicadosDiv = document.getElementById('duplicates-alert');
   if (!duplicadosDiv) return;
-  
   if (duplicadosHtml.length > 0) {
     duplicadosDiv.innerHTML = duplicadosHtml.join('');
     duplicadosDiv.style.display = 'block';
@@ -1639,33 +1630,22 @@ function detectarDuplicados() {
   }
 }
 
-// 6. VALIDACION MEJORADA DE ENTRADA
-// ========================================================
+// VALIDACION DE MONTO
 function validarMonto(input) {
   var valor = input.value.replace(/[^0-9.]/g, '');
   var partes = valor.split('.');
-  
-  if (partes.length > 2) {
-    valor = partes[0] + '.' + partes.slice(1).join('');
-  }
-  
-  if (partes[1] && partes[1].length > 2) {
-    valor = partes[0] + '.' + partes[1].slice(0, 2);
-  }
-  
+  if (partes.length > 2) valor = partes[0] + '.' + partes.slice(1).join('');
+  if (partes[1] && partes[1].length > 2) valor = partes[0] + '.' + partes[1].slice(0, 2);
   input.value = valor;
 }
 
-// 7. VER TUTORIAL NUEVAMENTE
-// ========================================================
+// VER TUTORIAL DE NUEVO
 function mostrarTutorialDeNuevo() {
   document.getElementById('onboarding').style.display = 'flex';
 }
 
-// 8. AGREGAR ELEMENTOS DOM PARA NUEVAS FUNCIONES
-// ========================================================
+// INYECTAR ELEMENTOS NUEVOS EN DOM
 function inyectarElementosNuevos() {
-  // Agregar div para alertas presupuesto en dashboard
   var dashboard = document.getElementById('view-dashboard');
   if (dashboard && !document.getElementById('budget-alerts')) {
     var alertasDiv = document.createElement('div');
@@ -1673,8 +1653,6 @@ function inyectarElementosNuevos() {
     alertasDiv.style.marginBottom = '15px';
     dashboard.insertBefore(alertasDiv, dashboard.firstChild);
   }
-  
-  // Agregar div para duplicados en dashboard
   if (dashboard && !document.getElementById('duplicates-alert')) {
     var dupDiv = document.createElement('div');
     dupDiv.id = 'duplicates-alert';
@@ -1682,15 +1660,11 @@ function inyectarElementosNuevos() {
     dupDiv.style.display = 'none';
     dashboard.insertBefore(dupDiv, dashboard.firstChild);
   }
-  
-  // Agregar div para proyeccion de caja en dashboard
   if (dashboard && !document.getElementById('cashflow-projection')) {
     var projDiv = document.createElement('div');
     projDiv.id = 'cashflow-projection';
     dashboard.appendChild(projDiv);
   }
-  
-  // Agregar boton de tutorial en config
   var configView = document.getElementById('view-config');
   if (configView && !document.getElementById('tutorial-btn')) {
     var btn = document.createElement('button');
@@ -1701,21 +1675,15 @@ function inyectarElementosNuevos() {
     btn.style.marginTop = '10px';
     configView.appendChild(btn);
   }
-  
-  // Agregar seccion de papelera en config
-  if (configView && !document.getElementById('trash-section')) {
+  if (configView && !document.getElementById('trash-section-wrapper')) {
     var trashDiv = document.createElement('div');
-    trashDiv.id = 'trash-section';
+    trashDiv.id = 'trash-section-wrapper';
     trashDiv.className = 'trash-section';
-    trashDiv.innerHTML = '<h4 style="margin-bottom:10px">🗑️ Papelera de Gastos</h4>' +
-                       '<div id="trash-list"></div>' +
-                       '<button id="empty-trash-btn" class="btn btn-danger" onclick="vaciarPapelera()" style="margin-top:10px;display:none">Vaciar Papelera</button>';
+    trashDiv.innerHTML = '<h4 style="margin-bottom:10px">🗑️ Papelera de Gastos</h4><div id="trash-list"></div><button id="empty-trash-btn" class="btn btn-danger" onclick="vaciarPapelera()" style="margin-top:10px;display:none">Vaciar Papelera</button>';
     configView.appendChild(trashDiv);
   }
 }
 
-// 9. EJECUTAR TODAS LAS NUEVAS VERIFICACIONES
-// ========================================================
 function ejecutarVerificacionesNuevas() {
   inyectarElementosNuevos();
   setTimeout(function() {
@@ -1726,28 +1694,19 @@ function ejecutarVerificacionesNuevas() {
   }, 200);
 }
 
-// 10. MODIFICAR window.onload para usar mejoras
-// ========================================================
-var originalOnload = window.onload;
+// SOBRESCRIBIR window.onload
 window.onload = function() {
   if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
   if (!state.prestamos) state.prestamos = [];
   if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
-  
-  // Usar PIN mejorado con sessionStorage
   verificarPINmejorado();
-  
   var recordarEl = document.getElementById('recordar-pin');
   if (recordarEl) recordarEl.checked = recordarPIN;
-  
   renderBudgetRules();
-  
-  // Ejecutar verificaciones de mejoras
   setTimeout(ejecutarVerificacionesNuevas, 500);
 };
 
-// 11. INTERCEPTAR renderAll para incluir verificaciones
-// ========================================================
+// SOBRESCRIBIR renderAll para incluir verificaciones
 var originalRenderAll = renderAll;
 renderAll = function() {
   originalRenderAll();
@@ -1759,7 +1718,7 @@ renderAll = function() {
   }, 100);
 };
 
-console.log('✅ Mejoras v1.1 cargadas: PIN sessionStorage, Papelera, Alertas, Proyeccion Caja, Duplicados');
+console.log('✅ Mejoras v1.1 cargadas: PIN sessionStorage, Papelera, Alertas, Proyeccion, Duplicados');
 
 </script>
 </body>
