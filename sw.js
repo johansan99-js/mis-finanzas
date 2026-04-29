@@ -1,6 +1,5 @@
-const CACHE_NAME = 'misfinanzas-secure-v8';
+const CACHE_NAME = 'mipistohn-v1';
 
-// Rutas absolutas relativas al scope del SW (/mis-finanzas/)
 const ASSETS = [
   '/mis-finanzas/',
   '/mis-finanzas/index.html',
@@ -12,9 +11,9 @@ const ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('✅ Cacheando assets críticos...');
+      console.log('✅ Mi Pisto HN — cacheando assets...');
       return Promise.allSettled(
-        ASSETS.map(url => 
+        ASSETS.map(url =>
           cache.add(url).catch(err => console.warn(`⚠️ No se pudo cachear ${url}:`, err))
         )
       );
@@ -24,7 +23,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => 
+    caches.keys().then(cacheNames =>
       Promise.all(
         cacheNames
           .filter(name => name !== CACHE_NAME)
@@ -45,27 +44,20 @@ self.addEventListener('fetch', event => {
       if (cachedResponse) return cachedResponse;
 
       return fetch(event.request).then(response => {
-        // Solo cachear respuestas exitosas
         if (response && response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseClone).catch(err => {
-              console.warn('⚠️ No se pudo guardar en caché:', err);
-            });
+            cache.put(event.request, responseClone).catch(() => {});
           });
         }
         return response;
       }).catch(() => {
-        // Fallback robusto para navegación offline
         if (event.request.mode === 'navigate') {
-          // Intentar con ruta absoluta primero, luego relativa
           return caches.match('/mis-finanzas/index.html')
-            .then(res => res || caches.match('./index.html'))
-            .then(res => res || caches.match('index.html'));
+            .then(res => res || caches.match('./index.html'));
         }
-        // Para otros recursos, retornar error de red
-        return new Response('Offline - Recurso no disponible', { 
-          status: 503, 
+        return new Response('Offline', {
+          status: 503,
           statusText: 'Service Unavailable',
           headers: { 'Content-Type': 'text/plain' }
         });
