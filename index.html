@@ -239,6 +239,62 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .cashflow-label { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
 .duplicate-warning { background:rgba(240,165,0,0.1); border:1px solid var(--amber); border-radius:6px; padding:10px; margin:10px 0; font-size:12px; color:var(--text); display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .btn-duplicate-action { width:auto !important; padding:6px 10px !important; margin:0 !important; font-size:11px !important; background:var(--red); color:white; }
+
+/* ============================================================
+   OPCIÓN 5 — WEBAUTHN BIOMETRÍA
+   ============================================================ */
+.biometric-screen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:18px;z-index:500;padding:40px;text-align:center;
+  opacity:0;visibility:hidden;transition:.2s;
+}
+.biometric-screen.visible{opacity:1;visibility:visible}
+.biometric-icon{
+  width:100px;height:100px;border-radius:50%;
+  background:var(--bg3);border:3px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:46px;
+  animation:bioPulse 2s ease-in-out infinite;
+}
+@keyframes bioPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(74,158,248,.4)}
+  50%{box-shadow:0 0 0 18px rgba(74,158,248,.0)}
+}
+.biometric-icon.success{border-color:var(--green);background:rgba(46,204,138,.1);animation:none}
+.biometric-icon.error  {border-color:var(--red);  background:rgba(232,93,93,.1); animation:none}
+.biometric-title{font-size:20px;font-weight:800}
+.biometric-sub{font-size:13px;color:var(--text2);line-height:1.6;max-width:280px}
+.biometric-fallback{
+  position:absolute;bottom:48px;
+  background:none;border:none;color:var(--text2);
+  font-size:13px;cursor:pointer;text-decoration:underline;
+  padding:8px;
+}
+
+/* Botón biométrico en modal PIN */
+.btn-bio-unlock{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:16px;border-radius:12px;
+  border:1.5px solid var(--blue);
+  background:rgba(74,158,248,.08);color:var(--blue);
+  font-weight:700;font-size:15px;cursor:pointer;transition:.15s;
+  min-height:58px;margin-bottom:12px;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-bio-unlock:active{background:rgba(74,158,248,.2)}
+
+/* Card biométrica en Config */
+.bio-status-card{
+  border-radius:12px;padding:14px;
+  display:flex;align-items:center;gap:14px;margin-bottom:12px;
+}
+.bio-status-active {background:rgba(46,204,138,.08);border:1px solid rgba(46,204,138,.25)}
+.bio-status-inactive{background:var(--bg3);border:1px solid var(--border)}
+.bio-unavailable{
+  background:var(--bg3);border:1px dashed var(--border);
+  border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;
+}
 /* === OPCIÓN 6: LIQUIDEZ PROYECTADA === */
 .liquidez-widget{background:linear-gradient(135deg,var(--bg3),#1a2035);border-radius:var(--r);padding:18px;margin-bottom:15px;position:relative;overflow:hidden}
 .liquidez-widget::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(74,158,248,.12),transparent 70%);border-radius:50%}
@@ -526,13 +582,27 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   </div>
 </div>
 
+<!-- PANTALLA BIOMÉTRICA DE ESPERA -->
+<div class="biometric-screen" id="bio-screen">
+  <div class="biometric-icon" id="bio-icon">👆</div>
+  <div class="biometric-title" id="bio-title">Verificando identidad</div>
+  <div class="biometric-sub" id="bio-sub">Usa tu huella dactilar o Face ID para continuar</div>
+  <button class="biometric-fallback" onclick="usarPINcomoFallback()">Usar PIN en su lugar</button>
+</div>
+
 <div id="modal-pin" class="modal">
   <div class="modal-content" style="text-align:center">
     <div style="font-size:48px;margin-bottom:15px">🔒</div>
     <h3 style="margin-bottom:10px">Acceso Seguro</h3>
     <p style="color:var(--text2);font-size:12px;margin-bottom:20px">Ingresa tu PIN de 4 dígitos</p>
     <input type="password" id="pin-input" class="pin-input" placeholder="••••" maxlength="4" inputmode="numeric" pattern="[0-9]*">
-    <button class="btn btn-primary" onclick="verificarPIN()">🔓 Entrar</button>
+    <button class="btn btn-primary" onclick="verificarPIN()">🔓 Entrar con PIN</button>
+    <!-- Botón biométrico — se muestra solo si está registrado -->
+    <div id="pin-bio-btn-wrap" style="display:none;margin-top:8px">
+      <button class="btn-bio-unlock" onclick="intentarBiometriaDesdePin()">
+        👆 Usar Huella / Face ID
+      </button>
+    </div>
     <p id="pin-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none">❌ PIN incorrecto</p>
     <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
       <p style="font-size:11px;color:var(--text2)"><button onclick="olvidePIN()" style="background:none;border:none;color:var(--amber);cursor:pointer;text-decoration:underline">¿Olvidaste tu PIN?</button></p>
@@ -721,36 +791,26 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <div id="view-config" class="view">
   <h2 style="margin-bottom:15px">⚙️ Configuración y Seguridad</h2>
   <div class="card card-security">
-    <h4 style="margin-bottom:10px;color:var(--purple)">🔐 Configuración de Seguridad</h4>
-    <button class="btn btn-secondary" onclick="configurarPIN()" style="margin-bottom:10px">🔑 Cambiar PIN de Acceso</button>
-    <button class="btn btn-secondary" onclick="exportDataEncriptado()" style="margin-bottom:10px">📥 Exportar Respaldo Cifrado</button>
-    <button class="btn btn-secondary" onclick="exportToExcelPro()" style="margin-bottom:10px; background: #1D6F42; color: white;">📊 Excel Profesional</button>
-    <div style="font-size:11px;color:var(--text2);margin-top:10px">
-      <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <h4 style="margin-bottom:14px;color:var(--purple)">🔐 Configuración de Seguridad</h4>
+
+    <!-- Biometría (WebAuthn) -->
+    <h5 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin-bottom:10px">Biometría</h5>
+    <div id="biometria-config"></div>
+
+    <h5 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin:14px 0 10px">PIN de respaldo</h5>
+    <button class="btn btn-secondary" onclick="configurarPIN()" style="margin-bottom:10px;min-height:52px">🔑 Cambiar PIN de Acceso</button>
+    <div style="font-size:11px;color:var(--text2)">
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer">
         <input type="checkbox" id="recordar-pin" onchange="toggleRecordarPIN()">
         <span>Recordar PIN en este dispositivo (30 días)</span>
       </label>
     </div>
   </div>
-  
-  <!-- NUEVA SECCIÓN: DIAGNÓSTICO OCR -->
-  <div class="card" style="margin-top: 15px;">
-    <h4 style="margin-bottom: 10px;">🔧 Diagnóstico OCR</h4>
-    <p style="font-size: 12px; color: var(--text2); margin-bottom: 10px;">
-      Si el escaneo de facturas no funciona, prueba esto:
-    </p>
-    <button class="btn btn-secondary" onclick="testOCR()" style="margin-bottom: 5px;">
-      🧪 Probar conexión OCR
-    </button>
-    <button class="btn btn-secondary" onclick="clearOCRCache()">
-      🗑️ Limpiar caché OCR
-    </button>
-    <div id="ocr-test-result" style="font-size: 11px; margin-top: 10px; color: var(--text2);"></div>
-  </div>
-  
+
   <div class="card">
-    <h4 style="margin-bottom:10px">💾 Respaldo de Datos</h4>
-    <button class="btn btn-secondary" onclick="exportData()" style="margin-bottom:10px">📥 Exportar JSON (Sin cifrar)</button>
+    <h4 style="margin-bottom:10px">📤 Exportar / Importar</h4>
+    <button class="btn btn-secondary" onclick="exportDataEncriptado()" style="margin-bottom:10px">📥 Respaldo Cifrado</button>
+    <button class="btn btn-secondary" onclick="exportToExcelPro()" style="margin-bottom:10px;background:#1D6F42;color:white">📊 Excel Profesional</button>
     <input type="file" id="import-file" style="display:none" onchange="importData(event)">
     <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Importar Respaldo</button>
   </div>
@@ -2085,7 +2145,38 @@ if ('serviceWorker' in navigator) {
 // ========================================================
 
 function verificarPINmejorado() {
-  if (appPIN && !recordarPIN) {
+  const credId = localStorage.getItem(WEBAUTHN_KEY);
+  const tienePin = appPIN && appPIN.length > 0;
+  _updatePinBioBtn();
+
+  // Si biometría está configurada, intentarla primero
+  if (credId && isWebAuthnAvailable()) {
+    _showBioScreen();
+    authenticateWithWebAuthn().then(ok => {
+      _setBioResult(ok);
+      setTimeout(() => {
+        _hideBioScreen();
+        if (ok) {
+          sessionStorage.setItem('pinVerificado','true');
+          if (!state.setup) document.getElementById('onboarding').style.display='flex';
+          else renderAll();
+        } else {
+          // Falló biometría → caer al PIN si existe, si no al onboarding
+          if (tienePin) {
+            document.getElementById('modal-pin').style.display = 'flex';
+            document.getElementById('pin-input')?.focus();
+          } else {
+            if (!state.setup) document.getElementById('onboarding').style.display='flex';
+            else renderAll();
+          }
+        }
+      }, 1000);
+    });
+    return; // esperar la promesa
+  }
+
+  // Sin biometría: flujo PIN clásico
+  if (tienePin && !recordarPIN) {
     var pinVerificado = sessionStorage.getItem('pinVerificado');
     if (!pinVerificado) {
       document.getElementById('modal-pin').style.display = 'flex';
@@ -2094,7 +2185,7 @@ function verificarPINmejorado() {
       if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
       else renderAll();
     }
-  } else if (appPIN && recordarPIN) {
+  } else if (tienePin && recordarPIN) {
     if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
     else renderAll();
   } else {
@@ -2519,6 +2610,155 @@ function renderChipsRapidas() {
 }
 
 // ==========================================
+// 🔐 OPCIÓN 5: WEBAUTHN — BIOMETRÍA NATIVA
+// ==========================================
+const WEBAUTHN_KEY = 'mipistohn_webauthn_credId';
+
+function isWebAuthnAvailable() {
+  return !!(window.PublicKeyCredential &&
+    typeof navigator.credentials?.create === 'function' &&
+    typeof navigator.credentials?.get === 'function');
+}
+function _bufToB64(buf) {
+  const b = new Uint8Array(buf); let s = '';
+  b.forEach(x => s += String.fromCharCode(x));
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+function _b64ToBuf(b64) {
+  const s = atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
+  const b = new Uint8Array(s.length);
+  for (let i=0;i<s.length;i++) b[i]=s.charCodeAt(i);
+  return b;
+}
+function _getRpId() { return window.location.hostname || 'localhost'; }
+
+async function registrarBiometria() {
+  if (!isWebAuthnAvailable()) { alert('❌ Tu dispositivo no soporta biometría.'); return; }
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: 'Mi Pisto HN', id: _getRpId() },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'usuario', displayName: 'Mi Pisto HN' },
+      pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+      timeout: 60000, attestation: 'none'
+    }});
+    localStorage.setItem(WEBAUTHN_KEY, _bufToB64(cred.rawId));
+    renderBiometriaConfig();
+    alert('✅ ¡Biometría activada! La próxima vez usa tu huella o Face ID.');
+  } catch(e) {
+    if (e.name==='NotAllowedError') alert('❌ Acceso denegado. Verifica los permisos del dispositivo.');
+    else if (e.name==='InvalidStateError') alert('⚠️ Ya hay una credencial registrada.');
+    else alert('❌ Error: ' + e.message);
+  }
+}
+
+async function authenticateWithWebAuthn() {
+  const credId = localStorage.getItem(WEBAUTHN_KEY);
+  if (!credId || !isWebAuthnAvailable()) return false;
+  try {
+    await navigator.credentials.get({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: [{ id: _b64ToBuf(credId), type: 'public-key' }],
+      userVerification: 'required', timeout: 60000
+    }});
+    return true;
+  } catch(e) { console.warn('WebAuthn:', e.name); return false; }
+}
+
+function desactivarBiometria() {
+  if (!confirm('¿Desactivar la autenticación biométrica?')) return;
+  localStorage.removeItem(WEBAUTHN_KEY);
+  renderBiometriaConfig();
+  alert('🚫 Biometría desactivada.');
+}
+
+function renderBiometriaConfig() {
+  const el = document.getElementById('biometria-config');
+  if (!el) return;
+  if (!isWebAuthnAvailable()) {
+    el.innerHTML = `<div class="bio-unavailable">
+      <div style="font-size:24px;margin-bottom:6px">📵</div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">No disponible en este dispositivo</div>
+      <div style="font-size:11px;color:var(--text2)">Requiere iOS Safari 14+ o Chrome 70+ en HTTPS.</div>
+    </div>`; return;
+  }
+  const credId = localStorage.getItem(WEBAUTHN_KEY);
+  if (credId) {
+    el.innerHTML = `
+      <div class="bio-status-card bio-status-active">
+        <div style="font-size:28px">✅</div>
+        <div><div style="font-weight:700;font-size:13px;color:var(--green)">Biometría Activada</div>
+        <div style="font-size:11px;color:var(--text2)">Huella / Face ID activos al abrir la app</div></div>
+      </div>
+      <button class="btn btn-secondary" onclick="desactivarBiometria()" style="border:1px solid rgba(232,93,93,.3);color:var(--red);min-height:52px">🚫 Desactivar Biometría</button>`;
+  } else {
+    el.innerHTML = `
+      <div class="bio-status-card bio-status-inactive">
+        <div style="font-size:28px">👆</div>
+        <div><div style="font-weight:700;font-size:13px">Disponible en tu dispositivo</div>
+        <div style="font-size:11px;color:var(--text2)">Activa para no escribir el PIN cada vez</div></div>
+      </div>
+      <button class="btn btn-primary" onclick="registrarBiometria()" style="min-height:52px">🔐 Activar Huella / Face ID</button>`;
+  }
+}
+
+function _showBioScreen() {
+  const icon=document.getElementById('bio-icon');
+  const title=document.getElementById('bio-title');
+  const sub=document.getElementById('bio-sub');
+  if(icon){icon.className='biometric-icon';icon.textContent='👆';}
+  if(title) title.textContent='Verificando identidad';
+  if(sub) sub.textContent='Usa tu huella dactilar o Face ID para continuar';
+  document.getElementById('bio-screen')?.classList.add('visible');
+}
+function _hideBioScreen() { document.getElementById('bio-screen')?.classList.remove('visible'); }
+function _setBioResult(ok) {
+  const icon=document.getElementById('bio-icon');
+  const title=document.getElementById('bio-title');
+  const sub=document.getElementById('bio-sub');
+  if(ok){
+    if(icon){icon.className='biometric-icon success';icon.textContent='✅';}
+    if(title) title.textContent='¡Identidad verificada!';
+    if(sub) sub.textContent='Entrando a Mi Pisto HN…';
+  } else {
+    if(icon){icon.className='biometric-icon error';icon.textContent='✕';}
+    if(title) title.textContent='No se pudo verificar';
+    if(sub) sub.textContent='Usa tu PIN para continuar.';
+  }
+}
+
+function usarPINcomoFallback() {
+  _hideBioScreen();
+  document.getElementById('modal-pin').style.display = 'flex';
+  document.getElementById('pin-input')?.focus();
+}
+
+async function intentarBiometriaDesdePin() {
+  document.getElementById('modal-pin').style.display = 'none';
+  _showBioScreen();
+  const ok = await authenticateWithWebAuthn();
+  _setBioResult(ok);
+  setTimeout(() => {
+    _hideBioScreen();
+    if (ok) {
+      sessionStorage.setItem('pinVerificado','true');
+      if (!state.setup) document.getElementById('onboarding').style.display='flex';
+      else renderAll();
+    } else {
+      document.getElementById('modal-pin').style.display='flex';
+      document.getElementById('pin-input')?.focus();
+    }
+  }, 1000);
+}
+
+function _updatePinBioBtn() {
+  const wrap = document.getElementById('pin-bio-btn-wrap');
+  if (!wrap) return;
+  wrap.style.display = (localStorage.getItem(WEBAUTHN_KEY) && isWebAuthnAvailable()) ? 'block' : 'none';
+}
+
+// ==========================================
 // ==========================================
 
 async function requestPersistence() {
@@ -2656,8 +2896,12 @@ window.onload = async function() {
     if (state.setup) saveStateToDB(state);
   }
 
-  // 3. Verificar PIN con sessionStorage
+  // 3. Verificar PIN / Biometría
   verificarPINmejorado();
+
+  // 4. Setup UI de biometría
+  renderBiometriaConfig();
+  _updatePinBioBtn();
 
   // 4. Resto de inicialización
   var recordarEl = document.getElementById('recordar-pin');
