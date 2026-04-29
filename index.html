@@ -247,7 +247,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   position:fixed;inset:0;background:var(--bg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:18px;z-index:500;padding:40px;text-align:center;
-  opacity:0;visibility:hidden;transition:.2s;
+  opacity:0;visibility:hidden;pointer-events:none;transition:.2s;
 }
 .biometric-screen.visible{opacity:1;visibility:visible}
 .biometric-icon{
@@ -1499,6 +1499,7 @@ function renderDashboardGoals(){const container=document.getElementById('dashboa
 function saveCobrar(){const persona=document.getElementById('cobrar-persona').value.trim(),monto=parseFloat(document.getElementById('cobrar-monto').value),pagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;if(!persona||!monto)return;state.receivables.push({id:Date.now(),persona,monto,pagado,fecha:document.getElementById('cobrar-fecha').value});save();closeModal('modal-cobrar');renderAll();}
 function renderCobrar(){const c=document.getElementById('cobrar-list');if(!c)return;if(state.receivables.length===0){c.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🤝</div><div class="es-title">Nadie te debe dinero</div><div class="es-sub">Registra aquí los préstamos que has hecho a otras personas para llevar el control.</div><button class="btn-empty-secondary" onclick="openModal('modal-cobrar')">➕ Registrar cobro pendiente</button></div>`;return;}c.innerHTML=state.receivables.map(r=>`<div class="card card-receivable"><div>${r.persona} • Pendiente: ${fL(r.monto-(r.pagado||0))}</div><button class="btn btn-primary" onclick="abonarCobrar(${r.id})">Abonar</button></div>`).join('')}
 function renderPagar(){const c=document.getElementById('pagar-list');if(!c)return;if(state.payables.length===0){c.innerHTML=`<div class="empty-state-simple"><div class="es-icon">✅</div><div class="es-title">Sin deudas personales</div><div class="es-sub">Cuando debas dinero a alguien (no a un banco), regístralo aquí para no olvidarlo.</div><button class="btn-empty-secondary" onclick="openModal('modal-pagar')">➕ Registrar deuda personal</button></div>`;return;}c.innerHTML=state.payables.map(p=>`<div class="card card-debt"><div>${p.creditor} • Pendiente: ${fL(p.monto-(p.pagado||0))}</div><button class="btn btn-secondary" onclick="abonarPagar(${p.id})">Abonar</button></div>`).join('')}
+function abonarCobrar(id){
     const r = state.receivables.find(x => x.id === id);
     if (!r) return;
     const pendiente = r.monto - (r.pagado || 0);
@@ -1511,7 +1512,6 @@ function renderPagar(){const c=document.getElementById('pagar-list');if(!c)retur
 }
 
 function savePagar(){const creditor=document.getElementById('pagar-creditor').value.trim(),monto=parseFloat(document.getElementById('pagar-monto').value),pagado=parseFloat(document.getElementById('pagar-pagado').value)||0;if(!creditor||!monto)return;state.payables.push({id:Date.now(),creditor,monto,pagado,fecha:document.getElementById('pagar-fecha').value});save();closeModal('modal-pagar');renderAll();}
-function renderPagar(){const c=document.getElementById('pagar-list');if(!c)return;c.innerHTML=state.payables.map(p=>`<div class="card card-debt"><div>${p.creditor} • Pendiente: ${fL(p.monto-(p.pagado||0))}</div><button class="btn btn-secondary" onclick="abonarPagar(${p.id})">Abonar</button></div>`).join('')}
 function abonarPagar(id){
     const p = state.payables.find(x => x.id === id);
     if (!p) return;
