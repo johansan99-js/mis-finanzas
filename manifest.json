@@ -1,26 +1,16 @@
 {
-  "name": "Mis Finanzas HN - Pro Elite",
-  "short_name": "FinanzasHN",
+  "name": "Mi Pisto HN — Tu dinero, tu control",
+  "short_name": "Mi Pisto HN",
   "start_url": "./",
   "scope": "/mis-finanzas/",
   "display": "standalone",
   "background_color": "#0f1117",
   "theme_color": "#0f1117",
   "orientation": "portrait",
-  "description": "App de gestión financiera personal para Honduras con enfoque en presupuesto, deudas y ahorro.",
+  "description": "Gestión financiera personal para Honduras. 100% privado, 100% offline.",
   "categories": ["finance", "productivity", "utilities"],
   "icons": [
-    {
-      "src": "./icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
