@@ -485,11 +485,12 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="security-notice">
     <h4>📋 Tu Privacidad</h4>
     <ul style="margin:0;font-size:11px">
-      <li>✅ Datos 100% locales (localStorage)</li>
+      <li>✅ Datos 100% locales (localStorage + IndexedDB)</li>
       <li>✅ Sin conexión a internet requerida</li>
       <li>✅ Sin servidores externos</li>
     </ul>
   </div>
+  <div id="persistence-info"></div>
   <div class="card" style="border-color:var(--red)">
     <h4 style="margin-bottom:10px;color:var(--red)">🗑️ Zona de Peligro</h4>
     <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Borra todos tus datos y regresa al inicio. Esta acción NO se puede deshacer.</p>
@@ -618,7 +619,7 @@ if (state.transactions && state.transactions.length > 0) { state.transactions.fo
 let mainChart = null;
 let appPIN=localStorage.getItem('finanzas_pin')||'';let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
 const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
-function save() { localStorage.setItem(LS_KEY,JSON.stringify(state)); }
+function save() { localStorage.setItem(LS_KEY,JSON.stringify(state)); saveStateToDB(state); }
 const todayStr=()=>new Date().toISOString().split('T')[0];
 const CATEGORIES={vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}};
 
@@ -1425,7 +1426,7 @@ function exportToExcelPro() {
 function switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.hamburger-item').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');toggleHamburger();if(v==='gastos')renderGastos();if(v==='ingresos')renderIngresos();if(v==='metas')renderMetas();if(v==='cobrar')renderCobrar();if(v==='pagar')renderPagar();if(v==='prestamos')renderPrestamos();if(v==='tarjetas')renderTarjetas();if(v==='pagos')renderPagosRecurrentes();if(v==='historico')renderHistorico()}
 function openModal(id){document.getElementById(id).style.display='flex';document.getElementById('fab-menu').style.display='none'}
 function closeModal(id){document.getElementById(id).style.display='none'}
-function closeModalIfBg(e,id){if(e.target.id===id)closeModal(id)}
+function closeModalIfBg(e,id){if(e.target.id===id){if(hasUnsavedModalData){if(confirm("¿Descartar los datos ingresados?")){{hasUnsavedModalData=false;closeModal(id)}}}else{closeModal(id)}}}
 
 function renderAll(){
     renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetas();renderPagosRecurrentes();renderHistorico();renderBudgetRules();
@@ -1694,16 +1695,155 @@ function ejecutarVerificacionesNuevas() {
   }, 200);
 }
 
-// SOBRESCRIBIR window.onload
-window.onload = function() {
-  if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
-  if (!state.prestamos) state.prestamos = [];
-  if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+// ==========================================
+// 🛡️ CAPA DE PERSISTENCIA SEGURA (IndexedDB)
+// ==========================================
+
+async function requestPersistence() {
+  if (navigator.storage && navigator.storage.persist) {
+    try {
+      const isPersisted = await navigator.storage.persist();
+      console.log('Persistencia ITP: ' + (isPersisted ? '🛡️ BLINDADA' : '⚠️ VOLÁTIL'));
+      const persistDiv = document.getElementById('persistence-info');
+      if (persistDiv) {
+        if (isPersisted) {
+          persistDiv.innerHTML = '<div class="card" style="border-left:4px solid var(--green);margin-top:15px"><h4 style="color:var(--green);margin-bottom:8px">✅ Almacenamiento Persistente Activado</h4><p style="font-size:12px;color:var(--text2)">Tu navegador garantiza que los datos no se limpiarán automáticamente. Igual se recomienda hacer respaldos periódicos.</p></div>';
+        } else {
+          persistDiv.innerHTML = '<div class="card" style="border-left:4px solid var(--amber);margin-top:15px"><h4 style="color:var(--amber);margin-bottom:8px">⚠️ Almacenamiento No Persistente</h4><p style="font-size:12px;color:var(--text2)">Safari/iOS puede borrar los datos después de 7 días sin uso. Exporta un respaldo regularmente.</p><button class="btn btn-primary" onclick="exportDataEncriptado()" style="margin-top:10px">💾 Exportar Respaldo Ahora</button></div>';
+        }
+      }
+    } catch (error) {
+      console.error('Error solicitando persistencia:', error);
+    }
+  }
+}
+
+const IDB_NAME = 'MisFinanzasHN_DB';
+const IDB_STORE = 'app_state';
+const IDB_VERSION = 1;
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_NAME, IDB_VERSION);
+    request.onerror = (e) => reject('Error abriendo IndexedDB');
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+  });
+}
+
+async function saveStateToDB(stateObj) {
+  try {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const toSave = Object.assign({}, stateObj, { _version: '1.0.0', _lastSave: new Date().toISOString() });
+      store.put(toSave, 'current_state');
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e);
+    });
+  } catch (error) {
+    console.warn('IDB no disponible, usando solo localStorage:', error);
+  }
+}
+
+async function loadStateFromDB() {
+  try {
+    const db = await initDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const request = store.get('current_state');
+      request.onsuccess = () => {
+        if (request.result) {
+          console.log('📂 Estado cargado desde IndexedDB');
+          resolve(request.result);
+        } else {
+          console.log('⚠️ IDB vacío, usando localStorage como respaldo');
+          resolve(null);
+        }
+      };
+      request.onerror = () => resolve(null);
+    });
+  } catch (error) {
+    console.warn('Error en loadStateFromDB:', error);
+    return null;
+  }
+}
+
+// ==========================================
+// 🛑 PREVENCIÓN DE PÉRDIDA EN MODALES
+// ==========================================
+let hasUnsavedModalData = false;
+
+window.addEventListener('beforeunload', (e) => {
+  if (hasUnsavedModalData) {
+    e.preventDefault();
+    e.returnValue = '¿Seguro? Tienes datos sin guardar en pantalla.';
+  }
+});
+
+// Marcar cuando el usuario escribe en un modal
+document.addEventListener('input', (e) => {
+  if (e.target.closest('.modal-content')) {
+    if (e.target.value && e.target.value.trim().length > 0) hasUnsavedModalData = true;
+  }
+});
+
+// Limpiar el flag al cerrar modales correctamente
+const _origCloseModal = closeModal;
+closeModal = function(id) {
+  hasUnsavedModalData = false;
+  _origCloseModal(id);
+};
+
+// ==========================================
+// SOBRESCRIBIR window.onload (async + IDB)
+// ==========================================
+window.onload = async function() {
+  console.log('🚀 Mis Finanzas HN cargando...');
+
+  // 1. Solicitar persistencia al SO
+  await requestPersistence();
+
+  // 2. Intentar cargar desde IndexedDB primero
+  const idbState = await loadStateFromDB();
+  if (idbState) {
+    // Combinar el estado de IDB con las claves esperadas del state actual
+    Object.keys(state).forEach(key => {
+      if (idbState[key] !== undefined) state[key] = idbState[key];
+    });
+    // Migrar campos nuevos si no existen
+    if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+    if (!state.prestamos) state.prestamos = [];
+    if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+    if (!state.receivables) state.receivables = [];
+    if (!state.payables) state.payables = [];
+    if (!state.tarjetas) state.tarjetas = [];
+    if (!state.goals) state.goals = [];
+    console.log('✅ Estado restaurado desde IndexedDB');
+  } else {
+    // Si IDB no tiene datos, el state ya fue cargado desde localStorage al inicio del script
+    if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+    if (!state.prestamos) state.prestamos = [];
+    if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+    // Hacer una primera escritura en IDB del estado existente en localStorage
+    if (state.setup) saveStateToDB(state);
+  }
+
+  // 3. Verificar PIN con sessionStorage
   verificarPINmejorado();
+
+  // 4. Resto de inicialización
   var recordarEl = document.getElementById('recordar-pin');
   if (recordarEl) recordarEl.checked = recordarPIN;
   renderBudgetRules();
   setTimeout(ejecutarVerificacionesNuevas, 500);
+
+  console.log('✅ App lista');
 };
 
 // SOBRESCRIBIR renderAll para incluir verificaciones
