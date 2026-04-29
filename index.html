@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1117">
-<title>Mis Finanzas HN - Pro Elite</title>
+<title>Mi Pisto HN · Tu dinero, tu control</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- Tesseract OCR -->
@@ -145,10 +145,36 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .budget-extra{color:var(--blue)}
 
 /* === TOPBAR (simplificada) === */
-.hamburger-menu{position:fixed;top:0;left:0;width:100%;max-width:430px;margin:0 auto;height:56px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:200;display:flex;align-items:center;padding:0 15px;justify-content:space-between}
-.hamburger-btn{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:8px;line-height:1;border-radius:8px;transition:.15s}
+.hamburger-menu{
+  position:fixed;top:0;left:0;width:100%;max-width:430px;margin:0 auto;
+  height:56px;background:var(--bg2);border-bottom:1px solid var(--border);
+  z-index:200;
+  display:grid;
+  grid-template-columns:44px 1fr 44px;
+  align-items:center;
+  padding:0 6px;
+}
+.hamburger-spacer{width:44px}
+.hamburger-btn{
+  background:none;border:none;color:var(--text2);
+  font-size:22px;cursor:pointer;
+  width:44px;height:44px;
+  border-radius:10px;transition:.15s;
+  display:flex;align-items:center;justify-content:center;
+  justify-self:end;
+}
 .hamburger-btn:active{background:var(--bg3)}
-.hamburger-title{font-size:16px;font-weight:700;color:var(--amber)}
+.hamburger-title{
+  text-align:center;
+  font-size:17px;font-weight:800;
+  letter-spacing:-0.5px;
+  /* Wordmark: P verde, resto ámbar */
+  background:linear-gradient(90deg, var(--green) 0%, var(--amber) 40%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  line-height:1;
+}
 
 /* === PANEL "MÁS" (desliza desde la derecha) === */
 .hamburger-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:198;opacity:0;visibility:hidden;transition:opacity .25s;pointer-events:none}
@@ -311,16 +337,79 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .edit-type-btn.active-expense{border-color:var(--red);background:rgba(232,93,93,.12);color:var(--red)}
 
 /* ============================================================
-   WIDGET LIQUIDEZ — versión siempre visible
+   MENÚ "MÁS" — etiquetas de sección
    ============================================================ */
-.liquidez-widget-compact{background:linear-gradient(135deg,var(--bg3),#1a2035);border-radius:var(--r);padding:16px;margin-bottom:15px;position:relative;overflow:hidden;border:1px solid var(--border)}
-.liquidez-widget-compact::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(74,158,248,.1),transparent 70%);border-radius:50%;pointer-events:none}
+.more-section-label{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--text2);padding:10px 12px 4px;
+}
+.more-section-label:first-child{padding-top:4px}
+
+/* ============================================================
+   ITEM 2 — SEMÁFORO SURVIVAL INDEX
+   ============================================================ */
+.survival-box{transition:border-color .4s,box-shadow .4s}
+.survival-box.state-danger {border-color:var(--red)  !important;box-shadow:0 4px 15px rgba(232,93,93,.2)  !important}
+.survival-box.state-warning{border-color:var(--amber)!important;box-shadow:0 4px 15px rgba(240,165,0,.2) !important}
+.survival-box.state-safe   {border-color:var(--green)!important;box-shadow:0 4px 15px rgba(46,204,138,.2)!important}
+.survival-status{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;padding:4px 10px;border-radius:10px;
+  margin-top:6px;
+}
+.survival-status.danger {background:rgba(232,93,93,.15);color:var(--red)}
+.survival-status.warning{background:rgba(240,165,0,.15);color:var(--amber)}
+.survival-status.safe   {background:rgba(46,204,138,.15);color:var(--green)}
+
+/* ============================================================
+   ITEM 1 — EMPTY STATES
+   ============================================================ */
+.empty-state-dashboard{
+  background:linear-gradient(135deg,var(--bg3),#1e253a);
+  border:1px dashed var(--border);border-radius:var(--r);
+  padding:28px 20px;margin-bottom:15px;text-align:center;
+}
+.empty-state-dashboard h3{font-size:17px;margin-bottom:6px}
+.empty-state-dashboard p{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px}
+.empty-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;text-align:left}
+.empty-step{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.2);border-radius:10px;padding:12px 14px}
+.empty-step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--amber);color:var(--bg);
+  font-weight:800;font-size:13px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.empty-step-text{font-size:13px;color:var(--text);font-weight:600}
+.empty-step-sub{font-size:11px;color:var(--text2)}
+.btn-empty-cta{
+  width:100%;padding:16px;border-radius:12px;border:none;
+  background:var(--amber);color:var(--bg);
+  font-weight:800;font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:.15s;
+}
+.btn-empty-cta:active{transform:scale(.98)}
+.empty-state-simple{
+  text-align:center;padding:36px 20px;
+  color:var(--text2);
+}
+.empty-state-simple .es-icon{font-size:40px;margin-bottom:10px}
+.empty-state-simple .es-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty-state-simple .es-sub{font-size:12px;line-height:1.5;margin-bottom:16px}
+.btn-empty-secondary{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:11px 20px;border-radius:10px;border:1px solid var(--border);
+  background:var(--bg3);color:var(--text);font-weight:700;font-size:13px;
+  cursor:pointer;transition:.15s;
+}
+.btn-empty-secondary:active{background:var(--bg4)}
 </style>
 </head>
 <body>
 
 <div class="hamburger-menu">
-  <div class="hamburger-title">Mis Finanzas HN Pro</div>
+  <div class="hamburger-spacer"></div>
+  <div class="hamburger-title">Mi Pisto HN</div>
   <button class="hamburger-btn" onclick="toggleHamburger()" title="Más secciones">☰</button>
 </div>
 
@@ -332,6 +421,10 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <button class="hamburger-close" onclick="toggleHamburger()">✕</button>
   </div>
   <div class="hamburger-nav">
+
+    <!-- ── OPERACIONES DIARIAS ── -->
+    <div class="more-section-label">Operaciones</div>
+
     <div class="hamburger-item" onclick="switchView('cobrar');toggleHamburger()">
       <div class="hamburger-item-icon" style="background:rgba(46,204,138,.15)">💰</div>
       <div><div>Cobrar</div><div style="font-size:11px;color:var(--text2);font-weight:400">Dinero que me deben</div></div>
@@ -340,7 +433,6 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <div class="hamburger-item-icon" style="background:rgba(232,93,93,.15)">💸</div>
       <div><div>Pagar</div><div style="font-size:11px;color:var(--text2);font-weight:400">Lo que debo pagar</div></div>
     </div>
-    <hr class="hamburger-divider">
     <div class="hamburger-item" onclick="switchView('prestamos');toggleHamburger()">
       <div class="hamburger-item-icon" style="background:rgba(240,165,0,.15)">🏦</div>
       <div><div>Préstamos</div><div style="font-size:11px;color:var(--text2);font-weight:400">Bancarios y personales</div></div>
@@ -351,13 +443,33 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     </div>
     <div class="hamburger-item" onclick="switchView('pagos');toggleHamburger()">
       <div class="hamburger-item-icon" style="background:rgba(155,127,232,.15)">🔔</div>
-      <div><div>Pagos Recurrentes</div><div style="font-size:11px;color:var(--text2);font-weight:400">Servicios y alertas</div></div>
+      <div><div>Pagos Recurrentes</div><div style="font-size:11px;color:var(--text2);font-weight:400">Servicios y suscripciones</div></div>
     </div>
-    <hr class="hamburger-divider">
+
+    <!-- ── VISTAS DE DETALLE ── -->
+    <div class="more-section-label" style="margin-top:6px">Detalle</div>
+
+    <div class="hamburger-item" onclick="switchView('gastos');toggleHamburger()">
+      <div class="hamburger-item-icon" style="background:rgba(232,93,93,.12)">📉</div>
+      <div><div>Todos los Gastos</div><div style="font-size:11px;color:var(--text2);font-weight:400">Lista completa con filtros</div></div>
+    </div>
+    <div class="hamburger-item" onclick="switchView('ingresos');toggleHamburger()">
+      <div class="hamburger-item-icon" style="background:rgba(46,204,138,.12)">📈</div>
+      <div><div>Todos los Ingresos</div><div style="font-size:11px;color:var(--text2);font-weight:400">Salarios y entradas</div></div>
+    </div>
+
+    <!-- ── CONFIGURACIÓN DEL SISTEMA ── -->
+    <div class="more-section-label" style="margin-top:6px">Configuración del Sistema</div>
+
     <div class="hamburger-item" onclick="openModal('modal-budget-rules');toggleHamburger()">
-      <div class="hamburger-item-icon" style="background:rgba(46,204,138,.15)">📊</div>
-      <div><div>Reglas de Presupuesto</div><div style="font-size:11px;color:var(--text2);font-weight:400">Distribución personalizada</div></div>
+      <div class="hamburger-item-icon" style="background:rgba(155,127,232,.15)">📊</div>
+      <div><div>Reglas de Presupuesto</div><div style="font-size:11px;color:var(--text2);font-weight:400">Distribución 65/20/15</div></div>
     </div>
+    <div class="hamburger-item" onclick="switchView('config');toggleHamburger()">
+      <div class="hamburger-item-icon" style="background:rgba(155,127,232,.12)">⚙️</div>
+      <div><div>Configuración</div><div style="font-size:11px;color:var(--text2);font-weight:400">PIN, respaldo y seguridad</div></div>
+    </div>
+
   </div>
 </div>
 
@@ -392,7 +504,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div style="display:flex;align-items:center;gap:12px;flex:1">
     <div style="font-size:24px">📲</div>
     <div style="flex:1">
-      <div style="font-weight:700;font-size:14px">Instala Mis Finanzas HN</div>
+      <div style="font-weight:700;font-size:14px">Instala Mi Pisto HN</div>
       <div style="font-size:11px;color:var(--bg);opacity:0.9;margin-top:2px">Accede rápido • Funciona sin internet</div>
     </div>
   </div>
@@ -431,7 +543,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 
 <div id="onboarding" class="modal">
   <div class="modal-content">
-    <h2 style="margin-bottom:10px">💰 Mis Finanzas HN <span class="badge badge-secure">PRO</span></h2>
+    <h2 style="margin-bottom:10px">💰 Mi Pisto HN <span class="badge badge-secure">PRO</span></h2>
     <p style="color:var(--text2);font-size:14px;margin-bottom:20px">Configura tu perfil una sola vez.<br>La app hará los cálculos automáticamente.</p>
     <input type="text" id="ob-nombre" class="input-field" placeholder="Tu nombre">
     <input type="number" id="ob-salario" class="input-field" placeholder="¿Cuánto dinero tienes actualmente? (L)">
@@ -452,7 +564,10 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <div class="survival-box">
       <span class="survival-label">Índice de Libertad Financiera</span>
       <span id="survival-val" class="survival-number">0</span>
-      <span style="font-size: 11px; color: var(--text2)">Días de supervivencia sin ingresos (Basado en gastos fijos)</span>
+      <span style="font-size:11px;color:var(--text2)">Días de supervivencia sin ingresos</span>
+      <div style="margin-top:8px">
+        <span id="survival-status" class="survival-status warning">🟡 Calculando…</span>
+      </div>
   </div>
 
   <!-- WIDGET LIQUIDEZ 7 DÍAS (Opción 6) -->
@@ -1087,16 +1202,33 @@ function clearOCRCache() {
   
 // ========== FUNCIONES DE SUPERVIVENCIA Y GRÁFICO ==========
 function updateSurvivalIndex(balance) {
-    const fijosMensual = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'fijo').reduce((a, b) => a + b.amount, 0) || 1; 
+    const fijosMensual = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'fijo' && !t.deletedAt).reduce((a, b) => a + b.amount, 0) || 1;
     const gastoDiario = fijosMensual / 30;
-    const dias = Math.floor(balance / (gastoDiario || 1));
-    const el = document.getElementById('survival-val');
-    if(el) {
-        el.textContent = dias < 0 ? 0 : dias;
-        if(dias > 60) el.style.color = 'var(--green)';
-        else if(dias < 15) el.style.color = 'var(--red)';
-        else el.style.color = 'var(--amber)';
+    const dias = Math.max(0, Math.floor(balance / (gastoDiario || 1)));
+
+    const el  = document.getElementById('survival-val');
+    const box = document.querySelector('.survival-box');
+    const statusEl = document.getElementById('survival-status');
+
+    // Umbrales: < 30 rojo | 30–90 amarillo | > 90 verde
+    let state_class, statusClass, statusText, numColor;
+    if (dias < 30) {
+        state_class = 'state-danger';  statusClass = 'danger';
+        statusText  = '🔴 Riesgo alto — menos de 30 días';
+        numColor    = 'var(--red)';
+    } else if (dias <= 90) {
+        state_class = 'state-warning'; statusClass = 'warning';
+        statusText  = '🟡 Precaución — entre 30 y 90 días';
+        numColor    = 'var(--amber)';
+    } else {
+        state_class = 'state-safe';    statusClass = 'safe';
+        statusText  = '🟢 Seguro — más de 90 días';
+        numColor    = 'var(--green)';
     }
+
+    if (el) { el.textContent = dias; el.style.color = numColor; }
+    if (box) { box.classList.remove('state-danger','state-warning','state-safe'); box.classList.add(state_class); }
+    if (statusEl) { statusEl.className = `survival-status ${statusClass}`; statusEl.textContent = statusText; }
 }
 
 function renderDoughnutChart() {
@@ -1300,13 +1432,13 @@ function saveMeta(){const nombre=document.getElementById('meta-nombre').value,ob
 function openAbono(id){const g=state.goals.find(x=>x.id===id);if(!g)return;document.getElementById('abono-meta-nombre').textContent=g.nombre;document.getElementById('abono-meta-id').value=id;openModal('modal-abono')}
 function saveAbono(){const id=parseInt(document.getElementById('abono-meta-id').value),monto=parseFloat(document.getElementById('abono-monto').value);if(!monto||monto<=0)return alert('Monto inválido');const g=state.goals.find(x=>x.id===id);if(g){g.actual+=monto;state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Ahorro',subcat:`Meta: ${g.nombre}`,date:new Date().toISOString()});save();closeModal('modal-abono');renderAll()}document.getElementById('abono-monto').value=''}
 function deleteMeta(id){if(confirm('¿Eliminar?')){state.goals=state.goals.filter(g=>g.id!==id);save();renderAll()}}
-function renderMetas(){const container=document.getElementById('metas-list');if(!container)return;container.innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="font-weight:700">${g.nombre}</div><div style="font-size:12px;color:var(--text2)">${fL(g.actual)} de ${fL(g.objetivo)}</div><div style="height:8px;background:var(--bg4);border-radius:4px;margin:10px 0"><div style="width:${pct}%;height:100%;background:var(--green)"></div></div><button class="btn btn-primary" onclick="openAbono(${g.id})">💰 Abonar</button><button onclick="deleteMeta(${g.id})" style="background:none;border:none;color:var(--red);float:right;margin-top:10px">Eliminar</button></div>`}).join('')}
+function renderMetas(){const container=document.getElementById('metas-list');if(!container)return;if(state.goals.length===0){container.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🎯</div><div class="es-title">Sin metas de ahorro</div><div class="es-sub">Define una meta (viaje, fondo de emergencia, auto) y rastrea tu progreso.</div><button class="btn-empty-secondary" onclick="openModal('modal-meta')">➕ Crear primera meta</button></div>`;return;}container.innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="font-weight:700">${g.nombre}</div><div style="font-size:12px;color:var(--text2)">${fL(g.actual)} de ${fL(g.objetivo)}</div><div style="height:8px;background:var(--bg4);border-radius:4px;margin:10px 0"><div style="width:${pct}%;height:100%;background:var(--green)"></div></div><button class="btn btn-primary" onclick="openAbono(${g.id})">💰 Abonar</button><button onclick="deleteMeta(${g.id})" style="background:none;border:none;color:var(--red);float:right;margin-top:10px">Eliminar</button></div>`}).join('')}
 function renderDashboardGoals(){const container=document.getElementById('dashboard-goals');if(!container)return;container.innerHTML=state.goals.slice(0,3).map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="goal-mini"><div class="goal-mini-header"><span>${g.nombre}</span><span>${pct.toFixed(0)}%</span></div><div class="goal-mini-bar"><div class="goal-mini-progress" style="width:${pct}%"></div></div></div>`}).join('')}
 
 // ========== COBRAR Y PAGAR (MEJORADO CON FLUJO DE CAJA) ==========
 function saveCobrar(){const persona=document.getElementById('cobrar-persona').value.trim(),monto=parseFloat(document.getElementById('cobrar-monto').value),pagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;if(!persona||!monto)return;state.receivables.push({id:Date.now(),persona,monto,pagado,fecha:document.getElementById('cobrar-fecha').value});save();closeModal('modal-cobrar');renderAll();}
-function renderCobrar(){const c=document.getElementById('cobrar-list');if(!c)return;c.innerHTML=state.receivables.map(r=>`<div class="card card-receivable"><div>${r.persona} • Pendiente: ${fL(r.monto-(r.pagado||0))}</div><button class="btn btn-primary" onclick="abonarCobrar(${r.id})">Abonar</button></div>`).join('')}
-function abonarCobrar(id){
+function renderCobrar(){const c=document.getElementById('cobrar-list');if(!c)return;if(state.receivables.length===0){c.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🤝</div><div class="es-title">Nadie te debe dinero</div><div class="es-sub">Registra aquí los préstamos que has hecho a otras personas para llevar el control.</div><button class="btn-empty-secondary" onclick="openModal('modal-cobrar')">➕ Registrar cobro pendiente</button></div>`;return;}c.innerHTML=state.receivables.map(r=>`<div class="card card-receivable"><div>${r.persona} • Pendiente: ${fL(r.monto-(r.pagado||0))}</div><button class="btn btn-primary" onclick="abonarCobrar(${r.id})">Abonar</button></div>`).join('')}
+function renderPagar(){const c=document.getElementById('pagar-list');if(!c)return;if(state.payables.length===0){c.innerHTML=`<div class="empty-state-simple"><div class="es-icon">✅</div><div class="es-title">Sin deudas personales</div><div class="es-sub">Cuando debas dinero a alguien (no a un banco), regístralo aquí para no olvidarlo.</div><button class="btn-empty-secondary" onclick="openModal('modal-pagar')">➕ Registrar deuda personal</button></div>`;return;}c.innerHTML=state.payables.map(p=>`<div class="card card-debt"><div>${p.creditor} • Pendiente: ${fL(p.monto-(p.pagado||0))}</div><button class="btn btn-secondary" onclick="abonarPagar(${p.id})">Abonar</button></div>`).join('')}
     const r = state.receivables.find(x => x.id === id);
     if (!r) return;
     const pendiente = r.monto - (r.pagado || 0);
@@ -1336,6 +1468,7 @@ function abonarPagar(id){
 function savePrestamo(){const entidad=document.getElementById('prest-entidad').value,monto=parseFloat(document.getElementById('prest-monto').value);state.prestamos.push({id:Date.now(),entidad,monto,cuota:calculateLoan(),cuotasPagadas:0,cuotasTotal:parseInt(document.getElementById('prest-cuotas').value)});save();closeModal('modal-prestamo');renderAll();}
 function renderPrestamos(){
     const c=document.getElementById('prestamos-list');if(!c)return;
+    if(state.prestamos.length===0){c.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🏦</div><div class="es-title">Sin préstamos registrados</div><div class="es-sub">Agrega tus préstamos bancarios para llevar control de cuotas, intereses y saldo.</div><button class="btn-empty-secondary" onclick="openModal('modal-prestamo')">➕ Agregar préstamo</button></div>`;return;}
     let totalPrestado=0;
     c.innerHTML=state.prestamos.map(p=>{
         totalPrestado+=p.monto;
@@ -1365,6 +1498,7 @@ function saveTarjeta(){
 function limpiarFormTarjeta(){['tc-nombre','tc-corte','tc-pago','tc-limite','tc-saldo','tc-tasa'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('tc-calcular-minimo').checked=true;}
 function renderTarjetas(){
     const container=document.getElementById('tarjetas-list'),resumenContainer=document.getElementById('resumen-pagos-minimos');if(!container)return;
+    if(state.tarjetas.length===0){container.innerHTML=`<div class="empty-state-simple"><div class="es-icon">💳</div><div class="es-title">Sin tarjetas registradas</div><div class="es-sub">Agrega tus tarjetas de crédito para monitorear saldos, fechas de corte y pagos mínimos.</div><button class="btn-empty-secondary" onclick="openModal('modal-tarjeta')">➕ Agregar tarjeta</button></div>`;return;}
     let totalDeuda=0,totalPagoMinimo=0;
     container.innerHTML=state.tarjetas.map(t=>{
         totalDeuda+=t.saldo;
@@ -1393,7 +1527,7 @@ function deleteTarjeta(id){if(confirm('¿Eliminar esta tarjeta? Se perderá el r
 
 // ========== PAGOS RECURRENTES ==========
 function savePagoRecurrente(){const servicio=document.getElementById('pago-servicio').value,monto=parseFloat(document.getElementById('pago-monto').value),dia=parseInt(document.getElementById('pago-dia').value);state.pagosRecurrentes.push({id:Date.now(),servicio,monto,dia,pagado:0});save();closeModal('modal-pago-recurrente');renderAll();}
-function renderPagosRecurrentes(){const c=document.getElementById('pagos-list');if(!c)return;c.innerHTML=state.pagosRecurrentes.map(p=>`<div class="card card-credit"><div>${p.servicio} • Día: ${p.dia}</div><button class="btn btn-primary" onclick="marcarPagoRecurrente(${p.id})">Pagado</button></div>`).join('')}
+function renderPagosRecurrentes(){const c=document.getElementById('pagos-list');if(!c)return;if(state.pagosRecurrentes.length===0){c.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🔔</div><div class="es-title">Sin pagos recurrentes</div><div class="es-sub">Registra tus servicios fijos (agua, luz, internet) y recibe alertas antes de su vencimiento.</div><button class="btn-empty-secondary" onclick="openModal('modal-pago-recurrente')">➕ Agregar servicio</button></div>`;return;}c.innerHTML=state.pagosRecurrentes.map(p=>`<div class="card card-credit"><div>${p.servicio} • Día: ${p.dia}</div><button class="btn btn-primary" onclick="marcarPagoRecurrente(${p.id})">Pagado</button></div>`).join('')}
 function marcarPagoRecurrente(id){const p=state.pagosRecurrentes.find(x=>x.id===id);if(p){p.pagado+=p.monto;save();renderAll()}}
 
 // ========== CONCILIACIÓN v2 — ASIENTO COMPENSATORIO (Opción 3) ==========
@@ -1456,7 +1590,13 @@ function renderGastos(){
     document.getElementById('gastos-mes').textContent = fL(total);
     const container = document.getElementById('gastos-list');
     if (!container) return;
-    if (gastos.length === 0) { container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:13px">Sin gastos registrados</div>'; return; }
+    if (gastos.length === 0) {
+        container.innerHTML = `<div class="empty-state-simple">
+          <div class="es-icon">📭</div>
+          <div class="es-title">Sin gastos registrados</div>
+          <div class="es-sub">Registra tu primer gasto tocando el botón ➕ o escaneando un recibo.</div>
+          <button class="btn-empty-secondary" onclick="openModal('modal-gasto')">📝 Registrar gasto</button>
+        </div>`; return; }
     container.innerHTML = gastos.slice().reverse().map(t => {
         const tieneFactura = t.facturaImagen ? true : false;
         const etiqPill = t.etiqueta ? `<span class="etiqueta-pill">#${t.etiqueta}</span>` : '';
@@ -1484,7 +1624,13 @@ function renderIngresos(){
     document.getElementById('ingreso-salario').textContent = fL(ingresos.reduce((a,b)=>a+b.amount,0));
     const container = document.getElementById('ingresos-list');
     if (!container) return;
-    if (ingresos.length === 0) { container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:13px">Sin ingresos registrados</div>'; return; }
+    if (ingresos.length === 0) {
+        container.innerHTML = `<div class="empty-state-simple">
+          <div class="es-icon">💵</div>
+          <div class="es-title">Sin ingresos registrados</div>
+          <div class="es-sub">Registra tu salario u otro ingreso tocando el botón ➕.</div>
+          <button class="btn-empty-secondary" onclick="openModal('modal-ingreso')">💰 Registrar ingreso</button>
+        </div>`; return; }
     container.innerHTML = ingresos.slice().reverse().map(t => `
         <div class="card" style="padding:14px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1502,7 +1648,7 @@ function renderIngresos(){
 }
 
 function renderDashboard(){
-    const normalTransactions=state.transactions.filter(t=>t.type!=='conciliacion');
+    const normalTransactions=state.transactions.filter(t=>t.type!=='conciliacion'&&!t.deletedAt);
     const income=normalTransactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
     const expense=normalTransactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
     const extra=normalTransactions.filter(t=>t.type==='expense'&&t.tipo==='extra').reduce((a,b)=>a+b.amount,0);
@@ -1514,9 +1660,44 @@ function renderDashboard(){
     document.getElementById('total-income').textContent=fL(income);
     document.getElementById('total-expense').textContent=fL(expense);
     document.getElementById('total-extra').textContent=fL(extra);
-    
+
+    // ── EMPTY STATE: sin movimientos ──
     const recent = state.transactions.filter(t => !t.deletedAt).slice().reverse().slice(0,5);
-    document.getElementById('recent-history').innerHTML = recent.map(t => {
+    const recentEl = document.getElementById('recent-history');
+    if (recent.length === 0) {
+        recentEl.innerHTML = `
+        <div class="empty-state-dashboard">
+          <h3>👋 ¡Bienvenido a Mi Pisto HN!</h3>
+          <p>Aún no tienes movimientos registrados.<br>Empieza en 3 pasos simples:</p>
+          <div class="empty-steps">
+            <div class="empty-step">
+              <div class="empty-step-num">1</div>
+              <div>
+                <div class="empty-step-text">Registra tu primer ingreso</div>
+                <div class="empty-step-sub">Toca ➕ abajo → "Nuevo Ingreso"</div>
+              </div>
+            </div>
+            <div class="empty-step">
+              <div class="empty-step-num">2</div>
+              <div>
+                <div class="empty-step-text">Agrega un gasto de hoy</div>
+                <div class="empty-step-sub">Toca ➕ abajo → "Nuevo Gasto" o escanea un recibo</div>
+              </div>
+            </div>
+            <div class="empty-step">
+              <div class="empty-step-num">3</div>
+              <div>
+                <div class="empty-step-text">Mira tu saldo real</div>
+                <div class="empty-step-sub">El dashboard se actualiza automáticamente</div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-empty-cta" onclick="toggleFabMenu()">
+            ➕ Registrar primer movimiento
+          </button>
+        </div>`;
+    } else {
+        recentEl.innerHTML = recent.map(t => {
         const tieneFactura = t.facturaImagen ? true : false;
         const etiqPill = t.etiqueta ? `<span class="etiqueta-pill">#${t.etiqueta}</span>` : '';
         return `
@@ -1537,7 +1718,8 @@ function renderDashboard(){
             </div>
         </div>
         `;
-    }).join('') || '<p style="text-align:center;color:var(--text2);padding:20px 0">Sin movimientos</p>';
+    }).join('');
+    }
     
     renderDashboardGoals();
     updateSurvivalIndex(balance);
@@ -2444,7 +2626,7 @@ closeModal = function(id) {
 // SOBRESCRIBIR window.onload (async + IDB)
 // ==========================================
 window.onload = async function() {
-  console.log('🚀 Mis Finanzas HN cargando...');
+  console.log('🚀 Mi Pisto HN cargando...');
 
   // 1. Solicitar persistencia al SO
   await requestPersistence();
@@ -2498,7 +2680,7 @@ renderAll = function() {
   }, 100);
 };
 
-console.log('✅ Mejoras v1.1 cargadas: PIN sessionStorage, Papelera, Alertas, Proyeccion, Duplicados');
+console.log('✅ Mi Pisto HN v2.0 listo');
 
 </script>
 </body>
