@@ -1,4 +1,4 @@
-# mis-finanzas
+# mi-pisto-hn
 ⚠️ AVISO DE RESPONSABILIDAD:
 
 Esta aplicación es una herramienta de gestión financiera personal.
