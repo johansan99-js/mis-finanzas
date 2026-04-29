@@ -180,6 +180,51 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .cashflow-label { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
 .duplicate-warning { background:rgba(240,165,0,0.1); border:1px solid var(--amber); border-radius:6px; padding:10px; margin:10px 0; font-size:12px; color:var(--text); display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .btn-duplicate-action { width:auto !important; padding:6px 10px !important; margin:0 !important; font-size:11px !important; background:var(--red); color:white; }
+/* === OPCIÓN 6: LIQUIDEZ PROYECTADA === */
+.liquidez-widget{background:linear-gradient(135deg,var(--bg3),#1a2035);border-radius:var(--r);padding:18px;margin-bottom:15px;position:relative;overflow:hidden}
+.liquidez-widget::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(74,158,248,.12),transparent 70%);border-radius:50%}
+.liquidez-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.liquidez-title{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px}
+.liquidez-badge{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700}
+.badge-liq-safe{background:rgba(46,204,138,.2);color:var(--green)}
+.badge-liq-warning{background:rgba(240,165,0,.2);color:var(--amber)}
+.badge-liq-danger{background:rgba(232,93,93,.2);color:var(--red)}
+.liquidez-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.liquidez-box{background:rgba(0,0,0,.3);border-radius:8px;padding:10px;text-align:center}
+.liquidez-box-label{font-size:10px;color:var(--text2);margin-bottom:4px}
+.liquidez-box-value{font-size:14px;font-weight:800}
+.liquidez-bar-wrap{background:var(--bg4);border-radius:4px;height:5px;margin-bottom:12px;overflow:hidden}
+.liquidez-bar{height:100%;border-radius:4px;transition:width .6s ease}
+.liquidez-pagos{display:flex;flex-direction:column;gap:5px}
+.liquidez-pago-row{display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.25);padding:7px 10px;border-radius:6px;font-size:12px}
+.liq-dias{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700}
+.liq-dias-hoy{background:rgba(232,93,93,.3);color:var(--red)}
+.liq-dias-1-2{background:rgba(240,165,0,.3);color:var(--amber)}
+.liq-dias-3-7{background:rgba(74,158,248,.2);color:var(--blue)}
+/* === OPCIÓN 4: ETIQUETA AUTOCOMPLETE === */
+.etiqueta-wrap{position:relative;margin-bottom:12px}
+.etiqueta-input-row{display:flex;gap:8px;align-items:stretch}
+.etiqueta-input{flex:1;background:var(--bg3);border:1px solid var(--border);padding:13px;border-radius:8px;color:var(--text);font-size:14px;transition:.2s}
+.etiqueta-input:focus{outline:none;border-color:var(--blue)}
+.etiqueta-clear{background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:0 12px;color:var(--text2);cursor:pointer;font-size:18px;line-height:1;display:none;align-items:center}
+.etiqueta-clear.visible{display:flex}
+.etiqueta-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;z-index:400;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;max-height:180px;overflow-y:auto}
+.etiqueta-dropdown.open{display:block}
+.etiqueta-option{padding:10px 14px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;align-items:center;transition:background .1s}
+.etiqueta-option:hover{background:var(--bg3)}
+.etiqueta-option-count{font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 6px;border-radius:10px}
+.etiqueta-option-new{color:var(--blue);font-style:italic}
+.etiqueta-pill{display:inline-block;background:rgba(74,158,248,.15);color:var(--blue);border:1px solid rgba(74,158,248,.3);padding:2px 7px;border-radius:10px;font-size:10px;margin-top:3px;font-weight:600}
+.chip-etiqueta{background:var(--bg4);border:1px solid var(--border);padding:5px 10px;border-radius:14px;font-size:11px;cursor:pointer;color:var(--text2);transition:.15s;white-space:nowrap}
+.chip-etiqueta:hover,.chip-etiqueta.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.etiquetas-rapidas{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+/* === OPCIÓN 3: CONCILIACIÓN MEJORADA === */
+.conciliacion-diff{padding:11px;border-radius:8px;margin:10px 0;text-align:center;font-weight:700;font-size:14px;display:none}
+.conciliacion-diff.pos{background:rgba(46,204,138,.15);border:1px solid var(--green);color:var(--green)}
+.conciliacion-diff.neg{background:rgba(232,93,93,.15);border:1px solid var(--red);color:var(--red)}
+.conciliacion-diff.zero{background:rgba(46,204,138,.1);border:1px solid var(--green);color:var(--green)}
+.badge-conciliacion{background:rgba(155,127,232,.2);color:var(--purple);padding:3px 7px;border-radius:4px;font-size:10px;font-weight:700}
+.badge-conciliacion-pos{background:rgba(74,158,248,.2);color:var(--blue);padding:3px 7px;border-radius:4px;font-size:10px;font-weight:700}
 </style>
 </head>
 <body>
@@ -304,6 +349,9 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <span style="font-size: 11px; color: var(--text2)">Días de supervivencia sin ingresos (Basado en gastos fijos)</span>
   </div>
 
+  <!-- WIDGET LIQUIDEZ 7 DÍAS (Opción 6) -->
+  <div id="liquidez-7dias"></div>
+
   <div class="chart-wrapper">
       <h4 style="font-size:12px; margin-bottom:10px; text-align:center">Distribución: Vital vs Ocio</h4>
       <canvas id="mainChart" style="max-height: 180px; width: 100%;"></canvas>
@@ -321,12 +369,15 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   
   <div class="reconcile-box">
     <h4>🏦 Conciliación Bancaria</h4>
-    <p style="font-size:11px;color:var(--text2);margin-bottom:10px">Ajusta tu saldo al valor real de tu banco</p>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:10px">Genera un asiento compensatorio auditable en el histórico</p>
     <div class="input-row">
-      <input type="number" id="reconcile-balance" class="input-field" placeholder="Saldo real del banco" style="margin:0">
+      <input type="number" id="reconcile-balance" class="input-field" placeholder="Saldo real del banco" style="margin:0" oninput="previewConciliacion()">
       <button class="btn btn-secondary" onclick="reconcileBalance()" style="margin:0;height:fit-content">Ajustar</button>
     </div>
-    <p id="reconcile-diff" style="font-size:11px;color:var(--text2);margin-top:8px;display:none"></p>
+    <div id="reconcile-diff-preview" class="conciliacion-diff"></div>
+    <div id="reconcile-nota-wrap" style="display:none;margin-top:8px">
+      <input type="text" id="reconcile-nota" class="input-field" placeholder="Nota (opcional): Ej: Ajuste por cobro no registrado" style="margin:0">
+    </div>
   </div>
 
   <div class="daily-summary">
@@ -568,6 +619,16 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <select id="gasto-tarjeta" class="input-field hidden">
       <option value="">Selecciona tarjeta...</option>
     </select>
+    <!-- CAMPO ETIQUETA (Opción 4) -->
+    <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px">Etiqueta <span style="font-weight:400">(opcional · para filtros)</span></label>
+    <div class="etiqueta-wrap" id="etiqueta-wrap-gasto">
+      <div class="etiqueta-input-row">
+        <input type="text" id="etiqueta-input" class="etiqueta-input" placeholder="Ej: quincena, urgente, regalo…" autocomplete="off" oninput="onEtiquetaInput()" onfocus="onEtiquetaFocus()" onblur="onEtiquetaBlur()" onkeydown="onEtiquetaKeydown(event)">
+        <button class="etiqueta-clear" id="etiqueta-clear" onclick="clearEtiqueta()">×</button>
+      </div>
+      <div class="etiqueta-dropdown" id="etiqueta-dropdown"></div>
+    </div>
+    <div id="chips-rapidas-gasto" class="etiquetas-rapidas"></div>
     <button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button>
     <button class="btn btn-primary" onclick="saveGasto()">Guardar Movimiento</button>
   </div>
@@ -935,7 +996,8 @@ function saveGasto(){
           subcat = document.getElementById('gasto-subcat').value || '',
           pago = document.getElementById('gasto-pago').value,
           tipo = document.getElementById('gasto-tipo').value || 'extra',
-          banco = document.getElementById('gasto-banco').value || '';
+          banco = document.getElementById('gasto-banco').value || '',
+          etiqueta = (document.getElementById('etiqueta-input')?.value || '').trim();
           
     if(!monto || monto <= 0) return alert('Monto inválido');
     
@@ -951,9 +1013,10 @@ function saveGasto(){
         pago: pago,
         tipo: tipo,
         banco: banco,
+        etiqueta: etiqueta,
         date: new Date().toISOString(),
-        facturaImagen: facturaImagen,        // NUEVO
-        numeroFactura: `FAC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}` // NUEVO
+        facturaImagen: facturaImagen,
+        numeroFactura: `FAC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`
     };
     
     if(pago === 'credito'){
@@ -981,6 +1044,7 @@ function saveGasto(){
     ['gasto-monto','gasto-cat','gasto-subcat','gasto-banco'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('gasto-tipo').value = 'extra';
     document.getElementById('ocr-status').style.display = 'none';
+    clearEtiqueta();
     
     alert('✅ Gasto guardado. Factura adjuntada si fue escaneada.');
 }
@@ -1088,8 +1152,58 @@ function savePagoRecurrente(){const servicio=document.getElementById('pago-servi
 function renderPagosRecurrentes(){const c=document.getElementById('pagos-list');if(!c)return;c.innerHTML=state.pagosRecurrentes.map(p=>`<div class="card card-credit"><div>${p.servicio} • Día: ${p.dia}</div><button class="btn btn-primary" onclick="marcarPagoRecurrente(${p.id})">Pagado</button></div>`).join('')}
 function marcarPagoRecurrente(id){const p=state.pagosRecurrentes.find(x=>x.id===id);if(p){p.pagado+=p.monto;save();renderAll()}}
 
-// ========== CONCILIACIÓN ==========
-function reconcileBalance(){const real=parseFloat(document.getElementById('reconcile-balance').value);if(!real&&real!==0)return;const curr=state.saldoInicial+state.transactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0)-state.transactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);state.saldoInicial+=(real-curr);save();renderAll();document.getElementById('reconcile-balance').value='';alert('✅ Conciliado')}
+// ========== CONCILIACIÓN v2 — ASIENTO COMPENSATORIO (Opción 3) ==========
+function previewConciliacion() {
+  const real = parseFloat(document.getElementById('reconcile-balance').value);
+  const preview = document.getElementById('reconcile-diff-preview');
+  const notaWrap = document.getElementById('reconcile-nota-wrap');
+  if (!preview) return;
+  if (isNaN(real)) { preview.style.display='none'; if(notaWrap) notaWrap.style.display='none'; return; }
+  const curr = state.saldoInicial
+    + state.transactions.filter(t=>t.type==='income'&&!t.deletedAt).reduce((a,b)=>a+b.amount,0)
+    - state.transactions.filter(t=>t.type==='expense'&&!t.deletedAt).reduce((a,b)=>a+b.amount,0);
+  const diff = real - curr;
+  preview.style.display = 'block';
+  if(notaWrap) notaWrap.style.display = 'block';
+  if (diff === 0) {
+    preview.className = 'conciliacion-diff zero'; preview.textContent = '✅ Tu saldo ya está cuadrado con el banco';
+  } else {
+    const sign = diff > 0 ? '+' : '';
+    const tipo = diff > 0 ? '📈 Se registrará un ingreso compensatorio' : '📉 Se registrará un gasto compensatorio';
+    preview.className = 'conciliacion-diff ' + (diff>0?'pos':'neg');
+    preview.innerHTML = `Diferencia: ${sign}${fL(diff)}<br><small style="font-weight:400;font-size:12px">${tipo} de ${fL(Math.abs(diff))}</small>`;
+  }
+}
+
+function reconcileBalance(){
+  const real = parseFloat(document.getElementById('reconcile-balance').value);
+  if(!real && real!==0) return;
+  const curr = state.saldoInicial
+    + state.transactions.filter(t=>t.type==='income'&&!t.deletedAt).reduce((a,b)=>a+b.amount,0)
+    - state.transactions.filter(t=>t.type==='expense'&&!t.deletedAt).reduce((a,b)=>a+b.amount,0);
+  const diff = real - curr;
+  if(diff === 0) { alert('✅ Tu saldo ya está conciliado con el banco.'); return; }
+  const nota = document.getElementById('reconcile-nota')?.value?.trim() || 'Ajuste de conciliación bancaria';
+  state.transactions.push({
+    id: Date.now(),
+    type: diff > 0 ? 'income' : 'expense',
+    amount: Math.abs(diff),
+    cat: '⚖️ Conciliación',
+    subcat: nota,
+    tipo: 'conciliacion',
+    banco: 'Ajuste Manual',
+    date: new Date().toISOString(),
+    esConciliacion: true
+  });
+  save(); renderAll();
+  document.getElementById('reconcile-balance').value = '';
+  if(document.getElementById('reconcile-nota')) document.getElementById('reconcile-nota').value = '';
+  const preview = document.getElementById('reconcile-diff-preview');
+  if(preview) preview.style.display = 'none';
+  const notaWrap = document.getElementById('reconcile-nota-wrap');
+  if(notaWrap) notaWrap.style.display = 'none';
+  alert(diff > 0 ? `✅ Ajuste +${fL(diff)} registrado como ingreso de conciliación.` : `✅ Ajuste ${fL(diff)} registrado como gasto de conciliación.`);
+}
 
 // ========== RENDERIZADO DE VISTAS ==========
 function renderGastos(){
@@ -1151,12 +1265,14 @@ function renderDashboard(){
             <div>
                 <div style="font-weight:600">${t.cat} ${tieneFactura?'🧾':''}</div>
                 <div style="font-size:11px;color:var(--text2)">${t.subcat||''} ${t.banco?`(${t.banco})`:''}</div>
+                ${t.etiqueta ? `<span class="etiqueta-pill">#${t.etiqueta}</span>` : ''}
             </div>
             <div style="display:flex; align-items:center;">
-                <div style="font-weight:700;color:${t.type==='income'?'var(--green)':'var(--red)'}; margin-right:5px;">
+                <div style="font-weight:700;color:${t.esConciliacion?(t.type==='income'?'var(--blue)':'var(--purple)'):(t.type==='income'?'var(--green)':'var(--red)')}; margin-right:5px;">
                     ${t.type==='income'?'+':'-'}${fL(t.amount)}
                 </div>
                 ${tieneFactura && t.type==='expense' ? `<button onclick="verFactura(${t.id})" style="background:none;border:none;color:var(--blue);cursor:pointer;" title="Ver factura">🧾</button>` : ''}
+                ${t.esConciliacion ? `<span class="badge-conciliacion${t.type==='income'?'-pos':''}">⚖️ Conciliación</span>` : ''}
             </div>
         </div>
         `;
@@ -1430,6 +1546,7 @@ function closeModalIfBg(e,id){if(e.target.id===id){if(hasUnsavedModalData){if(co
 
 function renderAll(){
     renderDashboard();renderGastos();renderIngresos();renderMetas();renderCobrar();renderPagar();renderPrestamos();renderTarjetas();renderPagosRecurrentes();renderHistorico();renderBudgetRules();
+    setTimeout(function(){ renderLiquidez7Dias(); renderChipsRapidas(); }, 50);
 }
 // ========== INICIALIZACIÓN ==========
 window.onload = () => {
@@ -1690,13 +1807,155 @@ function ejecutarVerificacionesNuevas() {
   setTimeout(function() {
     verificarAlertasPresupuesto();
     calcularProyeccionCaja();
+    renderLiquidez7Dias();
     detectarDuplicados();
     renderPapelera();
+    renderChipsRapidas();
   }, 200);
 }
 
 // ==========================================
-// 🛡️ CAPA DE PERSISTENCIA SEGURA (IndexedDB)
+// 📊 OPCIÓN 6: LIQUIDEZ PROYECTADA 7 DÍAS
+// ==========================================
+function renderLiquidez7Dias() {
+  const container = document.getElementById('liquidez-7dias');
+  if (!container) return;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const saldoActual = state.saldoInicial
+    + state.transactions.filter(t=>t.type==='income'&&!t.deletedAt).reduce((a,b)=>a+b.amount,0)
+    - state.transactions.filter(t=>t.type==='expense'&&!t.deletedAt).reduce((a,b)=>a+b.amount,0);
+  const pagosProximos = [];
+  // Pagos recurrentes
+  (state.pagosRecurrentes||[]).forEach(p => {
+    let fp = new Date(hoy.getFullYear(), hoy.getMonth(), p.dia);
+    if (fp < hoy) fp.setMonth(fp.getMonth()+1);
+    const dias = Math.ceil((fp-hoy)/86400000);
+    if (dias>=0 && dias<=7) pagosProximos.push({nombre:p.servicio, monto:p.monto, dias});
+  });
+  // Cuotas préstamos
+  (state.prestamos||[]).forEach(p => {
+    if (!p.cuota || p.cuotasPagadas >= p.cuotasTotal) return;
+    const diaPago = p.fechaPago ? new Date(p.fechaPago).getDate() : 5;
+    let fp = new Date(hoy.getFullYear(), hoy.getMonth(), diaPago);
+    if (fp < hoy) fp.setMonth(fp.getMonth()+1);
+    const dias = Math.ceil((fp-hoy)/86400000);
+    if (dias>=0 && dias<=7) pagosProximos.push({nombre:'Cuota: '+p.entidad, monto:p.cuota, dias});
+  });
+  // Pagos mínimos tarjetas
+  (state.tarjetas||[]).forEach(t => {
+    if (t.saldo<=0) return;
+    let fp = new Date(hoy.getFullYear(), hoy.getMonth(), t.pago||15);
+    if (fp < hoy) fp.setMonth(fp.getMonth()+1);
+    const dias = Math.ceil((fp-hoy)/86400000);
+    if (dias>=0 && dias<=7) pagosProximos.push({nombre:'Mín. '+t.nombre, monto:Math.max(t.saldo*0.05,100), dias});
+  });
+  const totalEgresos = pagosProximos.reduce((a,b)=>a+b.monto,0);
+  if (totalEgresos===0 && pagosProximos.length===0) { container.innerHTML=''; return; }
+  const liquidezReal = saldoActual - totalEgresos;
+  const ratio = saldoActual>0 ? Math.max(0, liquidezReal/saldoActual) : 0;
+  let estado, barColor;
+  if (liquidezReal<0)    { estado='danger';  barColor='var(--red)'; }
+  else if (ratio<0.3)    { estado='warning'; barColor='var(--amber)'; }
+  else                   { estado='safe';    barColor='var(--green)'; }
+  const badges = {safe:'badge-liq-safe',warning:'badge-liq-warning',danger:'badge-liq-danger'};
+  const labels = {safe:'Liquidez Saludable',warning:'Liquidez Ajustada',danger:'⚠️ Riesgo de Iliquidez'};
+  const pct = Math.min(100,(ratio*100)).toFixed(0);
+  const filas = pagosProximos.sort((a,b)=>a.dias-b.dias).map(p=>{
+    const dc = p.dias===0?'liq-dias-hoy':p.dias<=2?'liq-dias-1-2':'liq-dias-3-7';
+    const dl = p.dias===0?'HOY':p.dias===1?'1 día':p.dias+' días';
+    return `<div class="liquidez-pago-row"><span style="font-weight:600">${p.nombre}</span><div style="display:flex;align-items:center;gap:8px"><span class="liq-dias ${dc}">${dl}</span><span style="font-weight:700;color:var(--red)">-${fL(p.monto)}</span></div></div>`;
+  }).join('');
+  container.innerHTML = `<div class="liquidez-widget">
+    <div class="liquidez-header"><span class="liquidez-title">Liquidez Proyectada · 7 días</span><span class="liquidez-badge ${badges[estado]}">${labels[estado]}</span></div>
+    <div class="liquidez-grid">
+      <div class="liquidez-box"><div class="liquidez-box-label">Saldo Actual</div><div class="liquidez-box-value" style="color:var(--blue)">${fL(saldoActual)}</div></div>
+      <div class="liquidez-box"><div class="liquidez-box-label">Egresos 7 días</div><div class="liquidez-box-value" style="color:var(--red)">-${fL(totalEgresos)}</div></div>
+      <div class="liquidez-box"><div class="liquidez-box-label">Disponible Real</div><div class="liquidez-box-value" style="color:${barColor}">${fL(liquidezReal)}</div></div>
+    </div>
+    <div class="liquidez-bar-wrap"><div class="liquidez-bar" style="width:${pct}%;background:${barColor}"></div></div>
+    <div class="liquidez-pagos">${filas}</div>
+  </div>`;
+}
+
+// ==========================================
+// 🏷️ OPCIÓN 4: ETIQUETAS CON AUTOCOMPLETE
+// ==========================================
+function getEtiquetasGuardadas() {
+  const freq = {};
+  (state.transactions||[]).forEach(t => {
+    if (t.etiqueta && t.etiqueta.trim()) {
+      const e = t.etiqueta.trim().toLowerCase();
+      freq[e] = (freq[e]||0)+1;
+    }
+  });
+  return Object.entries(freq).sort((a,b)=>b[1]-a[1]).map(([label,count])=>({label,count}));
+}
+
+function onEtiquetaInput() {
+  const val = (document.getElementById('etiqueta-input')?.value||'').trim().toLowerCase();
+  const todas = getEtiquetasGuardadas();
+  const matches = val ? todas.filter(e=>e.label.includes(val)) : todas.slice(0,5);
+  renderEtiquetaDropdown(matches, val);
+  toggleClearBtn();
+}
+
+function onEtiquetaFocus() {
+  const todas = getEtiquetasGuardadas().slice(0,5);
+  renderEtiquetaDropdown(todas, '');
+}
+
+function onEtiquetaBlur() {
+  setTimeout(()=>{ document.getElementById('etiqueta-dropdown')?.classList.remove('open'); }, 150);
+}
+
+function onEtiquetaKeydown(e) {
+  if(e.key==='Escape') clearEtiqueta();
+  if(e.key==='Enter'){ e.preventDefault(); document.getElementById('etiqueta-dropdown')?.classList.remove('open'); }
+}
+
+function renderEtiquetaDropdown(matches, query) {
+  const dd = document.getElementById('etiqueta-dropdown');
+  if(!dd) return;
+  if(matches.length===0 && !query){ dd.classList.remove('open'); return; }
+  let html = matches.map(e=>`<div class="etiqueta-option" onclick="selectEtiqueta('${e.label}')"><span>${e.label}</span><span class="etiqueta-option-count">${e.count}x</span></div>`).join('');
+  const exact = matches.find(e=>e.label===query);
+  if(query && !exact) html += `<div class="etiqueta-option" onclick="selectEtiqueta('${query}')"><span class="etiqueta-option-new">+ Crear "${query}"</span></div>`;
+  if(!html){ dd.classList.remove('open'); return; }
+  dd.innerHTML = html;
+  dd.classList.add('open');
+}
+
+function selectEtiqueta(val) {
+  const input = document.getElementById('etiqueta-input');
+  if(input) input.value = val;
+  document.getElementById('etiqueta-dropdown')?.classList.remove('open');
+  toggleClearBtn();
+  renderChipsRapidas();
+}
+
+function clearEtiqueta() {
+  const input = document.getElementById('etiqueta-input');
+  if(input) input.value='';
+  toggleClearBtn();
+  document.getElementById('etiqueta-dropdown')?.classList.remove('open');
+}
+
+function toggleClearBtn() {
+  const btn = document.getElementById('etiqueta-clear');
+  const val = document.getElementById('etiqueta-input')?.value;
+  if(btn) btn.classList.toggle('visible', !!(val&&val.length>0));
+}
+
+function renderChipsRapidas() {
+  const container = document.getElementById('chips-rapidas-gasto');
+  if(!container) return;
+  const top5 = getEtiquetasGuardadas().slice(0,5);
+  if(top5.length===0){ container.innerHTML=''; return; }
+  const activa = document.getElementById('etiqueta-input')?.value||'';
+  container.innerHTML = top5.map(e=>`<span class="chip-etiqueta ${e.label===activa?'active':''}" onclick="selectEtiqueta('${e.label}')">${e.label}</span>`).join('');
+}
+
+// ==========================================
 // ==========================================
 
 async function requestPersistence() {
