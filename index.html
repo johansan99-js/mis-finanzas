@@ -2736,7 +2736,7 @@ function renderGastos(){
           <button class="btn-empty-secondary" onclick="openModal('modal-gasto')">📝 Registrar gasto</button>
         </div>`; return; }
     container.innerHTML = gastos.slice().reverse().map(t => {
-        const tieneFactura = t.facturaImagen ? true : false;
+        const tieneFactura = t.facturaImagenId || t.facturaImagen; // P0-2: IDB o legacy
         const etiqPill = t.etiqueta ? `<span class="etiqueta-pill">#${t.etiqueta}</span>` : '';
         const concBadge = t.esConciliacion ? `<span class="badge-conciliacion">⚖️</span> ` : '';
         return `<div class="card" style="padding:14px">
@@ -2843,7 +2843,7 @@ function renderDashboard(){
         </div>`;
     } else {
         recentEl.innerHTML = recent.map(t => {
-        const tieneFactura = t.facturaImagen ? true : false;
+        const tieneFactura = t.facturaImagenId || t.facturaImagen; // P0-2: IDB o legacy
         const etiqPill = t.etiqueta ? `<span class="etiqueta-pill">#${t.etiqueta}</span>` : '';
         return `
         <div style="padding:12px 0;border-bottom:1px solid var(--border)">
@@ -3076,9 +3076,19 @@ function importData(event) {
 }
 
 // ========== VISOR DE FACTURAS ==========
-function verFactura(id) {
-    const gasto = state.transactions.find(t => t.id === id);
-    if (!gasto || !gasto.facturaImagen) {
+async function verFactura(id) {
+    const gasto = state.transactions.find(t => String(t.id) === String(id));
+    if (!gasto) return alert('Transacción no encontrada.');
+    
+    // P0-2: Cargar desde IDB si existe facturaImagenId, o usar facturaImagen legacy
+    let imagenBase64 = null;
+    if (gasto.facturaImagenId) {
+        imagenBase64 = await _obtenerFactura(gasto.facturaImagenId);
+    } else if (gasto.facturaImagen) {
+        imagenBase64 = gasto.facturaImagen; // legacy base64
+    }
+    
+    if (!imagenBase64) {
         alert('No hay factura adjunta a este gasto.');
         return;
     }
@@ -3088,7 +3098,7 @@ function verFactura(id) {
     modal.innerHTML = `
         <div style="position:relative;max-width:90%;max-height:90%">
             <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:-40px;right:0;background:var(--red);color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer">✕ Cerrar</button>
-            <img src="${gasto.facturaImagen}" style="max-width:100%;max-height:90vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5)">
+            <img src="${imagenBase64}" style="max-width:100%;max-height:90vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5)">
             <div style="position:absolute;bottom:-40px;left:0;color:var(--text2);font-size:12px">Factura #${gasto.numeroFactura || 'N/A'} • ${new Date(gasto.date).toLocaleDateString()}</div>
         </div>
     `;
@@ -3098,33 +3108,48 @@ function verFactura(id) {
     document.addEventListener('keydown', closeOnEsc);
 }
 
-function eliminarFactura(id) {
-    const gasto = state.transactions.find(t => t.id === id);
-    if (!gasto || !gasto.facturaImagen) {
+async function eliminarFactura(id) {
+    const gasto = state.transactions.find(t => String(t.id) === String(id));
+    if (!gasto) return alert('Transacción no encontrada.');
+    
+    // P0-2: Verificar si tiene factura en IDB o legacy
+    const tieneFac = gasto.facturaImagenId || gasto.facturaImagen;
+    if (!tieneFac) {
         alert('No hay factura para eliminar.');
         return;
     }
+    
     if (confirm('¿Eliminar la factura adjunta a este gasto?')) {
-        gasto.facturaImagen = null;
+        if (gasto.facturaImagenId) {
+            await _eliminarFactura(gasto.facturaImagenId);
+            gasto.facturaImagenId = null;
+        }
+        gasto.facturaImagen = null; // limpiar legacy si existía
         save();
         renderAll();
         alert('✅ Factura eliminada');
     }
 }
 
-function reemplazarFactura(id) {
-    const gasto = state.transactions.find(t => t.id === id);
+async function reemplazarFactura(id) {
+    const gasto = state.transactions.find(t => String(t.id) === String(id));
     if (!gasto) return;
     
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
-            gasto.facturaImagen = ev.target.result;
+        reader.onload = async (ev) => {
+            // P0-2: Guardar en IDB (no en la transacción)
+            const nuevoId = await _guardarTempFactura(ev.target.result);
+            if (gasto.facturaImagenId) {
+                await _eliminarFactura(gasto.facturaImagenId); // eliminar vieja
+            }
+            gasto.facturaImagenId = nuevoId;
+            gasto.facturaImagen = null; // limpiar legacy
             save();
             renderAll();
             alert('✅ Factura reemplazada');
