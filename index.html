@@ -3444,7 +3444,7 @@ function ejecutarTransferencia(){
   const toNom=to==='efectivo'?'Efectivo':'Ahorro';
   // Registrar como par de transacciones internas
   state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Transferencia',subcat:`Salida de ${fromNom}`,cuenta:from,tipo:'fijo',date:new Date().toISOString(),esTransferencia:true});
-  state.transactions.push({id:uid()+1,type:'income',amount:monto,cat:'Transferencia',subcat:`Entrada a ${toNom}`,cuenta:to,date:new Date().toISOString(),esTransferencia:true});
+  state.transactions.push({id:uid(),type:'income',amount:monto,cat:'Transferencia',subcat:`Entrada a ${toNom}`,cuenta:to,date:new Date().toISOString(),esTransferencia:true});
   save();closeModal('modal-transferir');renderAll();
   alert(`✅ Transferencia completada.\n${fromNom}: ${fL(state.cuentas[from])}\n${toNom}: ${fL(state.cuentas[to])}`);
 }
