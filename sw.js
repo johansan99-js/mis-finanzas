@@ -1,11 +1,12 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v3
+//  Mi Pisto HN — Service Worker v5 (P0+P1 hotfix)
 //  Paleta Guacamaya Roja · Moneda 50¢ Lempira
 //  Cuentas Efectivo + Ahorro · Conciliación por cuenta
 // ============================================================
-
-const CACHE_NAME     = 'mipistohn-v4';
-const CACHE_STATIC   = 'mipistohn-static-v4';
+// P1-10: bump de versión obligatorio para que activate purgue cachés viejos
+//        y los clientes obtengan la nueva versión del HTML/JS con los fixes.
+const VERSION = 'v5';
+const CACHE_NAME = `mipistohn-${VERSION}`;
 
 const ASSETS_REQUIRED = [
   '/mis-finanzas/',
@@ -20,7 +21,7 @@ const ASSETS_REQUIRED = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('✅ Mi Pisto HN v3 — cacheando assets...');
+      console.log('✅ Mi Pisto HN ' + VERSION + ' — cacheando assets...');
       return Promise.allSettled(
         ASSETS_REQUIRED.map(url =>
           cache.add(url).catch(err =>
@@ -41,14 +42,14 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames
-          .filter(name => name !== CACHE_NAME && name !== CACHE_STATIC)
+          .filter(name => name !== CACHE_NAME)
           .map(name => {
             console.log('🗑️ Eliminando caché antiguo:', name);
             return caches.delete(name);
           })
       );
     }).then(() => {
-      console.log('✅ Mi Pisto HN v3 activo');
+      console.log('✅ Mi Pisto HN ' + VERSION + ' activo');
       return self.clients.claim();
     })
   );
@@ -73,25 +74,32 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Para navegación (páginas HTML): network-first con fallback
+  // P1-10: navegación con caché-rápido + revalidación + timeout 4s.
+  // En 3G hondureño, esperar 30s a que falle un fetch deja la pantalla en blanco;
+  // ahora servimos el caché de inmediato si existe y refrescamos en background.
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() =>
-          caches.match(event.request)
-            .then(cached => cached ||
-              caches.match('/mis-finanzas/index.html').then(r => r ||
-              caches.match('/mis-finanzas/offline.html'))
-            )
-        )
-    );
+    event.respondWith((async () => {
+      const cached = await caches.match(event.request) ||
+                     await caches.match('/mis-finanzas/index.html');
+      const networkPromise = fetch(event.request).then(r => {
+        if (r && r.status === 200) {
+          const clone = r.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+        }
+        return r;
+      }).catch(() => null);
+
+      // Si hay caché → devolver caché de inmediato (revalidación silenciosa)
+      if (cached) {
+        event.waitUntil(networkPromise);
+        return cached;
+      }
+      // Sin caché → carrera red vs timeout 4s
+      const timeoutPromise = new Promise(res => setTimeout(() => res(null), 4000));
+      const result = await Promise.race([networkPromise, timeoutPromise]);
+      return result || (await caches.match('/mis-finanzas/offline.html')) ||
+             new Response('Offline', { status: 503 });
+    })());
     return;
   }
 
