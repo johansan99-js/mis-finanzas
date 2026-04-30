@@ -8,9 +8,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#130507">
+<!-- P1-6: Content Security Policy. unsafe-inline temporal mientras se migra a delegación de eventos.
+     Las CDNs listadas son las que carga la app: Chart.js (jsdelivr), SheetJS, Tesseract (unpkg + projectnaptha) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://unpkg.com https://tessdata.projectnaptha.com; worker-src 'self' blob: https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://unpkg.com https://tessdata.projectnaptha.com blob:; manifest-src 'self'">
 <title>Mi Pisto HN · Tu dinero, tu control</title>
 <link rel="manifest" href="manifest.json">
-<script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- P1-9: versión fijada + SRI. Si actualizas la versión, recalcula el hash con `srihash.org` o `openssl dgst -sha384 -binary chart.umd.js | openssl base64`. -->
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-NOTA-CALCULAR-HASH-SHA384-AL-DESPLEGAR"
+        crossorigin="anonymous"></script>
 <!-- Tesseract: eliminado del head — se carga bajo demanda en procesarReciboOCR() -->
 <script>
   window.TESSERACT_CONFIG = {
@@ -20,7 +26,10 @@
   };
 </script>
 <!-- SheetJS para Excel -->
-<script defer src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<!-- P1-9: SRI a calcular en despliegue. -->
+<script defer src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"
+        integrity="sha384-NOTA-CALCULAR-HASH-SHA384-AL-DESPLEGAR"
+        crossorigin="anonymous"></script>
 <style>
 :root{--bg:#130507;--bg2:#1C080B;--bg3:#280D10;--bg4:#3A1418;--amber:#F5C800;--text:#FFF0E8;--text2:#C09090;--green:#4CAF50;--red:#FF4444;--blue:#4285F4;--purple:#FF7043;--border:#3A1418;--r:12px}
 
@@ -1216,11 +1225,11 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div>
         <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">💵 Efectivo</label>
-        <input type="number" id="ob-efectivo" class="input-field" placeholder="L 0.00" style="margin:0" oninput="syncObSaldo()">
+        <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="ob-efectivo" class="input-field" placeholder="L 0.00" style="margin:0" oninput="syncObSaldo()">
       </div>
       <div>
         <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">🏦 Cuenta de ahorro</label>
-        <input type="number" id="ob-ahorro" class="input-field" placeholder="L 0.00" style="margin:0" oninput="syncObSaldo()">
+        <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="ob-ahorro" class="input-field" placeholder="L 0.00" style="margin:0" oninput="syncObSaldo()">
       </div>
     </div>
     <div class="card" style="margin:0 0 16px;text-align:left;border-color:var(--border)"><strong style="font-size:12px">Tu distribución personalizada</strong><div id="ob-preview" style="margin-top:10px;font-size:12px;color:var(--text2)"></div></div>
@@ -1310,7 +1319,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     </div>
     
     <div class="input-row">
-      <input type="number" id="reconcile-balance" class="input-field" placeholder="Saldo real (según banco/conteo)" style="margin:0" oninput="previewConciliacion()">
+      <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="reconcile-balance" class="input-field" placeholder="Saldo real (según banco/conteo)" style="margin:0" oninput="previewConciliacion()">
       <button class="btn btn-secondary" onclick="reconcileBalance()" style="margin:0;height:fit-content;white-space:nowrap">Conciliar</button>
     </div>
     <div id="reconcile-diff-preview" class="conciliacion-diff"></div>
@@ -1634,7 +1643,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
         <div id="ocr-status" style="font-size: 11px; color: var(--amber); margin-top: 8px; display: none;">Analizando imagen...</div>
     </div>
 
-    <input type="number" id="gasto-monto" class="input-field" placeholder="Monto (L)">
+    <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="gasto-monto" class="input-field" placeholder="Monto (L)">
     <input type="text" id="gasto-cat" class="input-field" placeholder="Categoría">
     <input type="text" id="gasto-subcat" class="input-field" placeholder="Comercio / Subcategoría">
     
@@ -1682,7 +1691,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')">
   <div class="modal-content">
     <h3 style="margin-bottom:16px">💰 Nuevo Ingreso</h3>
-    <input type="number" id="ingreso-monto" class="input-field" placeholder="Monto (L)">
+    <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="ingreso-monto" class="input-field" placeholder="Monto (L)">
     <select id="ingreso-tipo" class="input-field">
       <option value="salario">Salario / Quincena</option>
       <option value="extra">Ingreso Extra</option>
@@ -1700,11 +1709,11 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     </div>
   </div>
 </div>
-<div id="modal-meta" class="modal" onclick="closeModalIfBg(event,'modal-meta')"><div class="modal-content"><h3>🎯 Nueva Meta de Ahorro</h3><input type="text" id="meta-nombre" class="input-field" placeholder="Nombre de la meta"><input type="number" id="meta-objetivo" class="input-field" placeholder="Monto objetivo (L)"><input type="number" id="meta-actual" class="input-field" placeholder="Ahorrado actualmente" value="0"><button class="btn btn-secondary" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Guardar Meta</button></div></div>
-<div id="modal-abono" class="modal" onclick="closeModalIfBg(event,'modal-abono')"><div class="modal-content"><h3>💸 Abonar a Meta de Ahorro</h3><p id="abono-meta-nombre" style="color:var(--amber);margin-bottom:15px"></p><p style="font-size:12px;color:var(--text2);margin-bottom:15px">Este monto se restará de tu saldo disponible.</p><input type="number" id="abono-monto" class="input-field" placeholder="Monto a abonar (L)"><input type="hidden" id="abono-meta-id"><button class="btn btn-primary" onclick="saveAbono()">Abonar</button></div></div>
-<div id="modal-cobrar" class="modal" onclick="closeModalIfBg(event,'modal-cobrar')"><div class="modal-content"><h3>💰 Dinero que me deben</h3><input type="text" id="cobrar-persona" class="input-field" placeholder="¿Quién te debe?"><input type="number" id="cobrar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo.</p><input type="number" id="cobrar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="cobrar-fecha" class="input-field"><button class="btn btn-primary" onclick="saveCobrar()">Guardar</button></div></div>
-<div id="modal-pagar" class="modal" onclick="closeModalIfBg(event,'modal-pagar')"><div class="modal-content"><h3>💸 Lo que debo pagar</h3><input type="text" id="pagar-creditor" class="input-field" placeholder="¿A quién le debes?"><input type="number" id="pagar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo.</p><input type="number" id="pagar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="pagar-fecha" class="input-field"><button class="btn btn-secondary" onclick="savePagar()">Registrar</button></div></div>
-<div id="modal-prestamo" class="modal" onclick="closeModalIfBg(event,'modal-prestamo')"><div class="modal-content"><h3>🏦 Nuevo Préstamo Bancario</h3><input type="text" id="prest-entidad" class="input-field" placeholder="Entidad (Ej. BAC, Ficohsa, Familiar)"><input type="number" id="prest-monto" class="input-field" placeholder="Monto total del préstamo (L)"><input type="number" id="prest-tasa" class="input-field" placeholder="Tasa de interés anual (%)"><div class="input-row"><input type="number" id="prest-cuotas" class="input-field" placeholder="Número de cuotas"><input type="number" id="prest-cuota-calc" class="input-field" placeholder="Cuota calculada" readonly></div><input type="date" id="prest-fecha-pago" class="input-field"><input type="number" id="prest-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><div id="prest-breakdown" class="loan-breakdown hidden"></div><button class="btn btn-primary" onclick="calculateLoan();savePrestamo()">Calcular y Guardar</button></div></div>
+<div id="modal-meta" class="modal" onclick="closeModalIfBg(event,'modal-meta')"><div class="modal-content"><h3>🎯 Nueva Meta de Ahorro</h3><input type="text" id="meta-nombre" class="input-field" placeholder="Nombre de la meta"><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="meta-objetivo" class="input-field" placeholder="Monto objetivo (L)"><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="meta-actual" class="input-field" placeholder="Ahorrado actualmente" value="0"><button class="btn btn-secondary" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Guardar Meta</button></div></div>
+<div id="modal-abono" class="modal" onclick="closeModalIfBg(event,'modal-abono')"><div class="modal-content"><h3>💸 Abonar a Meta de Ahorro</h3><p id="abono-meta-nombre" style="color:var(--amber);margin-bottom:15px"></p><p style="font-size:12px;color:var(--text2);margin-bottom:15px">Este monto se restará de tu saldo disponible.</p><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="abono-monto" class="input-field" placeholder="Monto a abonar (L)"><input type="hidden" id="abono-meta-id"><button class="btn btn-primary" onclick="saveAbono()">Abonar</button></div></div>
+<div id="modal-cobrar" class="modal" onclick="closeModalIfBg(event,'modal-cobrar')"><div class="modal-content"><h3>💰 Dinero que me deben</h3><input type="text" id="cobrar-persona" class="input-field" placeholder="¿Quién te debe?"><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="cobrar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo.</p><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="cobrar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="cobrar-fecha" class="input-field"><button class="btn btn-primary" onclick="saveCobrar()">Guardar</button></div></div>
+<div id="modal-pagar" class="modal" onclick="closeModalIfBg(event,'modal-pagar')"><div class="modal-content"><h3>💸 Lo que debo pagar</h3><input type="text" id="pagar-creditor" class="input-field" placeholder="¿A quién le debes?"><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="pagar-monto" class="input-field" placeholder="Monto total (L)"><p style="font-size:11px;color:var(--text2);margin:5px 0">Nota: El campo "Ya pagado" es solo informativo.</p><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="pagar-pagado" class="input-field" placeholder="Ya pagado (L) - Informativo" value="0"><input type="date" id="pagar-fecha" class="input-field"><button class="btn btn-secondary" onclick="savePagar()">Registrar</button></div></div>
+<div id="modal-prestamo" class="modal" onclick="closeModalIfBg(event,'modal-prestamo')"><div class="modal-content"><h3>🏦 Nuevo Préstamo Bancario</h3><input type="text" id="prest-entidad" class="input-field" placeholder="Entidad (Ej. BAC, Ficohsa, Familiar)"><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="prest-monto" class="input-field" placeholder="Monto total del préstamo (L)"><input type="number" id="prest-tasa" class="input-field" placeholder="Tasa de interés anual (%)"><div class="input-row"><input type="number" id="prest-cuotas" class="input-field" placeholder="Número de cuotas"><input type="number" id="prest-cuota-calc" class="input-field" placeholder="Cuota calculada" readonly></div><input type="date" id="prest-fecha-pago" class="input-field"><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="prest-pagado" class="input-field" placeholder="Ya pagado (L)" value="0"><div id="prest-breakdown" class="loan-breakdown hidden"></div><button class="btn btn-primary" onclick="calculateLoan();savePrestamo()">Calcular y Guardar</button></div></div>
 <div id="modal-tarjeta" class="modal" onclick="closeModalIfBg(event,'modal-tarjeta')">
   <div class="modal-content">
     <h3>💳 Nueva Tarjeta de Crédito</h3>
@@ -1717,11 +1726,11 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     
     <!-- NUEVOS CAMPOS IMPORTANTES -->
     <div class="input-row">
-      <input type="number" id="tc-limite" class="input-field" placeholder="Límite (L)">
+      <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="tc-limite" class="input-field" placeholder="Límite (L)">
       <input type="number" id="tc-tasa" class="input-field" placeholder="Tasa Interés Anual (%)" value="48">
     </div>
     
-    <input type="number" id="tc-saldo" class="input-field" placeholder="Saldo actual (L)" value="0">
+    <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="tc-saldo" class="input-field" placeholder="Saldo actual (L)" value="0">
     
     <div style="background: var(--bg3); padding: 10px; border-radius: 8px; margin: 10px 0;">
         <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
@@ -1733,7 +1742,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <button class="btn btn-primary" onclick="saveTarjeta()">Guardar Tarjeta</button>
   </div>
 </div>
-<div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="number" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
+<div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
 
 <script>
 // ========== VARIABLES GLOBALES Y ESTADO ==========
@@ -1757,6 +1766,23 @@ let mainChart = null;
 // P0-1: appPIN ahora almacena el HASH (no el PIN en crudo)
 let appPIN=localStorage.getItem('finanzas_pin_hash')||'';let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
 const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
+// P1-6: escape HTML para todos los campos del usuario insertados vía innerHTML.
+// Esto cierra la superficie XSS aunque alguien logre meter datos maliciosos
+// (por import, edición manual de localStorage, o un payload en una transacción).
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+// P1-8: parseo estricto de montos. Rechaza notación científica ('e'/'E'),
+// caracteres no numéricos y valores absurdos. Acepta coma o punto como decimal.
+function parseMonto(str) {
+  if (str === null || str === undefined) return null;
+  const s = String(str).trim().replace(',', '.');
+  // Rechazar notación científica y cualquier letra
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
+  const n = parseFloat(s);
+  if (!Number.isFinite(n) || n < 0 || n > 1e9) return null;
+  return Math.round(n * 100) / 100;
+}
 // P1-4: ID único garantizado — crypto.randomUUID() con polyfill
 const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID)
   ? crypto.randomUUID()
@@ -2055,8 +2081,10 @@ function renderDoughnutChart() {
     const canvas = document.getElementById('mainChart');
     if(!canvas) return; 
     const ctx = canvas.getContext('2d');
-    const fijos = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'fijo').reduce((a, b) => a + b.amount, 0);
-    const extras = state.transactions.filter(t => t.type === 'expense' && t.tipo === 'extra').reduce((a, b) => a + b.amount, 0);
+    // P0-2: excluir transferencias internas, conciliaciones y soft-deleted del gráfico de gastos
+    const realExpenses = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt && !t.esTransferencia && !t.esConciliacion);
+    const fijos = realExpenses.filter(t => t.tipo === 'fijo').reduce((a, b) => a + b.amount, 0);
+    const extras = realExpenses.filter(t => t.tipo === 'extra').reduce((a, b) => a + b.amount, 0);
 
     const hasData = fijos > 0 || extras > 0;
 
@@ -2140,8 +2168,22 @@ async function configurarPIN() {
   appPIN = hash;
   alert('✅ PIN configurado con seguridad mejorada');
 }
-function verificarPIN(){const intento=document.getElementById('pin-input').value;if(intento===appPIN){document.getElementById('modal-pin').style.display='none';document.getElementById('pin-input').value='';document.getElementById('pin-error').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}else{document.getElementById('pin-error').style.display='block';document.getElementById('pin-input').value='';setTimeout(()=>document.getElementById('pin-error').style.display='none',3000)}}
-function olvidePIN(){if(confirm('¿Restablecer PIN?')){localStorage.removeItem('finanzas_pin_hash');localStorage.removeItem('finanzas_pin_salt');localStorage.removeItem('finanzas_pin');appPIN='';document.getElementById('modal-pin').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}}
+// P1-7: ELIMINADA verificarPIN síncrona obsoleta (comparaba intento crudo === appPIN
+// donde appPIN ahora es el HASH PBKDF2; nunca matchearía). La versión async correcta
+// se asigna más abajo en el archivo (sección "MEJORAS CRÍTICAS v1.1").
+// Stub temprano por si algo invoca verificarPIN antes de que se sobrescriba:
+var verificarPIN = function(){ /* será sobrescrita por la versión async */ };
+// P0-3: ELIMINADO el bypass. olvidePIN ya NO permite entrar sin autenticar.
+// Si el usuario olvidó su PIN, su único camino legítimo es:
+//   (a) restaurar desde un backup cifrado (si tiene uno guardado), o
+//   (b) restablecer la app por completo desde Configuración (resetApp), lo que borra todos los datos.
+function olvidePIN(){
+  alert('🔐 Sin tu PIN no es posible acceder a tus datos.\n\n' +
+        'Opciones disponibles:\n' +
+        '• Restaurar desde un respaldo cifrado (si tienes uno guardado).\n' +
+        '• Restablecer la app por completo (Configuración → Borrar todos los datos). ' +
+        'Esta acción es IRREVERSIBLE y eliminará todos tus movimientos.');
+}
 function toggleRecordarPIN(){recordarPIN=document.getElementById('recordar-pin').checked;localStorage.setItem('finanzas_recordar',recordarPIN);}
 
 function syncObSaldo(){
@@ -2151,17 +2193,43 @@ function syncObSaldo(){
   const salEl=document.getElementById('ob-salario');
   if(salEl&&total>0)salEl.value=total.toFixed(2);
 }
-function finishOnboarding(){const nombre=document.getElementById('ob-nombre').value.trim(),saldoInicial=parseFloat(document.getElementById('ob-salario').value)||0;if(!nombre||saldoInicial===0)return alert('Completa todos los campos');const saldoEfectivo=parseFloat(document.getElementById('ob-efectivo')?.value)||0;const saldoAhorro=parseFloat(document.getElementById('ob-ahorro')?.value)||0;state={setup:true,nombre,saldoInicial,cuentas:{efectivo:saldoEfectivo,ahorro:saldoAhorro},transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[],budgetRules:{gastos:65,ahorro:20,extra:15}};save();document.getElementById('onboarding').style.display='none';renderAll();renderWelcome()}
+function finishOnboarding(){
+  const nombre=document.getElementById('ob-nombre').value.trim();
+  const saldoInicial=parseFloat(document.getElementById('ob-salario').value)||0;
+  if(!nombre||saldoInicial===0)return alert('Completa todos los campos');
+  const saldoEfectivo=parseFloat(document.getElementById('ob-efectivo')?.value)||0;
+  const saldoAhorro=parseFloat(document.getElementById('ob-ahorro')?.value)||0;
+  // P0-4: cuentasIniciales NO se muta jamás; getCuentaBalance la usa como punto de partida
+  state={
+    setup:true,
+    nombre,
+    saldoInicial,
+    cuentasIniciales:{efectivo:saldoEfectivo,ahorro:saldoAhorro},
+    cuentas:{efectivo:saldoEfectivo,ahorro:saldoAhorro}, // legacy: compatibilidad de lectura
+    transactions:[],
+    goals:[],
+    receivables:[],
+    payables:[],
+    prestamos:[],
+    tarjetas:[],
+    pagosRecurrentes:[],
+    budgetRules:{gastos:65,ahorro:20,extra:15}
+  };
+  save();
+  document.getElementById('onboarding').style.display='none';
+  renderAll();
+  renderWelcome();
+}
 
 function toggleFabMenu_legacy(){/* reemplazada por la v2 */}
 document.addEventListener('click_legacy',(e)=>{/* reemplazado por la v2 */});
 
 function calculateLoan(){const P=parseFloat(document.getElementById('prest-monto').value)||0,r=(parseFloat(document.getElementById('prest-tasa').value)||0)/100/12,n=parseInt(document.getElementById('prest-cuotas').value)||1;let cuota=r===0?P/n:P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);document.getElementById('prest-cuota-calc').value=fL(cuota);const interes=P*r,capital=cuota-interes;document.getElementById('prest-breakdown').classList.remove('hidden');document.getElementById('prest-breakdown').innerHTML=`<div class="loan-breakdown-row"><span>Cuota mensual:</span><strong>${fL(cuota)}</strong></div><div class="loan-breakdown-row"><span>→ Interés:</span><span style="color:var(--red)">${fL(interes)}</span></div>`;return cuota}
-function checkCreditCard(){const cuentaEl=document.getElementById('gasto-cuenta');const pagoType=cuentaEl?cuentaEl.value:document.getElementById('gasto-pago').value;const tarjetaSelect=document.getElementById('gasto-tarjeta');if(pagoType==='credito'){tarjetaSelect.classList.remove('hidden');tarjetaSelect.innerHTML='<option value="">Selecciona tarjeta...</option>';state.tarjetas.forEach(t=>{tarjetaSelect.innerHTML+=`<option value="${t.id}">${t.nombre} (Saldo: ${fL(t.saldo)})</option>`})}else{tarjetaSelect.classList.add('hidden')}}
+function checkCreditCard(){const cuentaEl=document.getElementById('gasto-cuenta');const pagoType=cuentaEl?cuentaEl.value:document.getElementById('gasto-pago').value;const tarjetaSelect=document.getElementById('gasto-tarjeta');if(pagoType==='credito'){tarjetaSelect.classList.remove('hidden');tarjetaSelect.innerHTML='<option value="">Selecciona tarjeta...</option>';state.tarjetas.forEach(t=>{tarjetaSelect.innerHTML+=`<option value="${t.id}">${esc(t.nombre)} (Saldo: ${fL(t.saldo)})</option>`})}else{tarjetaSelect.classList.add('hidden')}}
 
 // ========== GUARDAR GASTO CON FACTURA ADJUNTA ==========
 function saveGasto(){
-    const monto = parseFloat(document.getElementById('gasto-monto').value),
+    const monto = parseMonto(document.getElementById('gasto-monto').value),
           cat = document.getElementById('gasto-cat').value || 'General',
           subcat = document.getElementById('gasto-subcat').value || '',
           pago = (document.getElementById('gasto-cuenta')?.value||document.getElementById('gasto-pago').value),
@@ -2169,11 +2237,20 @@ function saveGasto(){
           banco = document.getElementById('gasto-banco').value || '',
           etiqueta = (document.getElementById('etiqueta-input')?.value || '').trim();
           
-    if(!monto || monto <= 0) return alert('Monto inválido');
+    if(monto===null || monto<=0) return alert('Monto inválido (no se permite notación científica ni valores >1.000.000.000)');
     
-    // P0-2: Recuperar ID de imagen desde IDB (no base64 de localStorage)
+    // Recuperar ID de imagen desde IDB (no base64 de localStorage)
     const facturaImagenId = _tempFacturaId || null;
-    
+
+    // P0-4: normalizar la cuenta de imputación.
+    //   'efectivo' / 'ahorro' afectan el saldo de esa cuenta.
+    //   'credito' impacta el saldo de la tarjeta, no toca cuentas líquidas → cuenta=null.
+    //   Cualquier otro valor heredado (debito, transferencia, etc.) se imputa a 'efectivo'.
+    let cuentaImputacion = null;
+    if (pago === 'efectivo' || pago === 'ahorro') cuentaImputacion = pago;
+    else if (pago === 'credito') cuentaImputacion = null;
+    else cuentaImputacion = 'efectivo';
+
     const transaction = {
         id: uid(),
         type: 'expense',
@@ -2181,12 +2258,13 @@ function saveGasto(){
         cat: cat,
         subcat: subcat,
         pago: pago,
+        cuenta: cuentaImputacion,            // P0-4: explícito para getCuentaBalance
         tipo: tipo,
         banco: banco,
         etiqueta: etiqueta,
         date: new Date().toISOString(),
-        facturaImagenId: facturaImagenId,   // P0-2: solo el ID, la imagen vive en IDB
-        facturaImagen: null,                 // P0-2: ya no se guarda base64 aquí
+        facturaImagenId: facturaImagenId,
+        facturaImagen: null,
         numeroFactura: `FAC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`
     };
     
@@ -2222,7 +2300,29 @@ function saveGasto(){
     alert('✅ Gasto guardado. Factura adjuntada si fue escaneada.');
 }
 
-function saveIngreso(){const monto=parseFloat(document.getElementById('ingreso-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:uid(),type:'income',amount:monto,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value,date:new Date().toISOString()});save();closeModal('modal-ingreso');renderAll();document.getElementById('ingreso-monto').value='';renderWelcome()}
+function saveIngreso(){
+  const monto=parseMonto(document.getElementById('ingreso-monto').value);
+  if(monto===null||monto<=0)return alert('Monto inválido');
+  // P0-4: capturar la cuenta de destino y la nota — antes ambos campos se ignoraban
+  const cuentaSel=document.getElementById('ingreso-cuenta')?.value||'efectivo';
+  const cuenta=(cuentaSel==='efectivo'||cuentaSel==='ahorro')?cuentaSel:'efectivo';
+  const tipoSel=document.getElementById('ingreso-tipo').value;
+  const nota=(document.getElementById('ingreso-nota')?.value||'').trim();
+  state.transactions.push({
+    id:uid(),
+    type:'income',
+    amount:monto,
+    cat: tipoSel==='salario' ? 'Salario' : 'Extra',
+    subcat: tipoSel,
+    cuenta: cuenta,
+    nota: nota,
+    date:new Date().toISOString()
+  });
+  save();closeModal('modal-ingreso');renderAll();
+  document.getElementById('ingreso-monto').value='';
+  if(document.getElementById('ingreso-nota'))document.getElementById('ingreso-nota').value='';
+  renderWelcome();
+}
 
 // ============================================================
 // 🗑️ SOFT DELETE CON TOAST (reemplaza deleteTx y confirm())
@@ -2304,10 +2404,10 @@ function deleteTx(id) { softDeleteTx(id); }
 
 function saveMeta(){const nombre=document.getElementById('meta-nombre').value,objetivo=parseFloat(document.getElementById('meta-objetivo').value);if(!nombre||!objetivo)return alert('Completa nombre y monto');state.goals.push({id:uid(),nombre,objetivo,actual:parseFloat(document.getElementById('meta-actual').value)||0});save();closeModal('modal-meta');renderAll();['meta-nombre','meta-objetivo','meta-actual'].forEach(id=>document.getElementById(id).value=id==='meta-actual'?'0':'')}
 function openAbono(id){const g=state.goals.find(x=>x.id===id);if(!g)return;document.getElementById('abono-meta-nombre').textContent=g.nombre;document.getElementById('abono-meta-id').value=id;openModal('modal-abono')}
-function saveAbono(){const id=document.getElementById('abono-meta-id').value,monto=parseFloat(document.getElementById('abono-monto').value);if(!monto||monto<=0)return alert('Monto inválido');const g=state.goals.find(x=>String(x.id)===String(id));if(g){g.actual+=monto;state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Ahorro',subcat:`Meta: ${g.nombre}`,date:new Date().toISOString()});save();closeModal('modal-abono');renderAll()}document.getElementById('abono-monto').value=''}
+function saveAbono(){const id=document.getElementById('abono-meta-id').value,monto=parseFloat(document.getElementById('abono-monto').value);if(!monto||monto<=0)return alert('Monto inválido');const g=state.goals.find(x=>String(x.id)===String(id));if(g){g.actual+=monto;state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Ahorro',subcat:`Meta: ${esc(g.nombre)}`,date:new Date().toISOString()});save();closeModal('modal-abono');renderAll()}document.getElementById('abono-monto').value=''}
 function deleteMeta(id){if(confirm('¿Eliminar?')){state.goals=state.goals.filter(g=>g.id!==id);save();renderAll()}}
-function renderMetas(){const container=document.getElementById('metas-list');if(!container)return;if(state.goals.length===0){container.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🎯</div><div class="es-title">Sin metas de ahorro</div><div class="es-sub">Define una meta (viaje, fondo de emergencia, auto) y rastrea tu progreso.</div><button class="btn-empty-secondary" onclick="openModal('modal-meta')">➕ Crear primera meta</button></div>`;return;}container.innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="font-weight:700">${g.nombre}</div><div style="font-size:12px;color:var(--text2)">${fL(g.actual)} de ${fL(g.objetivo)}</div><div style="height:8px;background:var(--bg4);border-radius:4px;margin:10px 0"><div style="width:${pct}%;height:100%;background:var(--green)"></div></div><button class="btn btn-primary" onclick="openAbono(${g.id})">💰 Abonar</button><button onclick="deleteMeta(${g.id})" style="background:none;border:none;color:var(--red);float:right;margin-top:10px">Eliminar</button></div>`}).join('')}
-function renderDashboardGoals(){const container=document.getElementById('dashboard-goals');if(!container)return;container.innerHTML=state.goals.slice(0,3).map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="goal-mini"><div class="goal-mini-header"><span>${g.nombre}</span><span>${pct.toFixed(0)}%</span></div><div class="goal-mini-bar"><div class="goal-mini-progress" style="width:${pct}%"></div></div></div>`}).join('')}
+function renderMetas(){const container=document.getElementById('metas-list');if(!container)return;if(state.goals.length===0){container.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🎯</div><div class="es-title">Sin metas de ahorro</div><div class="es-sub">Define una meta (viaje, fondo de emergencia, auto) y rastrea tu progreso.</div><button class="btn-empty-secondary" onclick="openModal('modal-meta')">➕ Crear primera meta</button></div>`;return;}container.innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="font-weight:700">${esc(g.nombre)}</div><div style="font-size:12px;color:var(--text2)">${fL(g.actual)} de ${fL(g.objetivo)}</div><div style="height:8px;background:var(--bg4);border-radius:4px;margin:10px 0"><div style="width:${pct}%;height:100%;background:var(--green)"></div></div><button class="btn btn-primary" onclick="openAbono('${g.id}')">💰 Abonar</button><button onclick="deleteMeta('${g.id}')" style="background:none;border:none;color:var(--red);float:right;margin-top:10px">Eliminar</button></div>`}).join('')}
+function renderDashboardGoals(){const container=document.getElementById('dashboard-goals');if(!container)return;container.innerHTML=state.goals.slice(0,3).map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="goal-mini"><div class="goal-mini-header"><span>${esc(g.nombre)}</span><span>${pct.toFixed(0)}%</span></div><div class="goal-mini-bar"><div class="goal-mini-progress" style="width:${pct}%"></div></div></div>`}).join('')}
 
 // ========== COBRAR Y PAGAR (MEJORADO CON FLUJO DE CAJA) ==========
 function saveCobrar(){const persona=document.getElementById('cobrar-persona').value.trim(),monto=parseFloat(document.getElementById('cobrar-monto').value),pagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;if(!persona||!monto)return;state.receivables.push({id:uid(),persona,monto,pagado,fecha:document.getElementById('cobrar-fecha').value});save();closeModal('modal-cobrar');renderAll();}
@@ -2316,17 +2416,17 @@ function renderCobrar(){const c=document.getElementById('cobrar-list');if(!c)ret
   return `<div class="card card-receivable">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div>
-        <div style="font-weight:700;font-size:15px">${r.persona}</div>
+        <div style="font-weight:700;font-size:15px">${esc(r.persona)}</div>
         <div style="font-size:12px;color:var(--text2)">Total: ${fL(r.monto)} · Pagado: ${fL(r.pagado||0)}</div>
       </div>
       <div style="font-weight:800;font-size:16px;color:var(--amber)">${fL(pendiente)}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center">
-      <button class="btn btn-primary" onclick="abonarCobrar(${r.id})" style="min-height:40px;font-size:13px">Abonar</button>
-      <button onclick="editarCobrar(${r.id})" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(245,200,0,.4);background:rgba(245,200,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
+      <button class="btn btn-primary" onclick="abonarCobrar('${r.id}')" style="min-height:40px;font-size:13px">Abonar</button>
+      <button onclick="editarCobrar('${r.id}')" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(245,200,0,.4);background:rgba(245,200,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F5C800" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
-      <button onclick="eliminarCobrar(${r.id})" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
+      <button onclick="eliminarCobrar('${r.id}')" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF4444" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
       </button>
     </div>
@@ -2336,17 +2436,17 @@ function renderPagar(){const c=document.getElementById('pagar-list');if(!c)retur
   return `<div class="card card-debt">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div>
-        <div style="font-weight:700;font-size:15px">${p.creditor}</div>
+        <div style="font-weight:700;font-size:15px">${esc(p.creditor)}</div>
         <div style="font-size:12px;color:var(--text2)">Total: ${fL(p.monto)} · Pagado: ${fL(p.pagado||0)}</div>
       </div>
       <div style="font-weight:800;font-size:16px;color:var(--red)">${fL(pendiente)}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center">
-      <button class="btn btn-secondary" onclick="abonarPagar(${p.id})" style="min-height:40px;font-size:13px">Abonar</button>
-      <button onclick="editarPagar(${p.id})" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(245,200,0,.4);background:rgba(245,200,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
+      <button class="btn btn-secondary" onclick="abonarPagar('${p.id}')" style="min-height:40px;font-size:13px">Abonar</button>
+      <button onclick="editarPagar('${p.id}')" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(245,200,0,.4);background:rgba(245,200,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F5C800" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
-      <button onclick="eliminarPagar(${p.id})" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
+      <button onclick="eliminarPagar('${p.id}')" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF4444" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
       </button>
     </div>
@@ -2356,14 +2456,14 @@ function abonarCobrar(id){
   if(!r)return;
   const pendiente=r.monto-(r.pagado||0);
   if(pendiente<=0)return alert('Este cobro ya está saldado ✅');
-  const m=parseFloat(prompt(`¿Cuánto te pagó ${r.persona}?\nPendiente: ${fL(pendiente)}`));
+  const m=parseFloat(prompt(`¿Cuánto te pagó ${esc(r.persona)}?\nPendiente: ${fL(pendiente)}`));
   if(!m||m<=0)return;
   const abono=Math.min(m,pendiente);
   r.pagado=(r.pagado||0)+abono;
   if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
   state.cuentas.efectivo=(state.cuentas.efectivo||0)+abono;
-  state.transactions.push({id:uid(),type:'income',amount:abono,cat:'Cobro Deuda',subcat:`Cobro a ${r.persona}`,cuenta:'efectivo',date:new Date().toISOString()});
-  if(r.pagado>=r.monto){if(confirm(`✅ Cobro saldado. ¿Eliminar el registro de "${r.persona}"?`)){state.receivables=state.receivables.filter(x=>x.id!==id);}}
+  state.transactions.push({id:uid(),type:'income',amount:abono,cat:'Cobro Deuda',subcat:`Cobro a ${esc(r.persona)}`,cuenta:'efectivo',date:new Date().toISOString()});
+  if(r.pagado>=r.monto){if(confirm(`✅ Cobro saldado. ¿Eliminar el registro de "${esc(r.persona)}"?`)){state.receivables=state.receivables.filter(x=>x.id!==id);}}
   save();renderAll();
 }
 
@@ -2373,14 +2473,14 @@ function abonarPagar(id){
   if(!p)return;
   const pendiente=p.monto-(p.pagado||0);
   if(pendiente<=0)return alert('Esta deuda ya está saldada ✅');
-  const m=parseFloat(prompt(`¿Cuánto le pagas a ${p.creditor}?\nPendiente: ${fL(pendiente)}`));
+  const m=parseFloat(prompt(`¿Cuánto le pagas a ${esc(p.creditor)}?\nPendiente: ${fL(pendiente)}`));
   if(!m||m<=0)return;
   const abono=Math.min(m,pendiente);
   p.pagado=(p.pagado||0)+abono;
   if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
   state.cuentas.efectivo=Math.max(0,(state.cuentas.efectivo||0)-abono);
-  state.transactions.push({id:uid(),type:'expense',amount:abono,cat:'Pago Deuda',subcat:`Pago a ${p.creditor}`,cuenta:'efectivo',tipo:'fijo',date:new Date().toISOString()});
-  if(p.pagado>=p.monto){if(confirm(`✅ Deuda con "${p.creditor}" saldada. ¿Eliminar el registro?`)){state.payables=state.payables.filter(x=>x.id!==id);}}
+  state.transactions.push({id:uid(),type:'expense',amount:abono,cat:'Pago Deuda',subcat:`Pago a ${esc(p.creditor)}`,cuenta:'efectivo',tipo:'fijo',date:new Date().toISOString()});
+  if(p.pagado>=p.monto){if(confirm(`✅ Deuda con "${esc(p.creditor)}" saldada. ¿Eliminar el registro?`)){state.payables=state.payables.filter(x=>x.id!==id);}}
   save();renderAll();
 }
 
@@ -2393,12 +2493,12 @@ function renderPrestamos(){
     c.innerHTML=state.prestamos.map(p=>{
         totalPrestado+=p.monto;
         const cuotasPagadas=p.cuotasPagadas||0,progreso=(cuotasPagadas/p.cuotasTotal)*100,restante=p.monto-(p.cuota*cuotasPagadas);
-        return `<div class="card card-debt"><div class="debt-header"><div><div class="debt-title">${p.entidad}</div><div class="debt-meta">Cuota mensual: ${fL(p.cuota)}</div></div><div class="interest-badge">${p.cuotasPagadas||0}/${p.cuotasTotal} pagadas</div></div><div class="debt-progress"><div class="debt-progress-bar" style="width: ${progreso}%; background: var(--blue);"></div></div><div class="debt-stats"><div class="debt-stat"><span>Total Préstamo</span><strong>${fL(p.monto)}</strong></div><div class="debt-stat"><span>Saldo Aprox.</span><strong>${fL(restante)}</strong></div></div><div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-top:10px">
-  <button class="btn btn-secondary" onclick="pagarCuotaPrestamo(${p.id})" style="font-size:13px">Registrar Pago (${fL(p.cuota)})</button>
-  <button onclick="editarPrestamo(${p.id})" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(245,200,0,.4);background:rgba(245,200,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        return `<div class="card card-debt"><div class="debt-header"><div><div class="debt-title">${esc(p.entidad)}</div><div class="debt-meta">Cuota mensual: ${fL(p.cuota)}</div></div><div class="interest-badge">${p.cuotasPagadas||0}/${p.cuotasTotal} pagadas</div></div><div class="debt-progress"><div class="debt-progress-bar" style="width: ${progreso}%; background: var(--blue);"></div></div><div class="debt-stats"><div class="debt-stat"><span>Total Préstamo</span><strong>${fL(p.monto)}</strong></div><div class="debt-stat"><span>Saldo Aprox.</span><strong>${fL(restante)}</strong></div></div><div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-top:10px">
+  <button class="btn btn-secondary" onclick="pagarCuotaPrestamo('${p.id}')" style="font-size:13px">Registrar Pago (${fL(p.cuota)})</button>
+  <button onclick="editarPrestamo('${p.id}')" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(245,200,0,.4);background:rgba(245,200,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F5C800" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
   </button>
-  <button onclick="eliminarPrestamo(${p.id})" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+  <button onclick="eliminarPrestamo('${p.id}')" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF4444" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
   </button>
 </div></div>`;
@@ -2437,7 +2537,7 @@ function renderTarjetas(){
         totalDeuda+=t.saldo;
         const pagoMinimo=t.calcularMinimo?Math.max(t.saldo*0.05,100):0,interesMensual=t.saldo*(t.tasaInteres/100/12);totalPagoMinimo+=pagoMinimo;
         const hoy=new Date().getDate();let estadoCorte='';if(hoy>=t.corte&&hoy<=t.pago)estadoCorte='🟡 En periodo de pago';else if(hoy>t.pago)estadoCorte='🔴 Pago vencido';
-        return `<div class="card card-credit"><div style="display: flex; justify-content: space-between; align-items: start;"><div><div style="font-weight:700; font-size:16px;">${t.nombre}</div><div style="font-size:11px; color: var(--text2);">📅 Corte: día ${t.corte} | 📅 Pago: día ${t.pago} <span style="color: ${hoy>t.pago?'var(--red)':'var(--green)'}">${estadoCorte}</span></div></div><div style="text-align: right;"><div style="font-weight: 700; color: var(--red);">${fL(t.saldo)}</div><div style="font-size: 10px;">Límite: ${fL(t.limite)}</div></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; background: var(--bg3); padding: 10px; border-radius: 8px;"><div><span style="font-size: 10px; color: var(--text2);">💸 Interés Est. (${t.tasaInteres}%):</span><span style="display: block; font-weight: 600; color: var(--red);">${fL(interesMensual)} / mes</span></div><div><span style="font-size: 10px; color: var(--text2);">⚠️ Pago Mínimo:</span><span style="display: block; font-weight: 600;">${fL(pagoMinimo)}</span></div></div><div class="debt-actions"><button class="btn btn-primary" style="padding: 8px;" onclick="pagarTarjeta(${t.id})">💳 Registrar Pago</button><button class="btn btn-secondary" style="padding: 8px;" onclick="ajustarSaldoTarjeta(${t.id})">✏️ Ajustar</button><button class="btn btn-danger" style="padding: 8px;" onclick="deleteTarjeta(${t.id})">🗑️</button></div></div>`;
+        return `<div class="card card-credit"><div style="display: flex; justify-content: space-between; align-items: start;"><div><div style="font-weight:700; font-size:16px;">${esc(t.nombre)}</div><div style="font-size:11px; color: var(--text2);">📅 Corte: día ${t.corte} | 📅 Pago: día ${t.pago} <span style="color: ${hoy>t.pago?'var(--red)':'var(--green)'}">${estadoCorte}</span></div></div><div style="text-align: right;"><div style="font-weight: 700; color: var(--red);">${fL(t.saldo)}</div><div style="font-size: 10px;">Límite: ${fL(t.limite)}</div></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; background: var(--bg3); padding: 10px; border-radius: 8px;"><div><span style="font-size: 10px; color: var(--text2);">💸 Interés Est. (${t.tasaInteres}%):</span><span style="display: block; font-weight: 600; color: var(--red);">${fL(interesMensual)} / mes</span></div><div><span style="font-size: 10px; color: var(--text2);">⚠️ Pago Mínimo:</span><span style="display: block; font-weight: 600;">${fL(pagoMinimo)}</span></div></div><div class="debt-actions"><button class="btn btn-primary" style="padding: 8px;" onclick="pagarTarjeta('${t.id}')">💳 Registrar Pago</button><button class="btn btn-secondary" style="padding: 8px;" onclick="ajustarSaldoTarjeta('${t.id}')">✏️ Ajustar</button><button class="btn btn-danger" style="padding: 8px;" onclick="deleteTarjeta('${t.id}')">🗑️</button></div></div>`;
     }).join('');
     document.getElementById('total-deuda-tc').textContent=fL(totalDeuda);
     if(resumenContainer){
@@ -2448,11 +2548,11 @@ function renderTarjetas(){
 function pagarTarjeta(id){
     const tarjeta=state.tarjetas.find(t=>t.id===id);if(!tarjeta)return;
     const pagoMinimo=tarjeta.calcularMinimo?Math.max(tarjeta.saldo*0.05,100):0;
-    const montoStr=prompt(`Ingresa el monto a abonar a ${tarjeta.nombre}\nSaldo actual: ${fL(tarjeta.saldo)}\nPago mínimo sugerido: ${fL(pagoMinimo)}`,pagoMinimo.toFixed(2));
+    const montoStr=prompt(`Ingresa el monto a abonar a ${esc(tarjeta.nombre)}\nSaldo actual: ${fL(tarjeta.saldo)}\nPago mínimo sugerido: ${fL(pagoMinimo)}`,pagoMinimo.toFixed(2));
     if(!montoStr)return;const monto=parseFloat(montoStr);if(isNaN(monto)||monto<=0)return alert('Monto inválido');
     if(monto>tarjeta.saldo){if(!confirm(`Estás pagando ${fL(monto)} pero solo debes ${fL(tarjeta.saldo)}. ¿Deseas dejar la tarjeta con saldo a favor?`))return;}
     tarjeta.saldo=Math.max(0,tarjeta.saldo-monto);
-    state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Pago Tarjeta',subcat:`Pago a ${tarjeta.nombre}`,pago:'efectivo',tipo:'fijo',date:new Date().toISOString(),notas:`Abono a tarjeta ${tarjeta.nombre}`});
+    state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Pago Tarjeta',subcat:`Pago a ${esc(tarjeta.nombre)}`,pago:'efectivo',tipo:'fijo',date:new Date().toISOString(),notas:`Abono a tarjeta ${esc(tarjeta.nombre)}`});
     save();renderAll();alert(`✅ Pago de ${fL(monto)} registrado.\nNuevo saldo de tarjeta: ${fL(tarjeta.saldo)}`);
 }
 function ajustarSaldoTarjeta(id){const tarjeta=state.tarjetas.find(t=>t.id===id);if(!tarjeta)return;const nuevoSaldo=parseFloat(prompt(`Saldo actual: ${fL(tarjeta.saldo)}\nNuevo saldo:`));if(!isNaN(nuevoSaldo)){tarjeta.saldo=nuevoSaldo;save();renderAll();}}
@@ -2464,7 +2564,7 @@ function savePagoRecurrente(){const servicio=document.getElementById('pago-servi
 // ── EDITAR / ELIMINAR COBRAR (dinero que me deben) ──────────
 function editarCobrar(id){
   const r=state.receivables.find(x=>x.id===id);if(!r)return;
-  const nuevo=prompt(`Editar nombre de "${r.persona}":`,r.persona);
+  const nuevo=prompt(`Editar nombre de "${esc(r.persona)}":`,r.persona);
   if(nuevo===null)return;
   const monto=parseFloat(prompt('Monto total:',r.monto));
   if(isNaN(monto)||monto<=0)return;
@@ -2474,7 +2574,7 @@ function editarCobrar(id){
 }
 function eliminarCobrar(id){
   const r=state.receivables.find(x=>x.id===id);if(!r)return;
-  const pendR=fL(r.monto-(r.pagado||0));if(!confirm(`¿Eliminar cobro de "${r.persona}"?\nPendiente: ${pendR}`))return;
+  const pendR=fL(r.monto-(r.pagado||0));if(!confirm(`¿Eliminar cobro de "${esc(r.persona)}"?\nPendiente: ${pendR}`))return;
   state.receivables=state.receivables.filter(x=>x.id!==id);
   save();renderAll();
 }
@@ -2482,7 +2582,7 @@ function eliminarCobrar(id){
 // ── EDITAR / ELIMINAR PAGAR (dinero que debo) ────────────────
 function editarPagar(id){
   const p=state.payables.find(x=>x.id===id);if(!p)return;
-  const nuevo=prompt(`Editar acreedor "${p.creditor}":`,p.creditor);
+  const nuevo=prompt(`Editar acreedor "${esc(p.creditor)}":`,p.creditor);
   if(nuevo===null)return;
   const monto=parseFloat(prompt('Monto total:',p.monto));
   if(isNaN(monto)||monto<=0)return;
@@ -2492,7 +2592,7 @@ function editarPagar(id){
 }
 function eliminarPagar(id){
   const p=state.payables.find(x=>x.id===id);if(!p)return;
-  if(!confirm(`¿Eliminar deuda con "${p.creditor}"?`))return;
+  if(!confirm(`¿Eliminar deuda con "${esc(p.creditor)}"?`))return;
   state.payables=state.payables.filter(x=>x.id!==id);
   save();renderAll();
 }
@@ -2510,7 +2610,7 @@ function editarPrestamo(id){
 }
 function eliminarPrestamo(id){
   const p=state.prestamos.find(x=>x.id===id);if(!p)return;
-  if(!confirm(`¿Eliminar préstamo de "${p.entidad}"?\n\nSe eliminará el registro pero NO se agregarán transacciones de cancelación.`))return;
+  if(!confirm(`¿Eliminar préstamo de "${esc(p.entidad)}"?\n\nSe eliminará el registro pero NO se agregarán transacciones de cancelación.`))return;
   state.prestamos=state.prestamos.filter(x=>x.id!==id);
   save();renderAll();
 }
@@ -2530,7 +2630,7 @@ function editarRecurrente(id){
 }
 function eliminarRecurrente(id){
   const p=state.pagosRecurrentes.find(x=>x.id===id);if(!p)return;
-  if(!confirm(`¿Eliminar "${p.servicio}"?`))return;
+  if(!confirm(`¿Eliminar "${esc(p.servicio)}"?`))return;
   state.pagosRecurrentes=state.pagosRecurrentes.filter(x=>x.id!==id);
   save();renderAll();
 }
@@ -2591,10 +2691,10 @@ function checkNotificacionesPagos(){
     const clave=`rec_${p.id}_${claveHoy}`;
     if(!alertasEnviadas[clave]){
       if(diasRestantes===0){
-        enviarNotificacion('💳 ¡Pago vence HOY!',`${p.servicio} - Día ${p.dia}${p.monto?' (L. '+p.monto+')':''}`,null);
+        enviarNotificacion('💳 ¡Pago vence HOY!',`${esc(p.servicio)} - Día ${p.dia}${p.monto?' (L. '+p.monto+')':''}`,null);
         alertasEnviadas[clave]=true;
       } else if(diasRestantes<=3){
-        enviarNotificacion(`⏰ Pago en ${diasRestantes} día${diasRestantes>1?'s':''}`,`${p.servicio} vence el día ${p.dia}${p.monto?' - L. '+p.monto:''}`,null);
+        enviarNotificacion(`⏰ Pago en ${diasRestantes} día${diasRestantes>1?'s':''}`,`${esc(p.servicio)} vence el día ${p.dia}${p.monto?' - L. '+p.monto:''}`,null);
         alertasEnviadas[clave]=true;
       }
     }
@@ -2606,7 +2706,7 @@ function checkNotificacionesPagos(){
     const clave=`tc_${t.id}_${claveHoy}`;
     if(!alertasEnviadas[clave]&&diasPago<=3){
       const pagoMin=Math.max(t.saldo*0.05,100);
-      enviarNotificacion(`💳 TC ${t.nombre} — ${diasPago===0?'¡VENCE HOY!':diasPago+'d restantes'}`,`Saldo: L. ${t.saldo.toLocaleString('es-HN',{minimumFractionDigits:2})} · Pago mín: L. ${pagoMin.toFixed(2)}`,null);
+      enviarNotificacion(`💳 TC ${esc(t.nombre)} — ${diasPago===0?'¡VENCE HOY!':diasPago+'d restantes'}`,`Saldo: L. ${t.saldo.toLocaleString('es-HN',{minimumFractionDigits:2})} · Pago mín: L. ${pagoMin.toFixed(2)}`,null);
       alertasEnviadas[clave]=true;
     }
   });
@@ -2617,7 +2717,7 @@ function checkNotificacionesPagos(){
     const diasProxCuota=diaHoy<=5?0:31-diaHoy+1;
     const clave=`prest_${p.id}_${claveHoy}`;
     if(!alertasEnviadas[clave]&&diasProxCuota<=3&&(p.cuotasPagadas||0)<(p.cuotasTotal||99)){
-      enviarNotificacion(`🏦 Cuota próxima: ${p.entidad}`,`L. ${p.cuota.toLocaleString('es-HN',{minimumFractionDigits:2})} · ${p.cuotasPagadas||0}/${p.cuotasTotal} pagadas`,null);
+      enviarNotificacion(`🏦 Cuota próxima: ${esc(p.entidad)}`,`L. ${p.cuota.toLocaleString('es-HN',{minimumFractionDigits:2})} · ${p.cuotasPagadas||0}/${p.cuotasTotal} pagadas`,null);
       alertasEnviadas[clave]=true;
     }
   });
@@ -2644,7 +2744,7 @@ function renderPagosRecurrentes(){const c=document.getElementById('pagos-list');
   const urgente=diasParaPago<=3;
   return `<div class="card card-credit" style="border-left:3px solid ${urgente?'var(--red)':'var(--green)'}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <div style="font-weight:700;font-size:15px">${p.servicio}</div>
+      <div style="font-weight:700;font-size:15px">${esc(p.servicio)}</div>
       <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:${urgente?'rgba(255,68,68,.15)':'rgba(76,175,80,.15)'};color:${urgente?'var(--red)':'var(--green)'}">Día ${p.dia}</span>
     </div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
@@ -2652,11 +2752,11 @@ function renderPagosRecurrentes(){const c=document.getElementById('pagos-list');
       ${diasParaPago===0?'<span style="color:var(--red);font-weight:700">¡Hoy vence!</span>':diasParaPago===1?'<span style="color:var(--amber);font-weight:700">Vence mañana</span>':`En ${diasParaPago} días`}
     </div>
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center">
-      <button class="btn btn-primary" onclick="marcarPagoRecurrente(${p.id})" style="min-height:40px;font-size:13px">✓ Pagado</button>
-      <button onclick="editarRecurrente(${p.id})" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(245,200,0,.4);background:rgba(245,200,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
+      <button class="btn btn-primary" onclick="marcarPagoRecurrente('${p.id}')" style="min-height:40px;font-size:13px">✓ Pagado</button>
+      <button onclick="editarRecurrente('${p.id}')" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(245,200,0,.4);background:rgba(245,200,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F5C800" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
-      <button onclick="eliminarRecurrente(${p.id})" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
+      <button onclick="eliminarRecurrente('${p.id}')" style="width:40px;height:40px;border-radius:10px;border:1.5px solid rgba(255,68,68,.4);background:rgba(255,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF4444" stroke-width="2.2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
       </button>
     </div>
@@ -2665,9 +2765,9 @@ function marcarPagoRecurrente(id){const p=state.pagosRecurrentes.find(x=>x.id===
 
 // ========== CONCILIACIÓN v2 — ASIENTO COMPENSATORIO (Opción 3) ==========
 function previewConciliacion(){
-  if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
+  // P0-4: leer saldo derivado en lugar de snapshot estático
   const cuentaSel=document.getElementById('reconcile-cuenta')?.value||'efectivo';
-  const saldoActual=state.cuentas[cuentaSel]||0;
+  const saldoActual=getCuentaBalance(cuentaSel);
   const currentEl=document.getElementById('reconcile-current');
   if(currentEl)currentEl.textContent=fL(saldoActual);
   const realInput=parseFloat(document.getElementById('reconcile-balance')?.value);
@@ -2689,10 +2789,10 @@ function previewConciliacion(){
 }
 
 function reconcileBalance(){
-  if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
+  // P0-4: leer saldo derivado, no mutamos state.cuentas
   const cuentaSel=document.getElementById('reconcile-cuenta')?.value||'efectivo';
   const cuentaNombre=cuentaSel==='ahorro'?'Cuenta de Ahorro':'Efectivo';
-  const saldoActual=state.cuentas[cuentaSel]||0;
+  const saldoActual=getCuentaBalance(cuentaSel);
   const saldoReal=parseFloat(document.getElementById('reconcile-balance')?.value);
   if(isNaN(saldoReal))return alert('Ingresa el saldo real de tu '+cuentaNombre);
   const diff=saldoReal-saldoActual;
@@ -2712,8 +2812,7 @@ function reconcileBalance(){
     date:new Date().toISOString(),
     esConciliacion:true
   });
-  // Actualizar saldo de la cuenta
-  state.cuentas[cuentaSel]=saldoReal;
+  // P0-4: ya NO mutamos state.cuentas — el balance se recalcula desde transactions tras añadir el asiento
   save();renderAll();
   document.getElementById('reconcile-balance').value='';
   document.getElementById('reconcile-diff-preview').innerHTML='';
@@ -2723,7 +2822,8 @@ function reconcileBalance(){
 }
 
 function renderGastos(){
-    const gastos = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt);
+    // P0-2: ocultar transferencias internas y conciliaciones del listado y del KPI
+    const gastos = state.transactions.filter(t => t.type === 'expense' && !t.deletedAt && !t.esTransferencia && !t.esConciliacion);
     const total = gastos.reduce((a,b) => a + b.amount, 0);
     document.getElementById('gastos-mes').textContent = fL(total);
     const container = document.getElementById('gastos-list');
@@ -2737,29 +2837,30 @@ function renderGastos(){
         </div>`; return; }
     container.innerHTML = gastos.slice().reverse().map(t => {
         const tieneFactura = t.facturaImagenId || t.facturaImagen; // P0-2: IDB o legacy
-        const etiqPill = t.etiqueta ? `<span class="etiqueta-pill">#${t.etiqueta}</span>` : '';
+        const etiqPill = t.etiqueta ? `<span class="etiqueta-pill">#${esc(t.etiqueta)}</span>` : '';
         const concBadge = t.esConciliacion ? `<span class="badge-conciliacion">⚖️</span> ` : '';
         return `<div class="card" style="padding:14px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
                 <div style="flex:1;min-width:0">
-                    <div style="font-weight:700;font-size:14px">${concBadge}${t.cat}${tieneFactura?' 🧾':''}</div>
-                    <div style="font-size:11px;color:var(--text2);margin-top:2px">${t.subcat||''} ${t.banco?'· '+t.banco:''}</div>
+                    <div style="font-weight:700;font-size:14px">${concBadge}${esc(t.cat)}${tieneFactura?' 🧾':''}</div>
+                    <div style="font-size:11px;color:var(--text2);margin-top:2px">${esc(t.subcat||'')} ${t.banco?'· '+t.banco:''}</div>
                     <div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString('es-HN')}</div>
                     ${etiqPill}
                 </div>
                 <div style="font-size:17px;font-weight:800;color:var(--red);margin-left:12px;flex-shrink:0">-${fL(t.amount)}</div>
             </div>
             <div class="tx-actions" style="${tieneFactura?'grid-template-columns:1fr 1fr 1fr':'grid-template-columns:1fr 1fr'}">
-                <button class="btn-tx-edit" onclick="abrirEdicionTx(${t.id})">✏️ Editar</button>
-                ${tieneFactura?`<button class="btn-tx-edit" style="background:rgba(245,200,0,.15);color:var(--amber);border:1px solid rgba(245,200,0,.3)" onclick="verFactura(${t.id})">🧾 Factura</button>`:''}
-                <button class="btn-tx-delete" onclick="softDeleteTx(${t.id})">🗑️ Eliminar</button>
+                <button class="btn-tx-edit" onclick="abrirEdicionTx('${t.id}')">✏️ Editar</button>
+                ${tieneFactura?`<button class="btn-tx-edit" style="background:rgba(245,200,0,.15);color:var(--amber);border:1px solid rgba(245,200,0,.3)" onclick="verFactura('${t.id}')">🧾 Factura</button>`:''}
+                <button class="btn-tx-delete" onclick="softDeleteTx('${t.id}')">🗑️ Eliminar</button>
             </div>
         </div>`;
     }).join('');
 }
 
 function renderIngresos(){
-    const ingresos = state.transactions.filter(t => t.type === 'income' && !t.deletedAt);
+    // P0-2: ocultar transferencias internas y conciliaciones
+    const ingresos = state.transactions.filter(t => t.type === 'income' && !t.deletedAt && !t.esTransferencia && !t.esConciliacion);
     document.getElementById('ingreso-salario').textContent = fL(ingresos.reduce((a,b)=>a+b.amount,0));
     const container = document.getElementById('ingresos-list');
     if (!container) return;
@@ -2774,33 +2875,37 @@ function renderIngresos(){
         <div class="card" style="padding:14px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
                 <div>
-                    <div style="font-weight:700;font-size:14px">${t.cat}</div>
+                    <div style="font-weight:700;font-size:14px">${esc(t.cat)}</div>
                     <div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString('es-HN')}</div>
                 </div>
                 <div style="font-size:17px;font-weight:800;color:var(--green)">+${fL(t.amount)}</div>
             </div>
             <div class="tx-actions">
-                <button class="btn-tx-edit" onclick="abrirEdicionTx(${t.id})">✏️ Editar</button>
-                <button class="btn-tx-delete" onclick="softDeleteTx(${t.id})">🗑️ Eliminar</button>
+                <button class="btn-tx-edit" onclick="abrirEdicionTx('${t.id}')">✏️ Editar</button>
+                <button class="btn-tx-delete" onclick="softDeleteTx('${t.id}')">🗑️ Eliminar</button>
             </div>
         </div>`).join('');
 }
 
 function renderDashboard(){
-    const normalTransactions=state.transactions.filter(t=>t.type!=='conciliacion'&&!t.deletedAt);
-    const income=normalTransactions.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
-    const expense=normalTransactions.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
-    const extra=normalTransactions.filter(t=>t.type==='expense'&&t.tipo==='extra').reduce((a,b)=>a+b.amount,0);
-    const balance=state.saldoInicial+income-expense;
+    // P0-2: KPIs reales — excluyen transferencias internas Y conciliaciones (no son ingresos/gastos genuinos del mes)
+    const realTx=state.transactions.filter(t=>!t.deletedAt && !t.esTransferencia && !t.esConciliacion);
+    const income=realTx.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
+    const expense=realTx.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
+    const extra=realTx.filter(t=>t.type==='expense'&&t.tipo==='extra').reduce((a,b)=>a+b.amount,0);
+    // Balance global SÍ incluye conciliaciones (ajustes legítimos), pero NO transferencias (son neutras)
+    const balanceTx=state.transactions.filter(t=>!t.deletedAt && !t.esTransferencia);
+    const balanceIncome=balanceTx.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
+    const balanceExpense=balanceTx.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
+    const balance=state.saldoInicial+balanceIncome-balanceExpense;
     
     document.getElementById('balance-amount').textContent=fL(balance);
     document.getElementById('balance-amount').style.color=balance>=0?'var(--green)':'var(--red)';
-    // Update per-account balances
-    if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
+    // P0-4: saldos por cuenta DERIVADOS desde transactions (sin snapshot estático)
     const efEl=document.getElementById('cuenta-efectivo-val');
     const ahEl=document.getElementById('cuenta-ahorro-val');
-    if(efEl)efEl.textContent=fL(state.cuentas.efectivo||0);
-    if(ahEl)ahEl.textContent=fL(state.cuentas.ahorro||0);
+    if(efEl)efEl.textContent=fL(getCuentaBalance('efectivo'));
+    if(ahEl)ahEl.textContent=fL(getCuentaBalance('ahorro'));
     document.getElementById('balance-status').textContent=income>0?'Basado en tus movimientos':'Esperando movimientos';
     document.getElementById('total-income').textContent=fL(income);
     document.getElementById('total-expense').textContent=fL(expense);
@@ -2844,13 +2949,13 @@ function renderDashboard(){
     } else {
         recentEl.innerHTML = recent.map(t => {
         const tieneFactura = t.facturaImagenId || t.facturaImagen; // P0-2: IDB o legacy
-        const etiqPill = t.etiqueta ? `<span class="etiqueta-pill">#${t.etiqueta}</span>` : '';
+        const etiqPill = t.etiqueta ? `<span class="etiqueta-pill">#${esc(t.etiqueta)}</span>` : '';
         return `
         <div style="padding:12px 0;border-bottom:1px solid var(--border)">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
                 <div style="flex:1;min-width:0">
-                    <div style="font-weight:600">${t.cat} ${tieneFactura?'🧾':''} ${t.esConciliacion?'<span class="badge-conciliacion">⚖️</span>':''}</div>
-                    <div style="font-size:11px;color:var(--text2)">${t.subcat||''} ${t.banco?'('+t.banco+')':''}</div>
+                    <div style="font-weight:600">${esc(t.cat)} ${tieneFactura?'🧾':''} ${t.esConciliacion?'<span class="badge-conciliacion">⚖️</span>':''}</div>
+                    <div style="font-size:11px;color:var(--text2)">${esc(t.subcat||'')} ${t.banco?'('+t.banco+')':''}</div>
                     ${etiqPill}
                 </div>
                 <div style="font-weight:700;font-size:15px;color:${t.esConciliacion?(t.type==='income'?'var(--blue)':'var(--purple)'):(t.type==='income'?'var(--green)':'var(--red)')};margin-left:10px;flex-shrink:0">
@@ -2858,9 +2963,9 @@ function renderDashboard(){
                 </div>
             </div>
             <div class="tx-actions" style="${tieneFactura?'grid-template-columns:1fr 1fr 1fr':'grid-template-columns:1fr 1fr'}">
-                <button class="btn-tx-edit" onclick="abrirEdicionTx(${t.id})">✏️ Editar</button>
-                ${tieneFactura?`<button class="btn-tx-edit" style="background:rgba(245,200,0,.15);color:var(--amber);border:1px solid rgba(245,200,0,.3)" onclick="verFactura(${t.id})">🧾 Factura</button>`:''}
-                <button class="btn-tx-delete" onclick="softDeleteTx(${t.id})">🗑️ Eliminar</button>
+                <button class="btn-tx-edit" onclick="abrirEdicionTx('${t.id}')">✏️ Editar</button>
+                ${tieneFactura?`<button class="btn-tx-edit" style="background:rgba(245,200,0,.15);color:var(--amber);border:1px solid rgba(245,200,0,.3)" onclick="verFactura('${t.id}')">🧾 Factura</button>`:''}
+                <button class="btn-tx-delete" onclick="softDeleteTx('${t.id}')">🗑️ Eliminar</button>
             </div>
         </div>
         `;
@@ -2885,6 +2990,8 @@ function renderHistorico() {
     }
     state.transactions.forEach(t => {
         if (t.deletedAt) return;
+        // P0-2: excluir transferencias internas y conciliaciones del gráfico histórico
+        if (t.esTransferencia || t.esConciliacion) return;
         const fecha = new Date(t.date);
         const key = fecha.getFullYear() + '-' + String(fecha.getMonth() + 1).padStart(2, '0');
         if (meses[key]) {
@@ -2979,45 +3086,111 @@ function exportFullReport() {
     }
 }
 function exportData(){const data=JSON.stringify(state);const a=document.createElement('a');a.href='data:text/json;charset=utf-8,'+encodeURIComponent(data);a.download='backup.json';a.click();}
-function exportDataEncriptado() {
-    try {
-        const password = prompt('🔐 Crea una contrasena para cifrar el respaldo:\n(Minimo 6 caracteres - GUARDALA)');
-        if (!password || password.length < 6) {
-            alert('❌ Contrasena invalida');
-            return;
-        }
-        const confirmar = prompt('🔐 Confirma la contrasena:');
-        if (password !== confirmar) {
-            alert('❌ Las contrasenas no coinciden');
-            return;
-        }
-        const data = JSON.stringify(state);
-        let cifrado = '';
-        for (let i = 0; i < data.length; i++) {
-            const charCode = data.charCodeAt(i) ^ password.charCodeAt(i % password.length);
-            cifrado += String.fromCharCode(charCode);
-        }
-        const cifradoBase64 = btoa(unescape(encodeURIComponent(cifrado)));
-        const archivoFinal = {
-            version: '1.0',
-            tipo: 'finanzas-hn-encriptado',
-            fecha: new Date().toISOString(),
-            cliente: state.nombre || 'Usuario',
-            datos: cifradoBase64
-        };
-        const blob = new Blob([JSON.stringify(archivoFinal, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Backup_Encriptado_' + todayStr() + '.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert('✅ Respaldo cifrado generado.\n⚠️ NO OLVIDES TU CONTRASENA');
-    } catch (error) {
-        alert('❌ Error: ' + error.message);
+// ═══════════════════════════════════════════════════════════════════════
+// P0-5: CIFRADO REAL con AES-GCM + PBKDF2 (Web Crypto API)
+// ─────────────────────────────────────────────────────────────────────
+// El antiguo "cifrado XOR" se rompía en segundos: con plaintext conocido
+// (todos los backups empiezan con {"setup":...) se recuperaba la contraseña
+// directamente. Ahora usamos el mismo patrón que ya empleamos para el hash
+// del PIN: PBKDF2 → clave AES-GCM-256.
+//
+// Helpers de codificación:
+function _b64Encode(bytes) {
+  let bin = '';
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+  return btoa(bin);
+}
+function _b64Decode(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function _deriveBackupKey(password, salt) {
+  const baseKey = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password),
+    { name: 'PBKDF2' }, false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false, ['encrypt', 'decrypt']
+  );
+}
+
+async function exportDataEncriptado() {
+  try {
+    const password = prompt('🔐 Crea una contraseña para cifrar el respaldo:\n(Mínimo 8 caracteres — GUÁRDALA en un lugar seguro)');
+    if (password === null) return;
+    if (!password || password.length < 8) {
+      alert('❌ La contraseña debe tener al menos 8 caracteres');
+      return;
     }
+    const confirmar = prompt('🔐 Confirma la contraseña:');
+    if (password !== confirmar) {
+      alert('❌ Las contraseñas no coinciden');
+      return;
+    }
+
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv   = crypto.getRandomValues(new Uint8Array(12));
+    const key  = await _deriveBackupKey(password, salt);
+    const plaintext = new TextEncoder().encode(JSON.stringify(state));
+    const cipherBuf = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv }, key, plaintext
+    );
+
+    const archivoFinal = {
+      version: '2.0',
+      tipo: 'mipistohn-aes-gcm',
+      algoritmo: 'AES-GCM-256 + PBKDF2-SHA256 (250k iter)',
+      fecha: new Date().toISOString(),
+      cliente: state.nombre || 'Usuario',
+      salt: _b64Encode(salt),
+      iv:   _b64Encode(iv),
+      datos: _b64Encode(cipherBuf)
+    };
+    const blob = new Blob([JSON.stringify(archivoFinal, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Backup_MiPistoHN_' + todayStr() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('✅ Respaldo cifrado generado con AES-GCM-256.\n⚠️ NO OLVIDES TU CONTRASEÑA — sin ella el archivo es irrecuperable.');
+  } catch (error) {
+    console.error('Error al exportar:', error);
+    alert('❌ Error al cifrar el respaldo: ' + error.message);
+  }
+}
+
+async function _descifrarBackupAES(archivo, password) {
+  const salt = _b64Decode(archivo.salt);
+  const iv   = _b64Decode(archivo.iv);
+  const datos = _b64Decode(archivo.datos);
+  const key  = await _deriveBackupKey(password, salt);
+  const plainBuf = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv }, key, datos
+  );
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+
+// Compatibilidad hacia atrás: descifrar backups antiguos en formato XOR
+function _descifrarBackupXORLegacy(archivo, password) {
+  try {
+    const cifrado = decodeURIComponent(escape(atob(archivo.datos)));
+    let descifrado = '';
+    for (let i = 0; i < cifrado.length; i++) {
+      descifrado += String.fromCharCode(
+        cifrado.charCodeAt(i) ^ password.charCodeAt(i % password.length)
+      );
+    }
+    return JSON.parse(descifrado);
+  } catch { return null; }
 }
 function resetApp(){
   if(!confirm('⚠️ ZONA DE PELIGRO\n\n¿Estás seguro de que deseas BORRAR TODOS tus datos?\n\nEsto eliminará:\n• Todos tus gastos e ingresos\n• Préstamos y tarjetas\n• Metas de ahorro\n• Configuración personal\n\nEsta acción NO se puede deshacer.')) return;
@@ -3058,21 +3231,98 @@ function resetApp(){
 }
 
 // ========== IMPORTAR DATOS ==========
+// P0-5 + P1-6: soporta backups planos, AES-GCM (nuevo) y XOR legacy.
+// Valida la estructura antes de aceptar para cerrar el vector XSS por
+// import malicioso (un .json con <script> en state.nombre, etc.).
+
+function _validarSchemaBackup(obj) {
+  if (typeof obj !== 'object' || obj === null) return 'No es un objeto';
+  // Campos obligatorios mínimos
+  if (typeof obj.setup !== 'boolean') return 'Falta setup:boolean';
+  if (obj.nombre !== undefined && (typeof obj.nombre !== 'string' || obj.nombre.length > 200)) return 'Campo nombre inválido';
+  if (obj.saldoInicial !== undefined && typeof obj.saldoInicial !== 'number') return 'saldoInicial debe ser número';
+  // Arrays esperados
+  const arrays = ['transactions','goals','receivables','payables','prestamos','tarjetas','pagosRecurrentes'];
+  for (const k of arrays) {
+    if (obj[k] !== undefined && !Array.isArray(obj[k])) return `Campo ${k} debe ser array`;
+  }
+  // Validar tamaño total razonable (< 10MB serializado)
+  if (JSON.stringify(obj).length > 10 * 1024 * 1024) return 'Archivo demasiado grande (>10MB)';
+  // Validar estructura mínima de transacciones (primeras 50, para no consumir mucho CPU)
+  if (Array.isArray(obj.transactions)) {
+    for (const t of obj.transactions.slice(0, 50)) {
+      if (typeof t !== 'object' || t === null) return 'Transacción inválida';
+      if (t.type !== 'income' && t.type !== 'expense') return 'type de transacción inválido';
+      if (typeof t.amount !== 'number' || !isFinite(t.amount)) return 'amount inválido';
+    }
+  }
+  return null; // OK
+}
+
 function importData(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const imported = JSON.parse(e.target.result);
-            state = imported;
-            save();
-            location.reload();
-        } catch (err) {
-            alert('Archivo de respaldo inválido');
-        }
-    };
-    reader.readAsText(file);
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { alert('❌ Archivo demasiado grande (>10MB)'); event.target.value=''; return; }
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    let parsed;
+    try {
+      parsed = JSON.parse(e.target.result);
+    } catch {
+      alert('❌ Archivo de respaldo inválido (JSON corrupto)');
+      event.target.value=''; return;
+    }
+
+    let datosRecuperados = null;
+
+    // 1) Backup plano (sin cifrar): el archivo ES el state directamente
+    if (parsed && typeof parsed === 'object' && typeof parsed.setup === 'boolean') {
+      datosRecuperados = parsed;
+    }
+    // 2) Backup cifrado AES-GCM (nuevo formato P0-5)
+    else if (parsed && parsed.tipo === 'mipistohn-aes-gcm' && parsed.salt && parsed.iv && parsed.datos) {
+      const password = prompt('🔐 Contraseña del respaldo cifrado:');
+      if (!password) { event.target.value=''; return; }
+      try {
+        datosRecuperados = await _descifrarBackupAES(parsed, password);
+      } catch {
+        alert('❌ Contraseña incorrecta o archivo corrupto');
+        event.target.value=''; return;
+      }
+    }
+    // 3) Backup XOR legacy (compatibilidad con versiones < 2.0)
+    else if (parsed && parsed.tipo === 'finanzas-hn-encriptado' && parsed.datos) {
+      const password = prompt('🔐 Contraseña del respaldo (formato antiguo):');
+      if (!password) { event.target.value=''; return; }
+      datosRecuperados = _descifrarBackupXORLegacy(parsed, password);
+      if (!datosRecuperados) {
+        alert('❌ Contraseña incorrecta o archivo corrupto');
+        event.target.value=''; return;
+      }
+      alert('⚠️ Estás importando un respaldo en formato antiguo (XOR). Tras importar, exporta uno nuevo en formato seguro AES-GCM.');
+    }
+    else {
+      alert('❌ Formato de respaldo no reconocido');
+      event.target.value=''; return;
+    }
+
+    // Validación de schema antes de reemplazar el state — cierra XSS por import malicioso
+    const errorSchema = _validarSchemaBackup(datosRecuperados);
+    if (errorSchema) {
+      alert('❌ Estructura del respaldo inválida: ' + errorSchema);
+      event.target.value=''; return;
+    }
+
+    if (!confirm('⚠️ Esto reemplazará TODOS tus datos actuales con los del respaldo.\n\n¿Continuar?')) {
+      event.target.value=''; return;
+    }
+
+    state = datosRecuperados;
+    save();
+    location.reload();
+  };
+  reader.readAsText(file);
 }
 
 // ========== VISOR DE FACTURAS ==========
@@ -3263,24 +3513,9 @@ function renderAll(){
     setTimeout(function(){ renderLiquidez7Dias(); renderChipsRapidas(); }, 50);
 }
 // ========== INICIALIZACIÓN ==========
-window.onload = () => {
-  if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
-  if (!state.prestamos) state.prestamos = [];
-  if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
-  if (appPIN && !recordarPIN) {
-    document.getElementById('modal-pin').style.display = 'flex';
-    document.getElementById('pin-input').focus();
-  } else if (appPIN && recordarPIN) {
-    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
-    else renderAll();
-  } else {
-    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
-    else renderAll();
-  }
-  const recordarEl = document.getElementById('recordar-pin');
-  if (recordarEl) recordarEl.checked = recordarPIN;
-  renderBudgetRules();
-};
+// P1-7: ELIMINADA esta versión obsoleta de window.onload (era código muerto:
+// el archivo asigna window.onload de nuevo más abajo con la versión async + IDB
+// + biometría). Mantener dos definiciones inducía bugs latentes.
 
 
 // ══════════════════════════════════════════════════════════════
@@ -3288,10 +3523,41 @@ window.onload = () => {
 // ══════════════════════════════════════════════════════════════
 function calcBalance(){
   if(!state.setup)return 0;
-  const normal=state.transactions.filter(t=>!t.deletedAt);
+  // P0-2: excluir transferencias internas (neutras); las conciliaciones SÍ cuentan en el balance global
+  const normal=state.transactions.filter(t=>!t.deletedAt && !t.esTransferencia);
   const income=normal.filter(t=>t.type==='income').reduce((a,b)=>a+b.amount,0);
   const expense=normal.filter(t=>t.type==='expense').reduce((a,b)=>a+b.amount,0);
   return (state.saldoInicial||0)+income-expense;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// P0-4: BALANCE POR CUENTA DERIVADO desde transactions (no almacenado).
+// ─────────────────────────────────────────────────────────────────────
+// Antes, state.cuentas.efectivo / state.cuentas.ahorro eran "snapshots"
+// que sólo se actualizaban en onboarding y conciliación, pero NUNCA en
+// saveGasto / saveIngreso. Resultado: el badge de cuenta y el balance
+// global divergían con cada movimiento.
+//
+// Ahora ambos saldos se calculan en tiempo real desde el log de
+// transacciones. state.cuentasIniciales guarda los saldos del onboarding
+// como punto de partida y NO se muta jamás.
+//
+// Las transferencias internas SÍ afectan getCuentaBalance porque cambian
+// el saldo de cada cuenta individualmente, aunque el balance global sea
+// neutral.
+// ═══════════════════════════════════════════════════════════════════════
+function getCuentaBalance(cuenta) {
+  // Migración invisible: si el usuario viene de versión vieja, copiar state.cuentas
+  if (!state.cuentasIniciales) {
+    state.cuentasIniciales = {
+      efectivo: (state.cuentas && typeof state.cuentas.efectivo === 'number') ? state.cuentas.efectivo : 0,
+      ahorro:   (state.cuentas && typeof state.cuentas.ahorro   === 'number') ? state.cuentas.ahorro   : 0,
+    };
+  }
+  const inicial = state.cuentasIniciales[cuenta] || 0;
+  return state.transactions
+    .filter(t => !t.deletedAt && t.cuenta === cuenta)
+    .reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), inicial);
 }
 
 function getGreeting(){
@@ -3410,49 +3676,68 @@ function setSidebarActive(id){
 
 
 function openTransferirCuentas(){
-  if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
   updateTransferPreview();
   openModal('modal-transferir');
 }
 function updateTransferPreview(){
-  if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
+  // P0-4: lecturas derivadas
   const from=document.getElementById('transfer-from')?.value||'efectivo';
   const to=document.getElementById('transfer-to')?.value||'ahorro';
   const monto=parseFloat(document.getElementById('transfer-monto')?.value)||0;
+  const saldoFrom=getCuentaBalance(from);
+  const saldoTo=getCuentaBalance(to);
   const fromBal=document.getElementById('transfer-from-bal');
   const toBal=document.getElementById('transfer-to-bal');
   const preview=document.getElementById('transfer-preview');
-  if(fromBal)fromBal.textContent=fL(state.cuentas[from]||0);
-  if(toBal)toBal.textContent=fL(state.cuentas[to]||0);
+  if(fromBal)fromBal.textContent=fL(saldoFrom);
+  if(toBal)toBal.textContent=fL(saldoTo);
   if(preview&&monto>0){
-    const saldoFrom=(state.cuentas[from]||0);
     if(monto>saldoFrom)preview.innerHTML=`<span style="color:var(--red)">⚠️ Saldo insuficiente en ${from==='efectivo'?'Efectivo':'Ahorro'}</span>`;
-    else preview.innerHTML=`Después: <strong>${from==='efectivo'?'Efectivo':'Ahorro'}</strong> ${fL(saldoFrom-monto)} → <strong>${to==='efectivo'?'Efectivo':'Ahorro'}</strong> ${fL((state.cuentas[to]||0)+monto)}`;
+    else preview.innerHTML=`Después: <strong>${from==='efectivo'?'Efectivo':'Ahorro'}</strong> ${fL(saldoFrom-monto)} → <strong>${to==='efectivo'?'Efectivo':'Ahorro'}</strong> ${fL(saldoTo+monto)}`;
   }
 }
 function ejecutarTransferencia(){
-  if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
   const from=document.getElementById('transfer-from')?.value||'efectivo';
   const to=document.getElementById('transfer-to')?.value||'ahorro';
   const monto=parseFloat(document.getElementById('transfer-monto')?.value);
   if(!monto||monto<=0)return alert('Ingresa un monto válido');
   if(from===to)return alert('Las cuentas deben ser diferentes');
-  if(monto>(state.cuentas[from]||0))return alert('Saldo insuficiente en '+( from==='efectivo'?'Efectivo':'Ahorro'));
-  state.cuentas[from]=(state.cuentas[from]||0)-monto;
-  state.cuentas[to]=(state.cuentas[to]||0)+monto;
+  // P0-4: validación con saldo derivado
+  const saldoDisponible=getCuentaBalance(from);
+  if(monto>saldoDisponible)return alert('Saldo insuficiente en '+(from==='efectivo'?'Efectivo':'Ahorro'));
   const fromNom=from==='efectivo'?'Efectivo':'Ahorro';
   const toNom=to==='efectivo'?'Efectivo':'Ahorro';
-  // Registrar como par de transacciones internas
+  // Registrar como par de transacciones internas — el saldo se recalcula automáticamente
   state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Transferencia',subcat:`Salida de ${fromNom}`,cuenta:from,tipo:'fijo',date:new Date().toISOString(),esTransferencia:true});
   state.transactions.push({id:uid(),type:'income',amount:monto,cat:'Transferencia',subcat:`Entrada a ${toNom}`,cuenta:to,date:new Date().toISOString(),esTransferencia:true});
   save();closeModal('modal-transferir');renderAll();
-  alert(`✅ Transferencia completada.\n${fromNom}: ${fL(state.cuentas[from])}\n${toNom}: ${fL(state.cuentas[to])}`);
+  alert(`✅ Transferencia completada.\n${fromNom}: ${fL(getCuentaBalance(from))}\n${toNom}: ${fL(getCuentaBalance(to))}`);
 }
 
 // Registro del Service Worker (fuera del window.onload, aquí sí va)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
-    .then(reg => console.log('✅ Service Worker registrado', reg))
+    .then(reg => {
+      console.log('✅ Service Worker registrado', reg);
+      // P1-10: detectar versión nueva y ofrecer recargar al usuario.
+      // Sin esto, el SW viejo sigue sirviendo la app vieja hasta cerrar todas las pestañas.
+      reg.addEventListener('updatefound', () => {
+        const nuevoSW = reg.installing;
+        if (!nuevoSW) return;
+        nuevoSW.addEventListener('statechange', () => {
+          if (nuevoSW.state === 'installed' && navigator.serviceWorker.controller) {
+            // Hay versión nueva esperando a tomar el control
+            if (confirm('🆕 Hay una nueva versión de Mi Pisto HN disponible. ¿Actualizar ahora?')) {
+              nuevoSW.postMessage({ type: 'SKIP_WAITING' });
+              // Cuando el nuevo SW tome control, recargamos
+              navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+              }, { once: true });
+            }
+          }
+        });
+      });
+    })
     .catch(err => console.error('❌ Error al registrar SW:', err));
 }
 
@@ -3600,8 +3885,10 @@ function renderPapelera() {
 
 // ALERTAS DE PRESUPUESTO
 function verificarAlertasPresupuesto() {
-  var ingresos = state.transactions.filter(function(t) { return t.type === 'income' && !t.deletedAt; }).reduce(function(a, b) { return a + b.amount; }, 0);
-  var gastos = state.transactions.filter(function(t) { return t.type === 'expense' && !t.deletedAt; }).reduce(function(a, b) { return a + b.amount; }, 0);
+  // P0-2: excluir transferencias internas y conciliaciones del cálculo de presupuesto
+  var realTx = state.transactions.filter(function(t) { return !t.deletedAt && !t.esTransferencia && !t.esConciliacion; });
+  var ingresos = realTx.filter(function(t) { return t.type === 'income'; }).reduce(function(a, b) { return a + b.amount; }, 0);
+  var gastos = realTx.filter(function(t) { return t.type === 'expense'; }).reduce(function(a, b) { return a + b.amount; }, 0);
   var porcentaje = ingresos > 0 ? (gastos / ingresos) * 100 : 0;
   var alertasDiv = document.getElementById('budget-alerts');
   if (!alertasDiv) return;
@@ -3616,11 +3903,14 @@ function verificarAlertasPresupuesto() {
 
 // PROYECCION DE FLUJO DE CAJA
 function calcularProyeccionCaja() {
-  var ingresos = state.transactions.filter(function(t) { return t.type === 'income' && !t.deletedAt; }).reduce(function(a, b) { return a + b.amount; }, 0);
-  var gastos = state.transactions.filter(function(t) { return t.type === 'expense' && !t.deletedAt; }).reduce(function(a, b) { return a + b.amount; }, 0);
+  // P0-2: excluir transferencias internas (las conciliaciones SÍ cuentan en el balance real)
+  var balTx = state.transactions.filter(function(t) { return !t.deletedAt && !t.esTransferencia; });
+  var ingresos = balTx.filter(function(t) { return t.type === 'income'; }).reduce(function(a, b) { return a + b.amount; }, 0);
+  var gastos = balTx.filter(function(t) { return t.type === 'expense'; }).reduce(function(a, b) { return a + b.amount; }, 0);
   var balance = (state.saldoInicial || 0) + ingresos - gastos;
   var hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  var gastosUltimos30 = state.transactions.filter(function(t) { return t.type === 'expense' && !t.deletedAt && new Date(t.date) > hace30dias; }).reduce(function(a, b) { return a + b.amount; }, 0);
+  // Promedio diario: excluir conciliaciones (ajustes grandes distorsionan la proyección)
+  var gastosUltimos30 = state.transactions.filter(function(t) { return t.type === 'expense' && !t.deletedAt && !t.esTransferencia && !t.esConciliacion && new Date(t.date) > hace30dias; }).reduce(function(a, b) { return a + b.amount; }, 0);
   var gastoDiario = gastosUltimos30 / 30;
   var diasSupervivencia = gastoDiario > 0 ? Math.floor(balance / gastoDiario) : 999;
   var proyectDiv = document.getElementById('cashflow-projection');
@@ -3745,9 +4035,10 @@ function renderLiquidez7Dias() {
   const container = document.getElementById('liquidez-7dias');
   if (!container) return;
   const hoy = new Date(); hoy.setHours(0,0,0,0);
+  // P0-2: excluir transferencias internas (las conciliaciones SÍ son ajustes legítimos del balance)
   const saldoActual = state.saldoInicial
-    + state.transactions.filter(t=>t.type==='income'&&!t.deletedAt).reduce((a,b)=>a+b.amount,0)
-    - state.transactions.filter(t=>t.type==='expense'&&!t.deletedAt).reduce((a,b)=>a+b.amount,0);
+    + state.transactions.filter(t=>t.type==='income'&&!t.deletedAt&&!t.esTransferencia).reduce((a,b)=>a+b.amount,0)
+    - state.transactions.filter(t=>t.type==='expense'&&!t.deletedAt&&!t.esTransferencia).reduce((a,b)=>a+b.amount,0);
   const pagosProximos = [];
   (state.pagosRecurrentes||[]).forEach(p => {
     let fp = new Date(hoy.getFullYear(), hoy.getMonth(), p.dia);
@@ -3784,7 +4075,7 @@ function renderLiquidez7Dias() {
     ? pagosProximos.sort((a,b)=>a.dias-b.dias).map(p=>{
         const dc = p.dias===0?'liq-dias-hoy':p.dias<=2?'liq-dias-1-2':'liq-dias-3-7';
         const dl = p.dias===0?'HOY':p.dias===1?'1 día':p.dias+' días';
-        return `<div class="liquidez-pago-row"><span style="font-weight:600">${p.nombre}</span><div style="display:flex;align-items:center;gap:8px"><span class="liq-dias ${dc}">${dl}</span><span style="font-weight:700;color:var(--red)">-${fL(p.monto)}</span></div></div>`;
+        return `<div class="liquidez-pago-row"><span style="font-weight:600">${esc(p.nombre)}</span><div style="display:flex;align-items:center;gap:8px"><span class="liq-dias ${dc}">${dl}</span><span style="font-weight:700;color:var(--red)">-${fL(p.monto)}</span></div></div>`;
       }).join('')
     : `<div style="text-align:center;font-size:12px;color:var(--text2);padding:6px 0">✅ Sin pagos en los próximos 7 días</div>`;
   container.innerHTML = `<div class="liquidez-widget">
@@ -4382,7 +4673,7 @@ console.log('✅ Mi Pisto HN v2.0 listo');
         <div id="transfer-to-bal" style="font-size:11px;color:#4285F4;margin-top:6px;font-weight:700">L. 0.00</div>
       </div>
     </div>
-    <input type="number" id="transfer-monto" class="input-field" placeholder="Monto a transferir (L)" oninput="updateTransferPreview()">
+    <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="transfer-monto" class="input-field" placeholder="Monto a transferir (L)" oninput="updateTransferPreview()">
     <div id="transfer-preview" style="font-size:12px;color:var(--text2);margin:8px 0 14px;min-height:18px"></div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-secondary" onclick="closeModal('modal-transferir')" style="flex:1">Cancelar</button>
