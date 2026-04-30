@@ -1,7 +1,7 @@
 {
   "name": "Mi Pisto HN — Tu dinero, tu control",
   "short_name": "Mi Pisto HN",
-  "start_url": "./",
+  "start_url": "/mis-finanzas/",
   "scope": "/mis-finanzas/",
   "display": "standalone",
   "background_color": "#130507",
