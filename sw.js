@@ -4,8 +4,8 @@
 //  Cuentas Efectivo + Ahorro · Conciliación por cuenta
 // ============================================================
 
-const CACHE_NAME     = 'mipistohn-v3';
-const CACHE_STATIC   = 'mipistohn-static-v3';
+const CACHE_NAME     = 'mipistohn-v4';
+const CACHE_STATIC   = 'mipistohn-static-v4';
 
 const ASSETS_REQUIRED = [
   '/mis-finanzas/',
