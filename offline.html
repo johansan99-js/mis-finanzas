@@ -2,158 +2,266 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#130507">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Sin Conexión | Mi Pisto HN</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #130507;
+      --bg2:    #1C080B;
+      --bg3:    #280D10;
+      --border: #3A1418;
+      --amber:  #F5C800;
+      --green:  #4CAF50;
+      --red:    #FF4444;
+      --text:   #FFF0E8;
+      --text2:  #C09090;
+    }
 
     body {
-      font-family: system-ui, -apple-system, 'Space Grotesk', sans-serif;
-      background: #130507;
-      color: #FFF0E8;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
       padding: 20px;
-      text-align: center;
+      padding-bottom: calc(20px + env(safe-area-inset-bottom));
     }
 
-    .card {
-      background: #1C080B;
-      border: 1px solid #3A1418;
-      border-radius: 20px;
-      padding: 36px 28px;
-      max-width: 360px;
-      width: 100%;
-      animation: fadeUp 0.4s ease;
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
+    /* ── ANIMACIONES ── */
     @keyframes floatCoin {
       0%, 100% { transform: translateY(0) rotate(-2deg); }
-      50%       { transform: translateY(-8px) rotate(2deg); }
+      50%       { transform: translateY(-10px) rotate(2deg); }
     }
-
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
     @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(245,200,0,.4); }
-      50%       { box-shadow: 0 0 0 14px rgba(245,200,0,.0); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245,200,0,.45); }
+      50%       { box-shadow: 0 0 0 16px rgba(245,200,0,0); }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.25; }
+    }
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
+    /* ── CARD ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 28px 32px;
+      max-width: 380px;
+      width: 100%;
+      animation: fadeUp .45s cubic-bezier(.34,1.2,.64,1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Fondo decorativo */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(245,200,0,.06), transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .card::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: -40px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(255,68,68,.05), transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* ── MONEDA ── */
     .coin-wrap {
+      text-align: center;
       margin-bottom: 20px;
-      display: inline-block;
+    }
+    .coin-wrap svg {
       animation: floatCoin 3.5s ease-in-out infinite;
-      filter: drop-shadow(0 6px 16px rgba(140,140,140,.5));
+      filter: drop-shadow(0 8px 20px rgba(140,140,140,.55));
     }
 
-    h1 {
-      font-size: 22px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      background: linear-gradient(90deg, #FF4444, #F5C800);
+    /* ── TÍTULO ── */
+    .title {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -.5px;
+      text-align: center;
+      background: linear-gradient(90deg, #FF4444, #F5C800, #FF7043);
+      background-size: 200%;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      animation: gradientShift 4s ease infinite;
+      margin-bottom: 8px;
     }
 
-    p {
-      color: #C09090;
+    .subtitle {
+      text-align: center;
+      color: var(--text2);
       font-size: 13px;
       line-height: 1.6;
       margin-bottom: 24px;
     }
 
-    .security-note {
-      background: #280D10;
-      border-left: 3px solid #F5C800;
-      padding: 14px;
-      border-radius: 10px;
-      margin-bottom: 20px;
+    /* ── SECURITY NOTE ── */
+    .security-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--amber);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 22px;
+    }
+    .security-card .s-title {
       font-size: 12px;
-      color: #C09090;
-      text-align: left;
-    }
-
-    .security-note strong {
-      color: #F5C800;
-      display: block;
-      margin-bottom: 8px;
-    }
-
-    .security-note li {
-      list-style: none;
-      padding: 3px 0;
+      font-weight: 800;
+      color: var(--amber);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      margin-bottom: 10px;
     }
-
-    .security-note li::before {
-      content: '';
-      width: 6px;
-      height: 6px;
+    .security-card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .security-card li {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .s-dot {
+      width: 7px; height: 7px;
       border-radius: 50%;
-      background: #4CAF50;
+      background: var(--green);
       flex-shrink: 0;
     }
 
+    /* ── BOTÓN ── */
     .btn {
       width: 100%;
       padding: 15px;
-      border-radius: 12px;
+      border-radius: 14px;
       border: none;
-      font-weight: 700;
-      font-size: 14px;
+      font-weight: 800;
+      font-size: 15px;
       cursor: pointer;
       background: linear-gradient(135deg, #F5C800, #FF7043);
       color: #130507;
-      margin-bottom: 10px;
-      animation: pulse 2.5s infinite;
-      transition: transform 0.15s;
-    }
-
-    .btn:active { transform: scale(0.97); }
-
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #FF4444;
-      margin-right: 6px;
-      animation: blink 1s ease-in-out infinite;
-    }
-
-    .status-dot.online { background: #4CAF50; animation: none; }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.3; }
-    }
-
-    .status-bar {
-      font-size: 11px;
-      color: #C09090;
-      margin-top: 12px;
+      margin-bottom: 0;
+      animation: pulse 2.5s ease-in-out infinite;
+      transition: transform .15s, filter .15s;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 8px;
+    }
+    .btn:hover  { filter: brightness(1.08); }
+    .btn:active { transform: scale(.97); animation: none; }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+      animation: blink 1.2s ease-in-out infinite;
+    }
+    .dot.online {
+      background: var(--green);
+      animation: none;
+    }
+
+    /* ── TIMER ── */
+    .timer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 8px;
+      opacity: .7;
+    }
+
+    /* ── LOGO TOP ── */
+    .logo-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .logo-text {
+      font-weight: 900;
+      font-size: 18px;
+      background: linear-gradient(90deg, #FF4444, #F5C800);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
   </style>
 </head>
 <body>
   <div class="card">
 
-    <!-- Moneda 50 centavos de Lempira -->
+    <!-- Logo bar -->
+    <div class="logo-bar">
+      <!-- Moneda 50¢ pequeña -->
+      <svg width="28" height="28" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;filter:drop-shadow(0 2px 5px rgba(140,140,140,.4))">
+        <defs><radialGradient id="lg_cg" cx="38%" cy="32%" r="68%"><stop offset="0%" stop-color="#F4F4F4"/><stop offset="35%" stop-color="#DCDCDC"/><stop offset="70%" stop-color="#BABABA"/><stop offset="100%" stop-color="#888"/></radialGradient></defs>
+        <circle cx="102" cy="104" r="93" fill="rgba(0,0,0,0.2)"/>
+        <circle cx="100" cy="100" r="93" fill="#909090"/>
+        <circle cx="100" cy="100" r="84" fill="url(#lg_cg)"/>
+        <circle cx="100" cy="100" r="76" fill="none" stroke="#A0A0A0" stroke-width="1.5" opacity=".8"/>
+        <g transform="translate(100,100)">
+          <path d="M 8,-35 C 16,-38 24,-30 27,-18 C 30,-8 30,8 28,24 C 26,38 19,57 19,57 C 14,52 7,40 3,28 C -1,18 -2,4 0,-12 Z" fill="#5A5A5A"/>
+          <path d="M 8,-38 C 13,-43 4,-46 -3,-43 C -12,-39 -18,-31 -20,-22 C -22,-14 -19,-6 -17,0 C -15,5 -17,12 -15,18 C -13,23 -10,28 -7,32 C -4,36 -1,39 1,43 C 6,47 14,47 16,40 C 16,36 14,32 12,27 C 10,21 7,9 6,3 C 8,-4 10,-13 8,-38 Z" fill="#C0C0C0"/>
+          <path d="M -3,-43 C 4,-48 12,-45 16,-38 C 20,-31 15,-13 11,5 C 9,5 3,-1 -3,-19 C -7,-32 -7,-41 -3,-43 Z" fill="#CECECE"/>
+          <rect x="-7" y="-40" width="23" height="10" rx="1.2" fill="#ABABAB" stroke="#888" stroke-width=".8"/>
+          <rect x="-5"  y="-39" width="4" height="8" rx=".5" fill="#D5D5D5"/>
+          <rect x="0"   y="-39" width="4" height="8" rx=".5" fill="#C8C8C8"/>
+          <rect x="5"   y="-39" width="4" height="8" rx=".5" fill="#D5D5D5"/>
+          <rect x="10"  y="-39" width="4" height="8" rx=".5" fill="#C8C8C8"/>
+        </g>
+      </svg>
+      <span class="logo-text">Mi Pisto HN</span>
+    </div>
+
+    <!-- Moneda grande animada -->
     <div class="coin-wrap">
-      <svg width="72" height="72" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <svg width="80" height="80" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="of_cb" cx="38%" cy="32%" r="68%">
             <stop offset="0%"   stop-color="#F4F4F4"/>
@@ -166,6 +274,7 @@
             <stop offset="45%"  stop-color="rgba(255,255,255,0)"/>
             <stop offset="100%" stop-color="rgba(0,0,0,0.12)"/>
           </linearGradient>
+          <path id="of_arc" d="M 20,100 A 80,80 0 1,1 180,100" fill="none"/>
         </defs>
         <circle cx="102" cy="104" r="93" fill="rgba(0,0,0,0.28)"/>
         <circle cx="100" cy="100" r="93" fill="#909090"/>
@@ -186,6 +295,10 @@
         </g>
         <circle cx="100" cy="100" r="84" fill="url(#of_cb)"/>
         <circle cx="100" cy="100" r="76" fill="none" stroke="#A0A0A0" stroke-width="1.5" opacity=".9"/>
+        <circle cx="100" cy="100" r="74" fill="none" stroke="#D8D8D8" stroke-width=".8" opacity=".5"/>
+        <text font-size="10.5" font-weight="700" fill="#505050" font-family="'Times New Roman',Georgia,serif" letter-spacing="3">
+          <textPath href="#of_arc" startOffset="4%">50 CENTAVOS DE LEMPIRA</textPath>
+        </text>
         <g transform="translate(100,100)">
           <path d="M 8,-35 C 16,-38 24,-30 27,-18 C 30,-8 30,8 28,24 C 26,38 22,50 19,57 C 14,52 7,40 3,28 C -1,18 -2,4 0,-12 Z" fill="#5A5A5A"/>
           <path d="M -9,43 C -7,47 -4,52 -3,58 L 9,58 C 9,52 10,47 9,43 Z" fill="#AAAAAA"/>
@@ -201,47 +314,81 @@
           <rect x="10"  y="-39" width="4" height="8" rx=".5" fill="#C8C8C8" stroke="#909090" stroke-width=".7"/>
         </g>
         <circle cx="100" cy="100" r="84" fill="url(#of_sh)"/>
-        <ellipse cx="62" cy="54" rx="22" ry="13" fill="white" opacity=".13" transform="rotate(-35 62 54)"/>
+        <ellipse cx="62" cy="54" rx="22" ry="13" fill="white" opacity=".12" transform="rotate(-35 62 54)"/>
       </svg>
     </div>
 
-    <h1>Sin Conexión</h1>
-    <p>Tus datos están seguros en este dispositivo.<br>La app funciona 100% offline.</p>
+    <h1 class="title">Sin Conexión</h1>
+    <p class="subtitle">
+      Tus datos están seguros en este dispositivo.<br>
+      Mi Pisto HN funciona 100% offline.
+    </p>
 
-    <div class="security-note">
-      <strong>🔒 Tu privacidad garantizada</strong>
+    <!-- Nota de seguridad -->
+    <div class="security-card">
+      <div class="s-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C800" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Tu privacidad garantizada
+      </div>
       <ul>
-        <li>Los datos nunca salen de tu dispositivo</li>
-        <li>Sin servidores externos</li>
-        <li>Sin rastreo ni analytics</li>
+        <li><span class="s-dot"></span>Datos guardados solo en tu dispositivo</li>
+        <li><span class="s-dot"></span>Sin servidores externos ni nube</li>
+        <li><span class="s-dot"></span>Sin rastreo, sin publicidad</li>
+        <li><span class="s-dot"></span>Efectivo y ahorro calculados localmente</li>
       </ul>
     </div>
 
-    <button class="btn" id="retry-btn" onclick="window.location.href='./index.html'">
+    <!-- Botón reintentar -->
+    <button class="btn" id="retry-btn" onclick="reintentar()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
       Reintentar conexión
     </button>
 
+    <!-- Indicador de estado -->
     <div class="status-bar">
-      <span class="status-dot" id="dot"></span>
+      <span class="dot" id="status-dot"></span>
       <span id="status-text">Sin conexión</span>
     </div>
+    <div class="timer" id="timer-text"></div>
   </div>
 
   <script>
-    // Auto-redirigir cuando haya conexión
+    let offlineSecs = 0;
+    let timerInterval = null;
+
+    function reintentar() {
+      const btn = document.getElementById('retry-btn');
+      btn.textContent = 'Verificando...';
+      btn.style.animation = 'none';
+      btn.style.opacity = '.7';
+      setTimeout(() => {
+        window.location.href = './index.html';
+      }, 300);
+    }
+
+    // Auto-redirigir cuando regrese la conexión
     window.addEventListener('online', () => {
-      document.getElementById('dot').classList.add('online');
-      document.getElementById('status-text').textContent = '¡Conexión restaurada! Redirigiendo…';
-      setTimeout(() => window.location.href = './index.html', 1200);
+      const dot  = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (dot)  { dot.classList.add('online'); }
+      if (text) { text.textContent = '¡Conexión restaurada! Redirigiendo…'; }
+      clearInterval(timerInterval);
+      setTimeout(() => window.location.href = './index.html', 1000);
     });
 
-    // Actualizar texto del botón con el tiempo transcurrido
-    let secs = 0;
-    setInterval(() => {
-      secs++;
-      if (secs >= 60) {
-        document.getElementById('status-text').textContent =
-          `Offline hace ${Math.floor(secs / 60)} min — tus datos están seguros`;
+    // Contador de tiempo offline
+    timerInterval = setInterval(() => {
+      offlineSecs++;
+      const t = document.getElementById('timer-text');
+      if (!t) return;
+      if (offlineSecs < 60) {
+        t.textContent = `Offline hace ${offlineSecs} seg`;
+      } else if (offlineSecs < 3600) {
+        const m = Math.floor(offlineSecs / 60);
+        t.textContent = `Offline hace ${m} min — tus datos siguen seguros`;
+      } else {
+        const h = Math.floor(offlineSecs / 3600);
+        t.textContent = `Offline hace ${h}h — Mi Pisto HN sigue funcionando`;
       }
     }, 1000);
   </script>
