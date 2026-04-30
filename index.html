@@ -3,16 +3,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#130507">
 <title>Mi Pisto HN · Tu dinero, tu control</title>
 <link rel="manifest" href="manifest.json">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- Tesseract OCR -->
-<script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Tesseract: eliminado del head — se carga bajo demanda en procesarReciboOCR() -->
 <script>
   window.TESSERACT_CONFIG = {
     workerPath: 'https://unpkg.com/tesseract.js@4.0.2/dist/worker.min.js',
@@ -21,7 +20,7 @@
   };
 </script>
 <!-- SheetJS para Excel -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script defer src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#130507;--bg2:#1C080B;--bg3:#280D10;--bg4:#3A1418;--amber:#F5C800;--text:#FFF0E8;--text2:#C09090;--green:#4CAF50;--red:#FF4444;--blue:#4285F4;--purple:#FF7043;--border:#3A1418;--r:12px}
 
@@ -1755,8 +1754,13 @@ if(savedState && typeof savedState==='object'){
 }
 if (state.transactions && state.transactions.length > 0) { state.transactions.forEach(t => { if (t.type === 'expense' && !t.tipo) { t.tipo = (t.cat === 'Vivienda' || t.cat === 'Alimentación' || t.cat === '🏠 Vivienda') ? 'fijo' : 'extra'; } }); save(); }
 let mainChart = null;
-let appPIN=localStorage.getItem('finanzas_pin')||'';let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
+// P0-1: appPIN ahora almacena el HASH (no el PIN en crudo)
+let appPIN=localStorage.getItem('finanzas_pin_hash')||'';let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
 const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
+// P1-4: ID único garantizado — crypto.randomUUID() con polyfill
+const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID)
+  ? crypto.randomUUID()
+  : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2,9)}`;
 function save() { localStorage.setItem(LS_KEY,JSON.stringify(state)); saveStateToDB(state); }
 const todayStr=()=>new Date().toISOString().split('T')[0];
 const CATEGORIES={vivienda:{label:'🏠 Vivienda',sub:['Hipoteca/Alquiler','Teléfono','Electricidad','Gas','Agua','Mantenimiento']},transporte:{label:'🚗 Transporte',sub:['Pago de Auto','Combustible','Seguros','Mantenimiento']},alimentos:{label:'🍽️ Alimentación',sub:['Supermercado','Restaurantes','Delivery']},ocio:{label:'🎬 Ocio',sub:['Streaming','Salidas','Hobbies']},prestamos:{label:'💳 Préstamos',sub:['Personal','Estudiantil','Tarjeta de Crédito']},seguros:{label:'🛡️ Seguros',sub:['Salud','Vida','Hogar']},impuestos:{label:'📄 Impuestos',sub:['Federal','Estatal','Local']},ahorros:{label:'💰 Ahorros',sub:['Emergencia','Jubilación','Inversiones']},regalos:{label:'🎁 Regalos',sub:['Caridad','Familia','Amigos']},personal:{label:'✂️ Cuidado Personal',sub:['Médico','Ropa','Gimnasio']}};
@@ -1794,11 +1798,12 @@ async function procesarReciboOCR(event) {
         updateStatus('📸 Procesando imagen...');
         const imageUrl = URL.createObjectURL(file);
         const { data: { text } } = await worker.recognize(imageUrl);
-        // Guardar imagen como base64 con Promise para asegurar que se complete
+        // P0-2: Guardar imagen en IndexedDB (no localStorage) para evitar QuotaExceededError
         await new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onload = function(e) {
-                localStorage.setItem('temp_factura_imagen', e.target.result);
+            reader.onload = async function(e) {
+                _tempFacturaId = await _guardarTempFactura(e.target.result);
+                window._tempFacturaDataURL = e.target.result; // solo para preview en modal
                 resolve();
             };
             reader.onerror = () => resolve();
@@ -1957,7 +1962,7 @@ async function procesarReciboOCR(event) {
                   <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:var(--amber);font-size:10px;padding:4px 8px;font-weight:700">🧾 Factura adjunta — se guardará con el gasto</div>`;
                 document.getElementById('ocr-status').after(previewEl);
             }
-            document.getElementById('ocr-preview-img').src = localStorage.getItem('temp_factura_imagen');
+            document.getElementById('ocr-preview-img').src = window._tempFacturaDataURL || '';
             previewEl.style.display = 'block';
             setTimeout(() => statusEl.style.display = 'none', 7000);
             
@@ -2103,9 +2108,40 @@ window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredP
 document.getElementById('install-btn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;document.getElementById('pwa-banner').classList.add('hidden');deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;deferredPrompt=null});
 function dismissPwaBanner(){document.getElementById('pwa-banner').classList.add('hidden');localStorage.setItem('pwa_banner_dismissed','true');pwaDismissed=true}
 
-function configurarPIN(){const nuevoPIN=prompt('Crea un PIN de 4 dígitos:\n(Deja en blanco para eliminar)');if(nuevoPIN===null)return;if(nuevoPIN===''){localStorage.removeItem('finanzas_pin');appPIN='';alert('🔓 PIN eliminado');return}if(!/^\d{4}$/.test(nuevoPIN)){alert('❌ Debe tener 4 números');return}localStorage.setItem('finanzas_pin',nuevoPIN);appPIN=nuevoPIN;alert('✅ PIN configurado')}
+// ── P0-1: PBKDF2 helpers ─────────────────────────────────────
+async function _derivarHashPIN(pin, salt) {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(pin), { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function configurarPIN() {
+  const nuevoPIN = prompt('Crea un PIN de 4 dígitos:\n(Deja en blanco para eliminar)');
+  if (nuevoPIN === null) return;
+  if (nuevoPIN === '') {
+    localStorage.removeItem('finanzas_pin_hash');
+    localStorage.removeItem('finanzas_pin_salt');
+    localStorage.removeItem('finanzas_pin'); // limpia versión legacy
+    appPIN = '';
+    alert('🔓 PIN eliminado');
+    return;
+  }
+  if (!/^\d{4}$/.test(nuevoPIN)) { alert('❌ Debe tener 4 números'); return; }
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await _derivarHashPIN(nuevoPIN, salt);
+  localStorage.setItem('finanzas_pin_hash', hash);
+  localStorage.setItem('finanzas_pin_salt', btoa(String.fromCharCode(...salt)));
+  localStorage.removeItem('finanzas_pin'); // nunca guardar el PIN en crudo
+  appPIN = hash;
+  alert('✅ PIN configurado con seguridad mejorada');
+}
 function verificarPIN(){const intento=document.getElementById('pin-input').value;if(intento===appPIN){document.getElementById('modal-pin').style.display='none';document.getElementById('pin-input').value='';document.getElementById('pin-error').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}else{document.getElementById('pin-error').style.display='block';document.getElementById('pin-input').value='';setTimeout(()=>document.getElementById('pin-error').style.display='none',3000)}}
-function olvidePIN(){if(confirm('¿Restablecer PIN?')){localStorage.removeItem('finanzas_pin');appPIN='';document.getElementById('modal-pin').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}}
+function olvidePIN(){if(confirm('¿Restablecer PIN?')){localStorage.removeItem('finanzas_pin_hash');localStorage.removeItem('finanzas_pin_salt');localStorage.removeItem('finanzas_pin');appPIN='';document.getElementById('modal-pin').style.display='none';if(!state.setup){document.getElementById('onboarding').style.display='flex'}else{renderAll()}}}
 function toggleRecordarPIN(){recordarPIN=document.getElementById('recordar-pin').checked;localStorage.setItem('finanzas_recordar',recordarPIN);}
 
 function syncObSaldo(){
@@ -2135,11 +2171,11 @@ function saveGasto(){
           
     if(!monto || monto <= 0) return alert('Monto inválido');
     
-    // Recuperar imagen temporal
-    const facturaImagen = localStorage.getItem('temp_factura_imagen') || null;
+    // P0-2: Recuperar ID de imagen desde IDB (no base64 de localStorage)
+    const facturaImagenId = _tempFacturaId || null;
     
     const transaction = {
-        id: Date.now(),
+        id: uid(),
         type: 'expense',
         amount: monto,
         cat: cat,
@@ -2149,17 +2185,18 @@ function saveGasto(){
         banco: banco,
         etiqueta: etiqueta,
         date: new Date().toISOString(),
-        facturaImagen: facturaImagen,
+        facturaImagenId: facturaImagenId,   // P0-2: solo el ID, la imagen vive en IDB
+        facturaImagen: null,                 // P0-2: ya no se guarda base64 aquí
         numeroFactura: `FAC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`
     };
     
     if(pago === 'credito'){
-        const tarjetaId = parseInt(document.getElementById('gasto-tarjeta').value);
+        const tarjetaId = document.getElementById('gasto-tarjeta').value; // P1-4: no parseInt
         if(tarjetaId){
-            const tarjeta = state.tarjetas.find(t => t.id === tarjetaId);
+            const tarjeta = state.tarjetas.find(t => String(t.id) === String(tarjetaId));
             if(tarjeta){
                 tarjeta.saldo += monto;
-                transaction.tarjetaId = tarjetaId;
+                transaction.tarjetaId = tarjeta.id;
                 transaction.tarjetaNombre = tarjeta.nombre;
             }
         }
@@ -2168,9 +2205,9 @@ function saveGasto(){
     state.transactions.push(transaction);
     save();
     
-    // Limpiar imagen temporal
-    localStorage.removeItem('temp_factura_imagen');
-    window.tempFacturaImagen = false;
+    // P0-2: Limpiar estado temporal de imagen (ya NO toca localStorage)
+    _tempFacturaId = null;
+    window._tempFacturaDataURL = null;
     
     closeModal('modal-gasto');
     renderAll();
@@ -2185,7 +2222,7 @@ function saveGasto(){
     alert('✅ Gasto guardado. Factura adjuntada si fue escaneada.');
 }
 
-function saveIngreso(){const monto=parseFloat(document.getElementById('ingreso-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:Date.now(),type:'income',amount:monto,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value,date:new Date().toISOString()});save();closeModal('modal-ingreso');renderAll();document.getElementById('ingreso-monto').value='';renderWelcome()}
+function saveIngreso(){const monto=parseFloat(document.getElementById('ingreso-monto').value);if(!monto||monto<=0)return alert('Monto inválido');state.transactions.push({id:uid(),type:'income',amount:monto,cat:document.getElementById('ingreso-tipo').value==='salario'?'Salario':'Extra',subcat:document.getElementById('ingreso-tipo').value,date:new Date().toISOString()});save();closeModal('modal-ingreso');renderAll();document.getElementById('ingreso-monto').value='';renderWelcome()}
 
 // ============================================================
 // 🗑️ SOFT DELETE CON TOAST (reemplaza deleteTx y confirm())
@@ -2265,15 +2302,15 @@ function _dismissToast() {
 // Alias para compatibilidad con código existente
 function deleteTx(id) { softDeleteTx(id); }
 
-function saveMeta(){const nombre=document.getElementById('meta-nombre').value,objetivo=parseFloat(document.getElementById('meta-objetivo').value);if(!nombre||!objetivo)return alert('Completa nombre y monto');state.goals.push({id:Date.now(),nombre,objetivo,actual:parseFloat(document.getElementById('meta-actual').value)||0});save();closeModal('modal-meta');renderAll();['meta-nombre','meta-objetivo','meta-actual'].forEach(id=>document.getElementById(id).value=id==='meta-actual'?'0':'')}
+function saveMeta(){const nombre=document.getElementById('meta-nombre').value,objetivo=parseFloat(document.getElementById('meta-objetivo').value);if(!nombre||!objetivo)return alert('Completa nombre y monto');state.goals.push({id:uid(),nombre,objetivo,actual:parseFloat(document.getElementById('meta-actual').value)||0});save();closeModal('modal-meta');renderAll();['meta-nombre','meta-objetivo','meta-actual'].forEach(id=>document.getElementById(id).value=id==='meta-actual'?'0':'')}
 function openAbono(id){const g=state.goals.find(x=>x.id===id);if(!g)return;document.getElementById('abono-meta-nombre').textContent=g.nombre;document.getElementById('abono-meta-id').value=id;openModal('modal-abono')}
-function saveAbono(){const id=parseInt(document.getElementById('abono-meta-id').value),monto=parseFloat(document.getElementById('abono-monto').value);if(!monto||monto<=0)return alert('Monto inválido');const g=state.goals.find(x=>x.id===id);if(g){g.actual+=monto;state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Ahorro',subcat:`Meta: ${g.nombre}`,date:new Date().toISOString()});save();closeModal('modal-abono');renderAll()}document.getElementById('abono-monto').value=''}
+function saveAbono(){const id=document.getElementById('abono-meta-id').value,monto=parseFloat(document.getElementById('abono-monto').value);if(!monto||monto<=0)return alert('Monto inválido');const g=state.goals.find(x=>String(x.id)===String(id));if(g){g.actual+=monto;state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Ahorro',subcat:`Meta: ${g.nombre}`,date:new Date().toISOString()});save();closeModal('modal-abono');renderAll()}document.getElementById('abono-monto').value=''}
 function deleteMeta(id){if(confirm('¿Eliminar?')){state.goals=state.goals.filter(g=>g.id!==id);save();renderAll()}}
 function renderMetas(){const container=document.getElementById('metas-list');if(!container)return;if(state.goals.length===0){container.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🎯</div><div class="es-title">Sin metas de ahorro</div><div class="es-sub">Define una meta (viaje, fondo de emergencia, auto) y rastrea tu progreso.</div><button class="btn-empty-secondary" onclick="openModal('modal-meta')">➕ Crear primera meta</button></div>`;return;}container.innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="font-weight:700">${g.nombre}</div><div style="font-size:12px;color:var(--text2)">${fL(g.actual)} de ${fL(g.objetivo)}</div><div style="height:8px;background:var(--bg4);border-radius:4px;margin:10px 0"><div style="width:${pct}%;height:100%;background:var(--green)"></div></div><button class="btn btn-primary" onclick="openAbono(${g.id})">💰 Abonar</button><button onclick="deleteMeta(${g.id})" style="background:none;border:none;color:var(--red);float:right;margin-top:10px">Eliminar</button></div>`}).join('')}
 function renderDashboardGoals(){const container=document.getElementById('dashboard-goals');if(!container)return;container.innerHTML=state.goals.slice(0,3).map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="goal-mini"><div class="goal-mini-header"><span>${g.nombre}</span><span>${pct.toFixed(0)}%</span></div><div class="goal-mini-bar"><div class="goal-mini-progress" style="width:${pct}%"></div></div></div>`}).join('')}
 
 // ========== COBRAR Y PAGAR (MEJORADO CON FLUJO DE CAJA) ==========
-function saveCobrar(){const persona=document.getElementById('cobrar-persona').value.trim(),monto=parseFloat(document.getElementById('cobrar-monto').value),pagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;if(!persona||!monto)return;state.receivables.push({id:Date.now(),persona,monto,pagado,fecha:document.getElementById('cobrar-fecha').value});save();closeModal('modal-cobrar');renderAll();}
+function saveCobrar(){const persona=document.getElementById('cobrar-persona').value.trim(),monto=parseFloat(document.getElementById('cobrar-monto').value),pagado=parseFloat(document.getElementById('cobrar-pagado').value)||0;if(!persona||!monto)return;state.receivables.push({id:uid(),persona,monto,pagado,fecha:document.getElementById('cobrar-fecha').value});save();closeModal('modal-cobrar');renderAll();}
 function renderCobrar(){const c=document.getElementById('cobrar-list');if(!c)return;if(state.receivables.length===0){c.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🤝</div><div class="es-title">Nadie te debe dinero</div><div class="es-sub">Registra aquí los préstamos que has hecho a otras personas para llevar el control.</div><button class="btn-empty-secondary" onclick="openModal('modal-cobrar')">➕ Registrar cobro pendiente</button></div>`;return;}c.innerHTML=state.receivables.map(r=>{
   const pendiente=r.monto-(r.pagado||0);
   return `<div class="card card-receivable">
@@ -2325,12 +2362,12 @@ function abonarCobrar(id){
   r.pagado=(r.pagado||0)+abono;
   if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
   state.cuentas.efectivo=(state.cuentas.efectivo||0)+abono;
-  state.transactions.push({id:Date.now(),type:'income',amount:abono,cat:'Cobro Deuda',subcat:`Cobro a ${r.persona}`,cuenta:'efectivo',date:new Date().toISOString()});
+  state.transactions.push({id:uid(),type:'income',amount:abono,cat:'Cobro Deuda',subcat:`Cobro a ${r.persona}`,cuenta:'efectivo',date:new Date().toISOString()});
   if(r.pagado>=r.monto){if(confirm(`✅ Cobro saldado. ¿Eliminar el registro de "${r.persona}"?`)){state.receivables=state.receivables.filter(x=>x.id!==id);}}
   save();renderAll();
 }
 
-function savePagar(){const creditor=document.getElementById('pagar-creditor').value.trim(),monto=parseFloat(document.getElementById('pagar-monto').value),pagado=parseFloat(document.getElementById('pagar-pagado').value)||0;if(!creditor||!monto)return;state.payables.push({id:Date.now(),creditor,monto,pagado,fecha:document.getElementById('pagar-fecha').value});save();closeModal('modal-pagar');renderAll();}
+function savePagar(){const creditor=document.getElementById('pagar-creditor').value.trim(),monto=parseFloat(document.getElementById('pagar-monto').value),pagado=parseFloat(document.getElementById('pagar-pagado').value)||0;if(!creditor||!monto)return;state.payables.push({id:uid(),creditor,monto,pagado,fecha:document.getElementById('pagar-fecha').value});save();closeModal('modal-pagar');renderAll();}
 function abonarPagar(id){
   const p=state.payables.find(x=>x.id===id);
   if(!p)return;
@@ -2342,13 +2379,13 @@ function abonarPagar(id){
   p.pagado=(p.pagado||0)+abono;
   if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
   state.cuentas.efectivo=Math.max(0,(state.cuentas.efectivo||0)-abono);
-  state.transactions.push({id:Date.now(),type:'expense',amount:abono,cat:'Pago Deuda',subcat:`Pago a ${p.creditor}`,cuenta:'efectivo',tipo:'fijo',date:new Date().toISOString()});
+  state.transactions.push({id:uid(),type:'expense',amount:abono,cat:'Pago Deuda',subcat:`Pago a ${p.creditor}`,cuenta:'efectivo',tipo:'fijo',date:new Date().toISOString()});
   if(p.pagado>=p.monto){if(confirm(`✅ Deuda con "${p.creditor}" saldada. ¿Eliminar el registro?`)){state.payables=state.payables.filter(x=>x.id!==id);}}
   save();renderAll();
 }
 
 // ========== PRÉSTAMOS ==========
-function savePrestamo(){const entidad=document.getElementById('prest-entidad').value,monto=parseFloat(document.getElementById('prest-monto').value);state.prestamos.push({id:Date.now(),entidad,monto,cuota:calculateLoan(),cuotasPagadas:0,cuotasTotal:parseInt(document.getElementById('prest-cuotas').value)});save();closeModal('modal-prestamo');renderAll();}
+function savePrestamo(){const entidad=document.getElementById('prest-entidad').value,monto=parseFloat(document.getElementById('prest-monto').value);state.prestamos.push({id:uid(),entidad,monto,cuota:calculateLoan(),cuotasPagadas:0,cuotasTotal:parseInt(document.getElementById('prest-cuotas').value)});save();closeModal('modal-prestamo');renderAll();}
 function renderPrestamos(){
     const c=document.getElementById('prestamos-list');if(!c)return;
     if(state.prestamos.length===0){c.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🏦</div><div class="es-title">Sin préstamos registrados</div><div class="es-sub">Agrega tus préstamos bancarios para llevar control de cuotas, intereses y saldo.</div><button class="btn-empty-secondary" onclick="openModal('modal-prestamo')">➕ Agregar préstamo</button></div>`;return;}
@@ -2378,7 +2415,7 @@ function pagarCuotaPrestamo(id){
   if(!state.cuentas)state.cuentas={efectivo:0,ahorro:0};
   if(cuenta==='ahorro')state.cuentas.ahorro=Math.max(0,(state.cuentas.ahorro||0)-prestamo.cuota);
   else state.cuentas.efectivo=Math.max(0,(state.cuentas.efectivo||0)-prestamo.cuota);
-  state.transactions.push({id:Date.now(),type:'expense',amount:prestamo.cuota,cat:'Préstamo',subcat:`Cuota ${prestamo.entidad}`,cuenta,tipo:'fijo',date:new Date().toISOString()});
+  state.transactions.push({id:uid(),type:'expense',amount:prestamo.cuota,cat:'Préstamo',subcat:`Cuota ${prestamo.entidad}`,cuenta,tipo:'fijo',date:new Date().toISOString()});
   const restantes=(prestamo.cuotasTotal||0)-(prestamo.cuotasPagadas||0);
   const msg=restantes<=0?`🎉 ¡Préstamo con ${prestamo.entidad} pagado completamente!`:`✅ Cuota registrada. Quedan ${restantes} cuotas.`;
   save();renderAll();alert(msg);
@@ -2388,7 +2425,7 @@ function pagarCuotaPrestamo(id){
 function saveTarjeta(){
     const nombre=document.getElementById('tc-nombre').value.trim(),corte=parseInt(document.getElementById('tc-corte').value)||1,pago=parseInt(document.getElementById('tc-pago').value)||15,limite=parseFloat(document.getElementById('tc-limite').value)||0,saldo=parseFloat(document.getElementById('tc-saldo').value)||0,tasa=parseFloat(document.getElementById('tc-tasa').value)||48,calcMinimo=document.getElementById('tc-calcular-minimo').checked;
     if(!nombre)return alert('Nombre requerido');
-    state.tarjetas.push({id:Date.now(),nombre,corte,pago,limite,saldo,tasaInteres:tasa,calcularMinimo:calcMinimo,historialPagos:[]});
+    state.tarjetas.push({id:uid(),nombre,corte,pago,limite,saldo,tasaInteres:tasa,calcularMinimo:calcMinimo,historialPagos:[]});
     save();closeModal('modal-tarjeta');renderAll();limpiarFormTarjeta();
 }
 function limpiarFormTarjeta(){['tc-nombre','tc-corte','tc-pago','tc-limite','tc-saldo','tc-tasa'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('tc-calcular-minimo').checked=true;}
@@ -2415,14 +2452,14 @@ function pagarTarjeta(id){
     if(!montoStr)return;const monto=parseFloat(montoStr);if(isNaN(monto)||monto<=0)return alert('Monto inválido');
     if(monto>tarjeta.saldo){if(!confirm(`Estás pagando ${fL(monto)} pero solo debes ${fL(tarjeta.saldo)}. ¿Deseas dejar la tarjeta con saldo a favor?`))return;}
     tarjeta.saldo=Math.max(0,tarjeta.saldo-monto);
-    state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Pago Tarjeta',subcat:`Pago a ${tarjeta.nombre}`,pago:'efectivo',tipo:'fijo',date:new Date().toISOString(),notas:`Abono a tarjeta ${tarjeta.nombre}`});
+    state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Pago Tarjeta',subcat:`Pago a ${tarjeta.nombre}`,pago:'efectivo',tipo:'fijo',date:new Date().toISOString(),notas:`Abono a tarjeta ${tarjeta.nombre}`});
     save();renderAll();alert(`✅ Pago de ${fL(monto)} registrado.\nNuevo saldo de tarjeta: ${fL(tarjeta.saldo)}`);
 }
 function ajustarSaldoTarjeta(id){const tarjeta=state.tarjetas.find(t=>t.id===id);if(!tarjeta)return;const nuevoSaldo=parseFloat(prompt(`Saldo actual: ${fL(tarjeta.saldo)}\nNuevo saldo:`));if(!isNaN(nuevoSaldo)){tarjeta.saldo=nuevoSaldo;save();renderAll();}}
 function deleteTarjeta(id){if(confirm('¿Eliminar esta tarjeta? Se perderá el registro.')){state.tarjetas=state.tarjetas.filter(t=>t.id!==id);save();renderAll();}}
 
 // ========== PAGOS RECURRENTES ==========
-function savePagoRecurrente(){const servicio=document.getElementById('pago-servicio').value,monto=parseFloat(document.getElementById('pago-monto').value),dia=parseInt(document.getElementById('pago-dia').value);state.pagosRecurrentes.push({id:Date.now(),servicio,monto,dia,pagado:0});save();closeModal('modal-pago-recurrente');renderAll();}
+function savePagoRecurrente(){const servicio=document.getElementById('pago-servicio').value,monto=parseFloat(document.getElementById('pago-monto').value),dia=parseInt(document.getElementById('pago-dia').value);state.pagosRecurrentes.push({id:uid(),servicio,monto,dia,pagado:0});save();closeModal('modal-pago-recurrente');renderAll();}
 
 // ── EDITAR / ELIMINAR COBRAR (dinero que me deben) ──────────
 function editarCobrar(id){
@@ -2664,7 +2701,7 @@ function reconcileBalance(){
   if(!confirm(`¿Confirmar ajuste de ${cuentaNombre}?\n\nSaldo registrado: ${fL(saldoActual)}\nSaldo real: ${fL(saldoReal)}\nDiferencia: ${fL(diff)}\n\nSe creará un asiento de ${diff>0?'ingreso':'gasto'} por esta diferencia.`))return;
   // Crear transacción de conciliación
   state.transactions.push({
-    id:Date.now(),
+    id:uid(),
     type:diff>0?'income':'expense',
     amount:Math.abs(diff),
     cat:'Conciliación',
@@ -3381,8 +3418,8 @@ function ejecutarTransferencia(){
   const fromNom=from==='efectivo'?'Efectivo':'Ahorro';
   const toNom=to==='efectivo'?'Efectivo':'Ahorro';
   // Registrar como par de transacciones internas
-  state.transactions.push({id:Date.now(),type:'expense',amount:monto,cat:'Transferencia',subcat:`Salida de ${fromNom}`,cuenta:from,tipo:'fijo',date:new Date().toISOString(),esTransferencia:true});
-  state.transactions.push({id:Date.now()+1,type:'income',amount:monto,cat:'Transferencia',subcat:`Entrada a ${toNom}`,cuenta:to,date:new Date().toISOString(),esTransferencia:true});
+  state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Transferencia',subcat:`Salida de ${fromNom}`,cuenta:from,tipo:'fijo',date:new Date().toISOString(),esTransferencia:true});
+  state.transactions.push({id:uid()+1,type:'income',amount:monto,cat:'Transferencia',subcat:`Entrada a ${toNom}`,cuenta:to,date:new Date().toISOString(),esTransferencia:true});
   save();closeModal('modal-transferir');renderAll();
   alert(`✅ Transferencia completada.\n${fromNom}: ${fL(state.cuentas[from])}\n${toNom}: ${fL(state.cuentas[to])}`);
 }
@@ -3449,21 +3486,33 @@ function verificarPINmejorado() {
   }
 }
 
-// Sobrescribir verificarPIN para usar sessionStorage
-var verificarPINoriginal = verificarPIN;
-verificarPIN = function() {
+// P0-1: verificarPIN async con comparación de hash PBKDF2
+var verificarPINoriginal = null; // ya no se usa, se mantiene por compatibilidad
+verificarPIN = async function() {
   const intento = document.getElementById('pin-input').value;
-  if (intento === appPIN) {
-    sessionStorage.setItem('pinVerificado', 'true');
-    document.getElementById('modal-pin').style.display = 'none';
-    document.getElementById('pin-input').value = '';
-    document.getElementById('pin-error').style.display = 'none';
-    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+  const storedHash = localStorage.getItem('finanzas_pin_hash');
+  const storedSaltB64 = localStorage.getItem('finanzas_pin_salt');
+  if (!storedHash || !storedSaltB64) {
+    // Sin PIN configurado: acceso directo
+    sessionStorage.setItem('pinVerificado','true');
+    document.getElementById('modal-pin').style.display='none';
+    if (!state.setup) document.getElementById('onboarding').style.display='flex';
+    else renderAll();
+    return;
+  }
+  const salt = Uint8Array.from(atob(storedSaltB64), c => c.charCodeAt(0));
+  const intentoHash = await _derivarHashPIN(intento, salt);
+  if (intentoHash === storedHash) {
+    sessionStorage.setItem('pinVerificado','true');
+    document.getElementById('modal-pin').style.display='none';
+    document.getElementById('pin-input').value='';
+    document.getElementById('pin-error').style.display='none';
+    if (!state.setup) document.getElementById('onboarding').style.display='flex';
     else renderAll();
   } else {
-    document.getElementById('pin-error').style.display = 'block';
-    document.getElementById('pin-input').value = '';
-    setTimeout(function() { document.getElementById('pin-error').style.display = 'none'; }, 3000);
+    document.getElementById('pin-error').style.display='block';
+    document.getElementById('pin-input').value='';
+    setTimeout(function(){ document.getElementById('pin-error').style.display='none'; }, 3000);
   }
 };
 
@@ -3765,8 +3814,8 @@ function setEditType(tipo) {
 }
 
 function guardarEdicionTx() {
-  const id = parseInt(document.getElementById('edit-tx-id').value);
-  const t = state.transactions.find(x => x.id === id);
+  const id = document.getElementById('edit-tx-id').value; // P1-4: UUID string, no parseInt
+  const t = state.transactions.find(x => String(x.id) === String(id));
   if (!t) return;
   const nuevoMonto = parseFloat(document.getElementById('edit-monto').value);
   if (!nuevoMonto || nuevoMonto <= 0) { alert('Monto inválido'); return; }
@@ -4035,20 +4084,69 @@ async function requestPersistence() {
   }
 }
 
+// ── P1-6: Singleton IDB + P0-2: store 'facturas' ─────────────
 const IDB_NAME = 'MisFinanzasHN_DB';
 const IDB_STORE = 'app_state';
-const IDB_VERSION = 1;
+const IDB_FACTURAS = 'facturas';
+const IDB_VERSION = 2; // incrementado por el nuevo store
+
+let _dbPromise = null; // P1-6: singleton
 
 function initDB() {
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise; // reutilizar conexión existente
+  _dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(IDB_NAME, IDB_VERSION);
-    request.onerror = (e) => reject('Error abriendo IndexedDB');
+    request.onerror = () => { _dbPromise = null; reject('Error abriendo IndexedDB'); };
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      if (!db.objectStoreNames.contains(IDB_STORE))
+        db.createObjectStore(IDB_STORE);
+      if (!db.objectStoreNames.contains(IDB_FACTURAS)) // P0-2: store de imágenes
+        db.createObjectStore(IDB_FACTURAS);
     };
     request.onsuccess = (e) => resolve(e.target.result);
   });
+  return _dbPromise;
+}
+
+// ── P0-2: Helpers para imágenes de facturas en IDB ───────────
+let _tempFacturaId = null; // reemplaza localStorage('temp_factura_imagen')
+
+async function _guardarTempFactura(dataURL) {
+  if (!dataURL) return null;
+  const id = (crypto.randomUUID ? crypto.randomUUID() : `fac_${Date.now()}_${Math.random().toString(36).slice(2,7)}`);
+  try {
+    const db = await initDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction(IDB_FACTURAS, 'readwrite');
+      tx.objectStore(IDB_FACTURAS).put(dataURL, id);
+      tx.oncomplete = res;
+      tx.onerror = rej;
+    });
+    return id;
+  } catch (e) { console.warn('IDB factura error:', e); return null; }
+}
+
+async function _obtenerFactura(id) {
+  if (!id) return null;
+  try {
+    const db = await initDB();
+    return await new Promise((res) => {
+      const tx = db.transaction(IDB_FACTURAS, 'readonly');
+      const req = tx.objectStore(IDB_FACTURAS).get(id);
+      req.onsuccess = () => res(req.result || null);
+      req.onerror = () => res(null);
+    });
+  } catch { return null; }
+}
+
+async function _eliminarFactura(id) {
+  if (!id) return;
+  try {
+    const db = await initDB();
+    const tx = db.transaction(IDB_FACTURAS, 'readwrite');
+    tx.objectStore(IDB_FACTURAS).delete(id);
+  } catch {}
 }
 
 async function saveStateToDB(stateObj) {
@@ -4120,8 +4218,43 @@ closeModal = function(id) {
 // ==========================================
 // SOBRESCRIBIR window.onload (async + IDB)
 // ==========================================
+// ── P1-5: Purga de soft-delete con más de 30 días ────────────
+function purgarEliminadosViejos() {
+  const LIMITE_MS = 30 * 24 * 60 * 60 * 1000; // 30 días
+  const ahora = Date.now();
+  const antes = state.transactions.length;
+  state.transactions = state.transactions.filter(t => {
+    if (!t.deletedAt) return true; // transacción activa: conservar
+    return (ahora - new Date(t.deletedAt).getTime()) < LIMITE_MS;
+  });
+  const purgados = antes - state.transactions.length;
+  if (purgados > 0) {
+    console.log(`🗑️ Purga: ${purgados} transacciones eliminadas hace >30 días`);
+    save();
+  }
+}
+
+// ── P0-1: Migración PIN legado (texto plano → PBKDF2) ─────────
+async function migrarPINLegadoSiNecesario() {
+  const oldPIN = localStorage.getItem('finanzas_pin');
+  const newHash = localStorage.getItem('finanzas_pin_hash');
+  if (oldPIN && !newHash) {
+    console.log('🔐 Migrando PIN a PBKDF2...');
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const hash = await _derivarHashPIN(oldPIN, salt);
+    localStorage.setItem('finanzas_pin_hash', hash);
+    localStorage.setItem('finanzas_pin_salt', btoa(String.fromCharCode(...salt)));
+    localStorage.removeItem('finanzas_pin');
+    appPIN = hash;
+    console.log('✅ PIN migrado a hash seguro');
+  }
+}
+
 window.onload = async function() {
   console.log('🚀 Mi Pisto HN cargando...');
+
+  // 0. Migrar PIN legado a PBKDF2 si es necesario
+  await migrarPINLegadoSiNecesario();
 
   // 1. Solicitar persistencia al SO
   await requestPersistence();
@@ -4150,6 +4283,9 @@ window.onload = async function() {
     // Hacer una primera escritura en IDB del estado existente en localStorage
     if (state.setup) saveStateToDB(state);
   }
+
+  // 2b. P1-5: Purgar transacciones en papelera con más de 30 días
+  purgarEliminadosViejos();
 
   // 3. Verificar PIN / Biometría
   verificarPINmejorado();
