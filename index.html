@@ -1468,6 +1468,19 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     </div>
   </div>
 
+  <!-- ═══ MULTIMONEDA ═══ -->
+  <div class="card">
+    <h4 style="margin-bottom:6px">💱 Moneda</h4>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
+      Tus datos se guardan en <strong style="color:var(--amber)">Lempira (HNL)</strong>.
+      Elige cómo verlos.
+    </p>
+    <div id="currency-selector-container"></div>
+    <button class="btn btn-secondary" onclick="openRatesModal()" style="margin-top:10px">
+      📊 Configurar Tasas de Cambio
+    </button>
+  </div>
+
   <div class="card">
     <h4 style="margin-bottom:10px">📤 Exportar / Importar</h4>
     <button class="btn btn-secondary" onclick="exportDataEncriptado()" style="margin-bottom:10px">📥 Respaldo Cifrado</button>
@@ -1828,7 +1841,17 @@ if (state.transactions && state.transactions.length > 0) { state.transactions.fo
 let mainChart = null;
 // P0-1: appPIN ahora almacena el HASH (no el PIN en crudo)
 let appPIN=localStorage.getItem('finanzas_pin_hash')||'';let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
-const fL=n=>'L. '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
+// ─────────────────────────────────────────────────────────────────
+// MULTIMONEDA: fL ahora delega en window.currencyManager si existe.
+// Mantiene fallback a L. para no romper nada antes de que cargue.
+// El state SIEMPRE guarda en HNL (moneda base); fL solo cambia el display.
+// ─────────────────────────────────────────────────────────────────
+const fL = n => {
+  if (window.currencyManager && typeof window.currencyManager.formatFromBase === 'function') {
+    return window.currencyManager.formatFromBase(Number(n) || 0);
+  }
+  return 'L. ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+};
 // P1-6: escape HTML para todos los campos del usuario insertados vía innerHTML.
 // Esto cierra la superficie XSS aunque alguien logre meter datos maliciosos
 // (por import, edición manual de localStorage, o un payload en una transacción).
@@ -5328,5 +5351,835 @@ console.log('✅ Mi Pisto HN v2.0 listo');
   </div>
 </div>
 </div><!-- /main-scroll-area -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SISTEMA MULTIMONEDA + UX IMPROVEMENTS
+     ─────────────────────────────────────────────────────────────────────
+     - Multimoneda: HNL (base) + USD, EUR, MXN, GTQ, NIO, SVC
+     - Conversión transparente vía hook a fL()
+     - Tasas manuales o desde API exchangerate-api.com
+     - Mejoras UX: secciones vacías ocultas, metas RGB+confeti,
+       hamburguesa desktop, FAB+ desktop oculto
+═══════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ═══════════════════ CURRENCY MANAGER ═══════════════════ */
+(function () {
+  'use strict';
+
+  const CURRENCIES = {
+    HNL: { code:'HNL', name:'Lempira Hondureño',     symbol:'L',   decimals:2, format:'L. {amount}',  flag:'🇭🇳' },
+    USD: { code:'USD', name:'Dólar Estadounidense',  symbol:'$',   decimals:2, format:'$ {amount}',   flag:'🇺🇸' },
+    EUR: { code:'EUR', name:'Euro',                  symbol:'€',   decimals:2, format:'€ {amount}',   flag:'🇪🇺' },
+    MXN: { code:'MXN', name:'Peso Mexicano',         symbol:'MX$', decimals:2, format:'MX$ {amount}', flag:'🇲🇽' },
+    GTQ: { code:'GTQ', name:'Quetzal Guatemalteco',  symbol:'Q',   decimals:2, format:'Q {amount}',   flag:'🇬🇹' },
+    NIO: { code:'NIO', name:'Córdoba Nicaragüense',  symbol:'C$',  decimals:2, format:'C$ {amount}',  flag:'🇳🇮' },
+    SVC: { code:'SVC', name:'Colón Salvadoreño',     symbol:'₡',   decimals:2, format:'₡ {amount}',   flag:'🇸🇻' }
+  };
+
+  // Tasas iniciales (aprox. 2025) — siempre se pueden actualizar
+  const DEFAULT_RATES = {
+    USD: 0.0404,  // 1 HNL = 0.0404 USD  (=> 1 USD ≈ 24.75 HNL)
+    EUR: 0.0366,  // 1 HNL = 0.0366 EUR
+    MXN: 0.6897,  // 1 HNL = 0.69 MXN
+    GTQ: 0.3145,  // 1 HNL = 0.31 GTQ
+    NIO: 1.4925,  // 1 HNL = 1.49 NIO
+    SVC: 0.3534   // 1 HNL = 0.35 SVC
+  };
+
+  class CurrencyManager {
+    constructor() {
+      this.baseCurrency = 'HNL';                 // Siempre HNL: el state está en lempiras
+      this.displayCurrency = 'HNL';              // Lo que ve el usuario
+      this.rates = { ...DEFAULT_RATES };         // Tasas: 1 HNL = X moneda
+      this.ratesLastUpdate = null;
+      this.ratesExpiryMs = 24 * 60 * 60 * 1000;  // 24h
+      this.loadFromStorage();
+    }
+
+    loadFromStorage() {
+      try {
+        const raw = localStorage.getItem('mph_currency_config');
+        if (!raw) return;
+        const cfg = JSON.parse(raw);
+        this.displayCurrency = cfg.displayCurrency || 'HNL';
+        if (cfg.rates && Object.keys(cfg.rates).length) this.rates = cfg.rates;
+        this.ratesLastUpdate = cfg.ratesLastUpdate ? new Date(cfg.ratesLastUpdate) : null;
+      } catch (e) { console.warn('Currency config load fail:', e); }
+    }
+
+    saveToStorage() {
+      try {
+        localStorage.setItem('mph_currency_config', JSON.stringify({
+          displayCurrency: this.displayCurrency,
+          rates: this.rates,
+          ratesLastUpdate: this.ratesLastUpdate ? this.ratesLastUpdate.toISOString() : null
+        }));
+      } catch (e) { console.warn('Currency config save fail:', e); }
+    }
+
+    getAvailableCurrencies() { return Object.values(CURRENCIES); }
+    getCurrencyInfo(code)    { return CURRENCIES[code] || null; }
+
+    setDisplayCurrency(code) {
+      if (!CURRENCIES[code]) throw new Error('Moneda no soportada: ' + code);
+      this.displayCurrency = code;
+      this.saveToStorage();
+      document.dispatchEvent(new CustomEvent('currencyChanged', { detail: { code } }));
+    }
+
+    areRatesStale() {
+      if (!this.ratesLastUpdate) return true;
+      return (Date.now() - this.ratesLastUpdate.getTime()) > this.ratesExpiryMs;
+    }
+
+    async updateExchangeRates(customRates = null) {
+      if (customRates) {
+        this.rates = { ...this.rates, ...customRates };
+        this.ratesLastUpdate = new Date();
+        this.saveToStorage();
+        return true;
+      }
+      try {
+        const r = await fetch('https://api.exchangerate-api.com/v4/latest/HNL', {
+          signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined
+        });
+        if (!r.ok) throw new Error('API ' + r.status);
+        const data = await r.json();
+        if (data && data.rates) {
+          // Solo guardar las monedas que soportamos
+          const filtered = {};
+          Object.keys(CURRENCIES).forEach(c => {
+            if (c !== 'HNL' && data.rates[c]) filtered[c] = data.rates[c];
+          });
+          this.rates = filtered;
+          this.ratesLastUpdate = new Date();
+          this.saveToStorage();
+          return true;
+        }
+      } catch (e) { console.warn('No se pudieron actualizar tasas:', e); }
+      return false;
+    }
+
+    /** Convierte de HNL (base) a la moneda display */
+    toDisplay(amountInHNL) {
+      if (this.displayCurrency === 'HNL') return amountInHNL;
+      const rate = this.rates[this.displayCurrency];
+      if (!rate) return amountInHNL;
+      return amountInHNL * rate;
+    }
+
+    /** Convierte de moneda display a HNL (para guardar en state) */
+    toBase(amountInDisplay) {
+      if (this.displayCurrency === 'HNL') return amountInDisplay;
+      const rate = this.rates[this.displayCurrency];
+      if (!rate) return amountInDisplay;
+      return amountInDisplay / rate;
+    }
+
+    format(amount, currency = null) {
+      const code = currency || this.displayCurrency;
+      const info = CURRENCIES[code];
+      if (!info) return Number(amount).toFixed(2);
+      const formatted = Number(amount).toLocaleString('en-US', {
+        minimumFractionDigits: info.decimals,
+        maximumFractionDigits: info.decimals
+      });
+      return info.format.replace('{amount}', formatted);
+    }
+
+    /** Formatea un monto guardado en HNL convirtiéndolo al display */
+    formatFromBase(amountInHNL) {
+      return this.format(this.toDisplay(amountInHNL));
+    }
+  }
+
+  window.currencyManager = new CurrencyManager();
+})();
+
+/* ═══════════════════ CURRENCY UI ═══════════════════ */
+(function () {
+  'use strict';
+
+  const cm = window.currencyManager;
+
+  function renderCurrencySelector(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const currencies = cm.getAvailableCurrencies();
+    const current = cm.displayCurrency;
+
+    container.innerHTML = `
+      <div class="currency-grid">
+        ${currencies.map(c => `
+          <div class="currency-card ${c.code === current ? 'selected' : ''}"
+               data-currency="${c.code}"
+               onclick="selectDisplayCurrency('${c.code}')">
+            <div class="currency-flag">${c.flag}</div>
+            <div class="currency-code">${c.code}</div>
+            <div class="currency-symbol">${c.symbol}</div>
+            ${c.code === current ? '<div class="currency-check">✓</div>' : ''}
+          </div>
+        `).join('')}
+      </div>
+      <div class="rates-info-box">
+        <div class="rates-status">
+          ${cm.areRatesStale()
+            ? '<span style="color:var(--red)">⚠️ Tasas desactualizadas</span>'
+            : '<span style="color:var(--green)">✓ Tasas actualizadas</span>'}
+          ${cm.ratesLastUpdate ? '· ' + relTime(cm.ratesLastUpdate) : ''}
+        </div>
+        <div class="rates-grid">
+          ${Object.keys(cm.rates).map(code => `
+            <div class="rate-item">
+              <span class="rate-flag">${(cm.getCurrencyInfo(code) || {}).flag || ''}</span>
+              <span class="rate-code">${code}</span>
+              <span class="rate-value">${cm.rates[code].toFixed(4)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="font-size:10px;color:var(--text2);margin-top:6px">
+          (1 HNL equivale a esta cantidad)
+        </div>
+      </div>
+    `;
+  }
+
+  function relTime(date) {
+    const d = Date.now() - date.getTime();
+    const m = Math.floor(d / 60000);
+    if (m < 1) return 'hace instantes';
+    if (m < 60) return 'hace ' + m + ' min';
+    const h = Math.floor(d / 3600000);
+    if (h < 24) return 'hace ' + h + ' h';
+    return 'hace ' + Math.floor(d / 86400000) + ' días';
+  }
+
+  window.selectDisplayCurrency = function (code) {
+    cm.setDisplayCurrency(code);
+    renderCurrencySelector('currency-selector-container');
+    if (typeof window.renderAll === 'function') window.renderAll();
+  };
+
+  window.openRatesModal = function () {
+    let modal = document.getElementById('modal-rates');
+    if (!modal) createRatesModal();
+    renderRatesForm();
+    document.getElementById('modal-rates').style.display = 'flex';
+  };
+
+  function createRatesModal() {
+    const html = `
+      <div id="modal-rates" class="modal" onclick="closeModalIfBg(event,'modal-rates')">
+        <div class="modal-content" style="max-width:380px">
+          <h3 style="margin-bottom:12px">📊 Tasas de Cambio</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
+            Cuánto vale 1 HNL en cada moneda. Ej: si 1 USD = 24.75 HNL, escribe <strong>0.0404</strong> en USD.
+          </p>
+          <div id="rates-form-container"></div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn btn-secondary" onclick="updateRatesFromAPI()" style="flex:1">🌐 Auto</button>
+            <button class="btn btn-primary"   onclick="saveManualRates()"   style="flex:1">💾 Guardar</button>
+          </div>
+          <button class="btn btn-secondary" onclick="closeModal('modal-rates')" style="margin-top:8px">Cerrar</button>
+        </div>
+      </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+  }
+
+  function renderRatesForm() {
+    const container = document.getElementById('rates-form-container');
+    if (!container) return;
+    const currencies = cm.getAvailableCurrencies().filter(c => c.code !== 'HNL');
+    container.innerHTML = currencies.map(c => `
+      <div class="rate-input-row">
+        <div class="rate-label">
+          <span style="font-size:18px">${c.flag}</span>
+          <span style="font-weight:700">${c.code}</span>
+        </div>
+        <input type="number" step="0.0001" class="input-field rate-input"
+               data-currency="${c.code}"
+               value="${cm.rates[c.code] || ''}"
+               placeholder="0.0000"
+               style="margin:0;flex:1">
+      </div>
+    `).join('');
+  }
+
+  window.saveManualRates = async function () {
+    const inputs = document.querySelectorAll('.rate-input');
+    const newRates = {};
+    inputs.forEach(i => {
+      const v = parseFloat(i.value);
+      if (v && v > 0) newRates[i.dataset.currency] = v;
+    });
+    if (!Object.keys(newRates).length) { alert('⚠️ Ingresa al menos una tasa'); return; }
+    await cm.updateExchangeRates(newRates);
+    closeModal('modal-rates');
+    renderCurrencySelector('currency-selector-container');
+    if (typeof window.renderAll === 'function') window.renderAll();
+    alert('✓ Tasas guardadas');
+  };
+
+  window.updateRatesFromAPI = async function () {
+    const btn = event && event.target;
+    if (btn) { btn.textContent = '🔄 Actualizando...'; btn.disabled = true; }
+    const ok = await cm.updateExchangeRates();
+    if (btn) { btn.textContent = '🌐 Auto'; btn.disabled = false; }
+    if (ok) {
+      renderRatesForm();
+      renderCurrencySelector('currency-selector-container');
+      if (typeof window.renderAll === 'function') window.renderAll();
+      alert('✓ Tasas actualizadas desde internet');
+    } else {
+      alert('❌ Sin conexión. Ingresa las tasas manualmente.');
+    }
+  };
+
+  window.renderCurrencySelector = renderCurrencySelector;
+
+  // Render inicial cuando se entre a config
+  document.addEventListener('click', e => {
+    const sb = e.target.closest('#sb-config, [onclick*="config"]');
+    if (sb) setTimeout(() => renderCurrencySelector('currency-selector-container'), 100);
+  });
+  // Y al cargar, si ya estamos en config
+  setTimeout(() => renderCurrencySelector('currency-selector-container'), 800);
+})();
+</script>
+
+<!-- Estilos del selector de moneda -->
+<style>
+.currency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.currency-card {
+  position: relative;
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+}
+.currency-card:hover { border-color: var(--amber); transform: translateY(-2px); }
+.currency-card.selected {
+  border-color: var(--amber);
+  background: linear-gradient(135deg, var(--bg3), rgba(245,200,0,.08));
+  box-shadow: 0 0 0 3px rgba(245,200,0,.1);
+}
+.currency-flag { font-size: 26px; margin-bottom: 4px; }
+.currency-code { font-size: 12px; font-weight: 800; color: var(--text); }
+.currency-symbol { font-size: 14px; color: var(--amber); font-weight: 700; }
+.currency-check {
+  position: absolute; top: 4px; right: 4px;
+  width: 18px; height: 18px;
+  background: var(--amber); color: var(--bg);
+  border-radius: 50%; font-weight: 800; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+}
+.rates-info-box {
+  background: var(--bg3);
+  border-left: 3px solid var(--amber);
+  border-radius: 8px;
+  padding: 10px;
+}
+.rates-status { font-size: 11px; margin-bottom: 8px; color: var(--text2); }
+.rates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+  gap: 4px;
+}
+.rate-item {
+  background: var(--bg4);
+  border-radius: 6px;
+  padding: 5px;
+  text-align: center;
+  font-size: 11px;
+}
+.rate-item .rate-flag { display: block; font-size: 14px; }
+.rate-item .rate-code { color: var(--text2); display: block; font-size: 9px; }
+.rate-item .rate-value { color: var(--text); font-weight: 700; font-size: 11px; }
+.rate-input-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.rate-label { min-width: 70px; display: flex; align-items: center; gap: 6px; }
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     UX IMPROVEMENTS (secciones vacías + metas RGB + confeti + hamburguesa)
+═══════════════════════════════════════════════════════════════════════ -->
+<style>
+/* Metas pro */
+@keyframes rgbFlow { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+@keyframes rgbGlow { 0%,100%{box-shadow:0 0 8px rgba(245,200,0,.4),0 0 16px rgba(255,68,68,.2)} 50%{box-shadow:0 0 16px rgba(66,133,244,.5),0 0 24px rgba(76,175,80,.3)} }
+@keyframes goalPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+@keyframes shimmerBar { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
+
+.goal-card-pro { background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s }
+.goal-card-pro:hover { border-color:rgba(245,200,0,.4) }
+.goal-card-pro.completed { border-color:var(--green);animation:goalPulse 2s ease-in-out infinite;background:linear-gradient(135deg,var(--bg2),rgba(76,175,80,.08)) }
+.goal-pro-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:10px }
+.goal-pro-name { font-weight:800;font-size:15px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
+.goal-pro-pct { font-weight:900;font-size:18px;background:linear-gradient(90deg,#FF4444,#F5C800,#4285F4,#4CAF50);background-size:300% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:rgbFlow 3s linear infinite;flex-shrink:0 }
+.goal-pro-amounts { font-size:12px;color:var(--text2);margin-bottom:10px }
+.goal-pro-amounts strong { color:var(--amber) }
+.goal-pro-bar-wrap { height:14px;background:var(--bg4);border-radius:8px;overflow:hidden;position:relative;margin-bottom:12px;box-shadow:inset 0 1px 3px rgba(0,0,0,.4) }
+.goal-pro-bar { height:100%;border-radius:8px;background:linear-gradient(90deg,#FF4444 0%,#FF7043 20%,#F5C800 40%,#4CAF50 60%,#4285F4 80%,#FF4444 100%);background-size:200% 100%;animation:rgbFlow 3s linear infinite,rgbGlow 2s ease-in-out infinite;position:relative;transition:width .6s cubic-bezier(.34,1.2,.64,1) }
+.goal-pro-bar::after { content:'';position:absolute;top:0;left:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:shimmerBar 2s ease-in-out infinite }
+.goal-pro-bar.completed { background:linear-gradient(90deg,#4CAF50,#8BC34A,#4CAF50);background-size:200% 100% }
+.goal-pro-actions { display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px }
+.goal-pro-btn { padding:9px 6px;border-radius:8px;border:none;font-weight:700;font-size:12px;cursor:pointer;transition:transform .15s,filter .15s;display:flex;align-items:center;justify-content:center;gap:4px }
+.goal-pro-btn:active { transform:scale(.96) }
+.goal-pro-btn:hover { filter:brightness(1.15) }
+.goal-pro-btn.abonar { background:linear-gradient(135deg,var(--amber),#FF7043);color:var(--bg) }
+.goal-pro-btn.editar { background:var(--bg3);color:var(--text);border:1px solid var(--border) }
+.goal-pro-btn.eliminar { background:var(--bg3);color:var(--red);border:1px solid rgba(255,68,68,.3) }
+.goal-pro-btn.completed-badge { grid-column:1/-1;background:linear-gradient(135deg,var(--green),#8BC34A);color:white;cursor:default;animation:goalPulse 2s infinite }
+
+/* Confeti */
+#confetti-canvas { position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:99999 }
+.celebration-toast { position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.5);background:linear-gradient(135deg,var(--amber),#FF7043);color:var(--bg);padding:24px 32px;border-radius:20px;font-weight:900;font-size:18px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(245,200,0,.5);z-index:100000;opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);max-width:320px }
+.celebration-toast.show { opacity:1;transform:translate(-50%,-50%) scale(1) }
+.celebration-toast .ct-emoji { font-size:48px;display:block;margin-bottom:8px;animation:goalPulse 1s ease-in-out infinite }
+.celebration-toast .ct-title { font-size:22px;margin-bottom:6px;letter-spacing:-.5px }
+.celebration-toast .ct-sub { font-size:13px;font-weight:600;opacity:.9 }
+
+/* Hamburguesa desktop */
+.desktop-hamburger { display:none;position:fixed;top:18px;right:24px;width:44px;height:44px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;cursor:pointer;z-index:1001;align-items:center;justify-content:center;transition:all .2s }
+.desktop-hamburger:hover { background:var(--bg3);border-color:var(--amber);transform:scale(1.05) }
+.desktop-hamburger svg { width:22px;height:22px;stroke:var(--text);transition:stroke .2s }
+.desktop-hamburger:hover svg { stroke:var(--amber) }
+.desktop-hamburger-menu { display:none;position:fixed;top:70px;right:24px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:8px;min-width:240px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:1000;animation:hbMenuIn .2s ease-out }
+.desktop-hamburger-menu.open { display:block }
+@keyframes hbMenuIn { from{opacity:0;transform:translateY(-8px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+.hb-menu-item { display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;cursor:pointer;font-weight:600;font-size:14px;color:var(--text);transition:background .15s;user-select:none }
+.hb-menu-item:hover { background:var(--bg3);color:var(--amber) }
+.hb-menu-item svg { width:18px;height:18px;flex-shrink:0 }
+.hb-menu-divider { height:1px;background:var(--border);margin:6px 8px }
+.hb-menu-section { font-size:10px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:1px;padding:8px 14px 4px }
+
+@media (min-width:1024px) {
+  .desktop-hamburger { display:flex }
+  #desktop-fab-btn   { display:none !important }
+}
+@media (max-width:1023px) {
+  .desktop-hamburger,.desktop-hamburger-menu { display:none !important }
+}
+
+.btn-empty-cta-pro { width:100%;padding:16px;border-radius:12px;border:none;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(135deg,var(--amber),#FF7043);color:var(--bg);margin-top:16px;box-shadow:0 4px 16px rgba(245,200,0,.3);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px }
+.btn-empty-cta-pro:hover { filter:brightness(1.1);transform:translateY(-1px) }
+.btn-empty-cta-pro:active { transform:scale(.98) }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  /* 1. Ocultar secciones vacías del dashboard */
+  function hideEmptyDashboardSections() {
+    const sections = [
+      { c:'dashboard-goals',      e:null },
+      { c:'card-alerts',          e:'no-card-alerts' },
+      { c:'upcoming-payments',    e:'no-upcoming-payments' },
+      { c:'upcoming-receivables', e:'no-upcoming-receivables' }
+    ];
+    sections.forEach(s => {
+      const container = document.getElementById(s.c);
+      if (!container) return;
+      const isEmpty = container.children.length === 0 || container.innerHTML.trim() === '';
+      const heading = container.previousElementSibling;
+      const emptyMsg = s.e ? document.getElementById(s.e) : null;
+      if (isEmpty) {
+        if (heading && heading.tagName === 'H3') heading.style.display = 'none';
+        if (emptyMsg) emptyMsg.style.display = 'none';
+        container.style.display = 'none';
+      } else {
+        if (heading && heading.tagName === 'H3') heading.style.display = '';
+        if (emptyMsg) emptyMsg.style.display = 'none';
+        container.style.display = '';
+      }
+    });
+    const recentEl = document.getElementById('recent-history');
+    const recentHeading = recentEl ? recentEl.previousElementSibling : null;
+    if (recentEl && recentEl.children.length === 0 && recentHeading && recentHeading.tagName === 'H3') {
+      recentHeading.style.display = 'none';
+    } else if (recentHeading && recentHeading.tagName === 'H3') {
+      recentHeading.style.display = '';
+    }
+  }
+
+  /* 2. Arreglar botón "Registrar primer movimiento" */
+  function fixEmptyStateButton() {
+    const observer = new MutationObserver(() => {
+      const btn = document.querySelector('.btn-empty-cta');
+      if (btn && !btn.dataset.fixed) {
+        btn.dataset.fixed = '1';
+        btn.classList.add('btn-empty-cta-pro');
+        btn.onclick = function (e) {
+          e.preventDefault(); e.stopPropagation();
+          const candidatos = ['modal-ingreso','modal-income','modal-tx-income','modal-nuevo-ingreso','modal-gasto'];
+          for (const id of candidatos) {
+            if (document.getElementById(id) && typeof window.openModal === 'function') {
+              window.openModal(id); return;
+            }
+          }
+          if (typeof window.toggleFabMenu === 'function') {
+            const fab = document.getElementById('nav-fab-btn') || document.getElementById('desktop-fab-btn');
+            if (fab) fab.scrollIntoView({behavior:'smooth',block:'center'});
+            window.toggleFabMenu();
+          }
+        };
+      }
+    });
+    observer.observe(document.body, { childList:true, subtree:true });
+  }
+
+  /* 3. Mejorar metas con barra RGB + acciones */
+  function enhanceMetasRendering() {
+    if (typeof window.renderMetas !== 'function') { setTimeout(enhanceMetasRendering, 300); return; }
+    window.renderMetas = function () {
+      const container = document.getElementById('metas-list');
+      if (!container) return;
+      const goals = (window.state && window.state.goals) || [];
+      if (goals.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:40px 20px">
+            <div style="font-size:48px;margin-bottom:12px">🎯</div>
+            <div style="font-weight:800;font-size:16px;margin-bottom:6px">Sin metas de ahorro</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:20px;max-width:280px;margin:0 auto 20px">
+              Define una meta y rastrea tu progreso con luces RGB.
+            </div>
+            <button class="btn-empty-cta-pro" onclick="openModal('modal-meta')" style="max-width:260px;margin:0 auto">
+              ➕ Crear primera meta
+            </button>
+          </div>`;
+        return;
+      }
+      container.innerHTML = goals.map(g => {
+        const pct = Math.min(100, (g.actual / g.objetivo) * 100);
+        const isComplete = pct >= 100;
+        const escFn = window.esc || (s => String(s||'').replace(/[<>"']/g, ''));
+        return `
+          <div class="goal-card-pro ${isComplete?'completed':''}" data-goal-id="${escFn(g.id)}">
+            <div class="goal-pro-header">
+              <div class="goal-pro-name">${escFn(g.nombre)}</div>
+              <div class="goal-pro-pct">${pct.toFixed(0)}%</div>
+            </div>
+            <div class="goal-pro-amounts">
+              <strong>${fL(g.actual)}</strong> de ${fL(g.objetivo)}
+              ${isComplete?'· 🎉 ¡Completada!':''}
+            </div>
+            <div class="goal-pro-bar-wrap">
+              <div class="goal-pro-bar ${isComplete?'completed':''}" style="width:${pct}%"></div>
+            </div>
+            <div class="goal-pro-actions">
+              ${isComplete ? `
+                <button class="goal-pro-btn completed-badge" onclick="window.celebrarMeta('${escFn(g.id)}')">
+                  🏆 ¡Meta lograda!
+                </button>` : `
+                <button class="goal-pro-btn abonar"   onclick="openAbono('${escFn(g.id)}')">💰 Abonar</button>
+                <button class="goal-pro-btn editar"   onclick="window.editarMeta('${escFn(g.id)}')">✏️ Editar</button>
+                <button class="goal-pro-btn eliminar" onclick="window.eliminarMetaPro('${escFn(g.id)}')">🗑️ Eliminar</button>`}
+            </div>
+          </div>`;
+      }).join('');
+    };
+
+    window.editarMeta = function (id) {
+      const g = window.state.goals.find(x => String(x.id) === String(id));
+      if (!g) return;
+      let modal = document.getElementById('modal-editar-meta');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-editar-meta';
+        modal.className = 'modal';
+        modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+        modal.innerHTML = `
+          <div class="modal-content">
+            <h3 style="margin-bottom:16px">✏️ Editar Meta</h3>
+            <input type="text"   id="edit-meta-nombre"   class="input-field" placeholder="Nombre">
+            <input type="number" id="edit-meta-objetivo" class="input-field" placeholder="Monto objetivo" inputmode="decimal">
+            <input type="number" id="edit-meta-actual"   class="input-field" placeholder="Monto actual"   inputmode="decimal">
+            <input type="hidden" id="edit-meta-id">
+            <div style="display:flex;gap:10px">
+              <button class="btn btn-secondary" onclick="document.getElementById('modal-editar-meta').style.display='none'" style="flex:1">Cancelar</button>
+              <button class="btn btn-primary"   onclick="window.guardarEdicionMeta()" style="flex:2">Guardar</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+      }
+      document.getElementById('edit-meta-nombre').value   = g.nombre;
+      document.getElementById('edit-meta-objetivo').value = g.objetivo;
+      document.getElementById('edit-meta-actual').value   = g.actual;
+      document.getElementById('edit-meta-id').value       = g.id;
+      modal.style.display = 'flex';
+    };
+
+    window.guardarEdicionMeta = function () {
+      const id = document.getElementById('edit-meta-id').value;
+      const nombre = document.getElementById('edit-meta-nombre').value.trim();
+      const objetivo = parseFloat(document.getElementById('edit-meta-objetivo').value);
+      const actual = parseFloat(document.getElementById('edit-meta-actual').value) || 0;
+      if (!nombre || !objetivo || objetivo <= 0) { alert('⚠️ Datos inválidos'); return; }
+      const g = window.state.goals.find(x => String(x.id) === String(id));
+      if (!g) return;
+      const wasIncomplete = (g.actual / g.objetivo) < 1;
+      g.nombre = nombre; g.objetivo = objetivo; g.actual = actual;
+      const isNowComplete = (actual / objetivo) >= 1;
+      if (typeof window.save === 'function') window.save();
+      document.getElementById('modal-editar-meta').style.display = 'none';
+      if (typeof window.renderAll === 'function') window.renderAll();
+      if (wasIncomplete && isNowComplete) setTimeout(() => window.celebrarMeta(id), 300);
+    };
+
+    window.eliminarMetaPro = function (id) {
+      const g = window.state.goals.find(x => String(x.id) === String(id));
+      if (!g) return;
+      const pct = ((g.actual/g.objetivo)*100).toFixed(0);
+      if (!confirm(`¿Eliminar la meta "${g.nombre}"?\n\nProgreso actual: ${pct}%\nEsta acción no se puede deshacer.`)) return;
+      window.state.goals = window.state.goals.filter(x => String(x.id) !== String(id));
+      if (typeof window.save === 'function') window.save();
+      if (typeof window.renderAll === 'function') window.renderAll();
+    };
+
+    if (window.state && window.state.goals && window.state.goals.length) window.renderMetas();
+  }
+
+  /* 3b. Confeti + felicitación */
+  function lanzarConfeti(durationMs) {
+    durationMs = durationMs || 2000;
+    let canvas = document.getElementById('confetti-canvas');
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.id = 'confetti-canvas';
+      document.body.appendChild(canvas);
+    }
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    const colors = ['#FF4444','#F5C800','#4CAF50','#4285F4','#FF7043','#9C27B0','#00BCD4'];
+    const particles = [];
+    for (let i = 0; i < 150; i++) {
+      particles.push({
+        x: Math.random()*canvas.width, y: -20-Math.random()*100,
+        vx: (Math.random()-.5)*6, vy: 2+Math.random()*4,
+        size: 6+Math.random()*8,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        rotation: Math.random()*360,
+        rotationSpeed: (Math.random()-.5)*10,
+        shape: Math.random() > .5 ? 'rect' : 'circle'
+      });
+    }
+    const startTime = Date.now();
+    function draw() {
+      const elapsed = Date.now() - startTime;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += .15; p.rotation += p.rotationSpeed;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI)/180);
+        ctx.fillStyle = p.color;
+        if (p.shape === 'rect') ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*.6);
+        else { ctx.beginPath(); ctx.arc(0,0,p.size/2,0,Math.PI*2); ctx.fill(); }
+        ctx.restore();
+      });
+      if (elapsed < durationMs) requestAnimationFrame(draw);
+      else {
+        const fadeStart = Date.now();
+        function fadeOut() {
+          const fe = Date.now() - fadeStart;
+          const op = 1 - (fe/500);
+          if (op > 0) {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.globalAlpha = op;
+            particles.forEach(p => {
+              p.x += p.vx; p.y += p.vy; p.vy += .15;
+              ctx.save();
+              ctx.translate(p.x,p.y);
+              ctx.rotate((p.rotation*Math.PI)/180);
+              ctx.fillStyle = p.color;
+              if (p.shape === 'rect') ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*.6);
+              else { ctx.beginPath(); ctx.arc(0,0,p.size/2,0,Math.PI*2); ctx.fill(); }
+              ctx.restore();
+            });
+            requestAnimationFrame(fadeOut);
+          } else {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.globalAlpha = 1;
+            canvas.remove();
+          }
+        }
+        fadeOut();
+      }
+    }
+    draw();
+  }
+
+  function mostrarFelicitacion(nombreMeta) {
+    let toast = document.querySelector('.celebration-toast');
+    if (toast) toast.remove();
+    toast = document.createElement('div');
+    toast.className = 'celebration-toast';
+    toast.innerHTML = `
+      <span class="ct-emoji">🎉</span>
+      <div class="ct-title">¡FELICIDADES!</div>
+      <div class="ct-sub">Lograste tu meta:<br><strong>"${nombreMeta}"</strong></div>`;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translate(-50%,-50%) scale(.8)';
+      setTimeout(() => toast.remove(), 400);
+    }, 2200);
+  }
+
+  window.celebrarMeta = function (id) {
+    const g = window.state.goals.find(x => String(x.id) === String(id));
+    if (!g) return;
+    lanzarConfeti(2000);
+    mostrarFelicitacion(g.nombre);
+  };
+
+  /* Hook saveAbono para detectar meta completada */
+  function hookAbonoParaConfeti() {
+    if (typeof window.saveAbono !== 'function') { setTimeout(hookAbonoParaConfeti, 300); return; }
+    const original = window.saveAbono;
+    window.saveAbono = function () {
+      const id = document.getElementById('abono-meta-id') ? document.getElementById('abono-meta-id').value : null;
+      const g = id ? window.state.goals.find(x => String(x.id) === String(id)) : null;
+      const wasIncomplete = g ? (g.actual / g.objetivo) < 1 : true;
+      original.apply(this, arguments);
+      setTimeout(() => {
+        const gAfter = id ? window.state.goals.find(x => String(x.id) === String(id)) : null;
+        if (gAfter && wasIncomplete && (gAfter.actual / gAfter.objetivo) >= 1) {
+          window.celebrarMeta(id);
+        }
+      }, 200);
+    };
+  }
+
+  /* 4. Hamburguesa desktop */
+  function buildDesktopHamburger() {
+    if (document.getElementById('desktop-hamburger-btn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'desktop-hamburger-btn';
+    btn.className = 'desktop-hamburger';
+    btn.setAttribute('aria-label','Abrir menú');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>`;
+    document.body.appendChild(btn);
+
+    const menu = document.createElement('div');
+    menu.id = 'desktop-hamburger-menu';
+    menu.className = 'desktop-hamburger-menu';
+    menu.innerHTML = `
+      <div class="hb-menu-section">Acciones rápidas</div>
+      <div class="hb-menu-item" data-fab="ingreso">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+        Nuevo ingreso
+      </div>
+      <div class="hb-menu-item" data-fab="gasto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#FF4444" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Nuevo gasto
+      </div>
+      <div class="hb-menu-item" data-fab="transferir">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#F5C800" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Transferir
+      </div>
+      <div class="hb-menu-divider"></div>
+      <div class="hb-menu-section">Navegación</div>
+      <div class="hb-menu-item" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2" opacity=".6"/><rect x="3" y="13" width="8" height="8" rx="2" opacity=".6"/><rect x="13" y="13" width="8" height="8" rx="2" opacity=".35"/></svg>
+        Inicio
+      </div>
+      <div class="hb-menu-item" data-view="metas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="#4285F4"/></svg>
+        Metas de ahorro
+      </div>
+      <div class="hb-menu-item" data-view="historico">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="14" width="4" height="7" rx="1.5" opacity=".5"/><rect x="10" y="9" width="4" height="12" rx="1.5" opacity=".75"/><rect x="17" y="4" width="4" height="17" rx="1.5"/></svg>
+        Historial
+      </div>
+      <div class="hb-menu-item" data-view="tarjetas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Tarjetas
+      </div>
+      <div class="hb-menu-divider"></div>
+      <div class="hb-menu-item" data-view="config">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Configuración
+      </div>`;
+    document.body.appendChild(menu);
+
+    btn.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('open'); });
+    document.addEventListener('click', e => {
+      if (!menu.contains(e.target) && !btn.contains(e.target)) menu.classList.remove('open');
+    });
+    menu.addEventListener('click', e => {
+      const item = e.target.closest('.hb-menu-item');
+      if (!item) return;
+      menu.classList.remove('open');
+      const view = item.dataset.view;
+      const fabAction = item.dataset.fab;
+      if (view && typeof window.switchView === 'function') {
+        window.switchView(view);
+        if (typeof window.setSidebarActive === 'function') window.setSidebarActive('sb-' + view);
+      }
+      if (fabAction) {
+        const map = {
+          ingreso:    ['modal-ingreso','modal-income'],
+          gasto:      ['modal-gasto','modal-expense'],
+          transferir: ['modal-transferir','modal-transfer']
+        };
+        const candidatos = map[fabAction] || [];
+        for (const id of candidatos) {
+          if (document.getElementById(id) && typeof window.openModal === 'function') {
+            window.openModal(id); return;
+          }
+        }
+        if (typeof window.toggleFabMenu === 'function') window.toggleFabMenu();
+      }
+    });
+  }
+
+  /* Hook al renderDashboard para ocultar secciones vacías cada vez que se renderiza */
+  function hookRenderDashboard() {
+    if (typeof window.renderDashboard !== 'function') { setTimeout(hookRenderDashboard, 300); return; }
+    const original = window.renderDashboard;
+    window.renderDashboard = function () {
+      original.apply(this, arguments);
+      setTimeout(hideEmptyDashboardSections, 50);
+    };
+  }
+
+  function init() {
+    console.log('🎨 UX Improvements + Multimoneda v1.0 cargando...');
+    hookRenderDashboard();
+    setTimeout(hideEmptyDashboardSections, 500);
+    fixEmptyStateButton();
+    enhanceMetasRendering();
+    hookAbonoParaConfeti();
+    buildDesktopHamburger();
+    if (typeof window.switchView === 'function') {
+      const orig = window.switchView;
+      window.switchView = function () {
+        orig.apply(this, arguments);
+        setTimeout(hideEmptyDashboardSections, 100);
+      };
+    }
+    console.log('✅ Listo');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
 </body>
 </html>
