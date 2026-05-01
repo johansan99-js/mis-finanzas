@@ -5351,7 +5351,22 @@ function initDB() {
       if (!db.objectStoreNames.contains(IDB_FACTURAS)) // P0-2: store de imágenes
         db.createObjectStore(IDB_FACTURAS);
     };
-    request.onsuccess = (e) => resolve(e.target.result);
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+      // FIX: invalidar el singleton si la conexión se cierra inesperadamente
+      // (otra pestaña actualiza versión, navegador la descarta por inactividad, etc.)
+      // Sin esto, db.transaction() lanza InvalidStateError "connection is closing".
+      db.onclose = () => {
+        console.warn('⚠️ Conexión IDB cerrada inesperadamente, invalidando singleton');
+        _dbPromise = null;
+      };
+      db.onversionchange = () => {
+        try { db.close(); } catch(_) {}
+        _dbPromise = null;
+        console.warn('⚠️ IDB versionchange detectado — conexión cerrada para permitir upgrade');
+      };
+      resolve(db);
+    };
   });
   return _dbPromise;
 }
@@ -5397,18 +5412,47 @@ async function _eliminarFactura(id) {
 }
 
 async function saveStateToDB(stateObj) {
-  try {
+  // FIX: helper interno reutilizable para reintento con conexión fresca
+  const _doSave = async () => {
     const db = await initDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
+      let tx;
+      try {
+        tx = db.transaction(IDB_STORE, 'readwrite');
+      } catch (e) {
+        // La conexión estaba cerrándose — invalidar singleton para forzar
+        // reapertura en el próximo intento
+        _dbPromise = null;
+        return reject(e);
+      }
       const store = tx.objectStore(IDB_STORE);
       const toSave = Object.assign({}, stateObj, { _version: '1.0.0', _lastSave: new Date().toISOString() });
-      store.put(toSave, 'current_state');
+      try {
+        store.put(toSave, 'current_state');
+      } catch (e) {
+        return reject(e);
+      }
       tx.oncomplete = () => resolve();
-      tx.onerror = (e) => reject(e);
+      tx.onerror = (e) => reject(tx.error || e);
+      tx.onabort = (e) => reject(tx.error || e);
     });
+  };
+  try {
+    return await _doSave();
   } catch (error) {
-    console.warn('IDB no disponible, usando solo localStorage:', error);
+    // Reintento único si la conexión vieja estaba cerrándose
+    if (error && (error.name === 'InvalidStateError' ||
+                  String(error.message || '').includes('closing'))) {
+      console.warn('⚠️ IDB save: conexión cerrándose, reintentando con conexión fresca...');
+      _dbPromise = null;
+      try {
+        return await _doSave();
+      } catch (e2) {
+        console.warn('IDB save falló tras reintento, fallback a localStorage:', e2);
+      }
+    } else {
+      console.warn('IDB no disponible, usando solo localStorage:', error);
+    }
   }
 }
 
@@ -5579,6 +5623,26 @@ renderAll = function() {
     renderPapelera();
   }, 100);
 };
+
+// ═══════════════════════════════════════════════════════════════════════
+// FIX CRÍTICO: Exponer state, fL, esc en window para que el IIFE de UX
+// (definido en otro <script> tag, scope independiente) pueda leerlos.
+// Sin esto, window.state es undefined → el IIFE muestra "Sin metas" aunque
+// state.goals tenga datos. Usamos getter para que sobreviva la reasignación
+// de state en línea ~4210 cuando se carga desde IndexedDB.
+// ═══════════════════════════════════════════════════════════════════════
+try {
+  Object.defineProperty(window, 'state', {
+    get: () => state,
+    set: v => { state = v; },
+    configurable: true
+  });
+} catch (e) {
+  window.state = state;
+  console.warn('No se pudo definir getter de window.state, usando asignación directa:', e);
+}
+window.fL = fL;
+window.esc = esc;
 
 console.log('✅ Mi Pisto HN v2.0 listo');
 
