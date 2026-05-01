@@ -5,7 +5,7 @@
 // ============================================================
 // P1-10: bump de versión obligatorio para que activate purgue cachés viejos
 //        y los clientes obtengan la nueva versión del HTML/JS con los fixes.
-const VERSION = 'v5';
+const VERSION = 'v6.1';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 const ASSETS_REQUIRED = [
