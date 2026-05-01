@@ -1961,7 +1961,7 @@ function _conIdValidado(func, nombreFunc) {
 // Proteger funciones críticas (wrapping automático al cargar)
 window.addEventListener('DOMContentLoaded', () => {
   const funcionesCriticas = [
-    'abrirEdicionTx', 'softDeleteTx', 'openAbono', 'deleteMeta',
+    'abrirEdicionTx', 'softDeleteTx', 'openAbono', 'deleteMeta', 'editarMeta',
     'abonarCobrar', 'editarCobrar', 'eliminarCobrar',
     'abonarPagar', 'editarPagar', 'eliminarPagar',
     'pagarCuotaPrestamo', 'editarPrestamo', 'eliminarPrestamo',
@@ -3004,7 +3004,99 @@ function saveMeta(){const nombre=document.getElementById('meta-nombre').value,ob
 function openAbono(id){const g=state.goals.find(x=>x.id===id);if(!g)return;document.getElementById('abono-meta-nombre').textContent=g.nombre;document.getElementById('abono-meta-id').value=id;openModal('modal-abono')}
 function saveAbono(){const id=document.getElementById('abono-meta-id').value,monto=parseFloat(document.getElementById('abono-monto').value);if(!monto||monto<=0)return alert('Monto inválido');const g=state.goals.find(x=>String(x.id)===String(id));if(g){g.actual+=monto;state.transactions.push({id:uid(),type:'expense',amount:monto,cat:'Ahorro',subcat:`Meta: ${esc(g.nombre)}`,date:new Date().toISOString()});save();closeModal('modal-abono');renderAll()}document.getElementById('abono-monto').value=''}
 function deleteMeta(id){if(confirm('¿Eliminar?')){state.goals=state.goals.filter(g=>g.id!==id);save();renderAll()}}
-function renderMetas(){const container=document.getElementById('metas-list');if(!container)return;if(state.goals.length===0){container.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🎯</div><div class="es-title">Sin metas de ahorro</div><div class="es-sub">Define una meta (viaje, fondo de emergencia, auto) y rastrea tu progreso.</div><button class="btn-empty-secondary" onclick="openModal('modal-meta')">➕ Crear primera meta</button></div>`;return;}container.innerHTML=state.goals.map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="card card-saving"><div style="font-weight:700">${esc(g.nombre)}</div><div style="font-size:12px;color:var(--text2)">${fL(g.actual)} de ${fL(g.objetivo)}</div><div style="height:8px;background:var(--bg4);border-radius:4px;margin:10px 0"><div style="width:${pct}%;height:100%;background:var(--green)"></div></div><button class="btn btn-primary" onclick=\"openAbono('${esc(g.id)}')\"">💰 Abonar</button><button onclick=\"deleteMeta('${esc(g.id)}')\"" style="background:none;border:none;color:var(--red);float:right;margin-top:10px">Eliminar</button></div>`}).join('')}
+function renderMetas(){
+  const container=document.getElementById('metas-list');
+  if(!container)return;
+  
+  // Estado vacío
+  if(state.goals.length===0){
+    container.innerHTML=`<div class="empty-state-simple"><div class="es-icon">🎯</div><div class="es-title">Sin metas de ahorro</div><div class="es-sub">Define una meta (viaje, fondo de emergencia, auto) y rastrea tu progreso.</div><button class="btn-empty-secondary" onclick="openModal('modal-meta')">➕ Crear primera meta</button></div>`;
+    return;
+  }
+  
+  // FIX CRÍTICO: HTML correctamente escapado con grid de 3 botones (Abonar, Editar, Eliminar)
+  container.innerHTML = state.goals.map(g => {
+    const pct = Math.min(100, (g.actual / g.objetivo) * 100);
+    const isComplete = pct >= 100;
+    const safeId = esc(g.id);
+    const safeName = esc(g.nombre);
+    
+    return `
+      <div class="card card-saving" data-goal-id="${safeId}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${safeName}</div>
+          <div style="font-weight:800;color:var(--amber);font-size:14px">${pct.toFixed(0)}%</div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
+          <strong style="color:var(--amber)">${fL(g.actual)}</strong> de ${fL(g.objetivo)}
+          ${isComplete ? ' · 🎉 ¡Completada!' : ''}
+        </div>
+        <div style="height:10px;background:var(--bg4);border-radius:5px;margin:10px 0;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${isComplete ? 'var(--green)' : 'linear-gradient(90deg,var(--amber),var(--green))'};transition:width .6s ease"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;margin-top:12px">
+          <button class="btn btn-primary" style="margin:0;padding:10px 6px;font-size:12px" onclick="openAbono('${safeId}')">💰 Abonar</button>
+          <button class="btn btn-secondary" style="margin:0;padding:10px 6px;font-size:12px" onclick="editarMeta('${safeId}')">✏️ Editar</button>
+          <button class="btn" style="margin:0;padding:10px 6px;font-size:12px;background:var(--bg3);color:var(--red);border:1px solid rgba(255,68,68,.3)" onclick="deleteMeta('${safeId}')">🗑️ Eliminar</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// FIX: Función global editarMeta (faltaba en la versión original)
+function editarMeta(id) {
+  const g = state.goals.find(x => String(x.id) === String(id));
+  if (!g) return;
+  
+  let modal = document.getElementById('modal-editar-meta');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-editar-meta';
+    modal.className = 'modal';
+    modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h3 style="margin-bottom:16px">✏️ Editar Meta</h3>
+        <input type="text" id="edit-meta-nombre" class="input-field" placeholder="Nombre de la meta">
+        <input type="number" id="edit-meta-objetivo" class="input-field" placeholder="Monto objetivo (L)" inputmode="decimal" step="0.01">
+        <input type="number" id="edit-meta-actual" class="input-field" placeholder="Monto actual ahorrado (L)" inputmode="decimal" step="0.01">
+        <input type="hidden" id="edit-meta-id">
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-editar-meta').style.display='none'" style="flex:1">Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarEdicionMeta()" style="flex:2">💾 Guardar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  
+  document.getElementById('edit-meta-nombre').value = g.nombre;
+  document.getElementById('edit-meta-objetivo').value = g.objetivo;
+  document.getElementById('edit-meta-actual').value = g.actual;
+  document.getElementById('edit-meta-id').value = g.id;
+  modal.style.display = 'flex';
+}
+
+function guardarEdicionMeta() {
+  const id = document.getElementById('edit-meta-id').value;
+  const nombre = document.getElementById('edit-meta-nombre').value.trim();
+  const objetivo = parseFloat(document.getElementById('edit-meta-objetivo').value);
+  const actual = parseFloat(document.getElementById('edit-meta-actual').value) || 0;
+  
+  if (!nombre) { alert('⚠️ El nombre es obligatorio'); return; }
+  if (!objetivo || objetivo <= 0) { alert('⚠️ El monto objetivo debe ser mayor a 0'); return; }
+  if (actual < 0) { alert('⚠️ El monto actual no puede ser negativo'); return; }
+  
+  const g = state.goals.find(x => String(x.id) === String(id));
+  if (!g) return;
+  
+  g.nombre = nombre;
+  g.objetivo = objetivo;
+  g.actual = actual;
+  
+  save();
+  document.getElementById('modal-editar-meta').style.display = 'none';
+  renderAll();
+}
 function renderDashboardGoals(){const container=document.getElementById('dashboard-goals');if(!container)return;container.innerHTML=state.goals.slice(0,3).map(g=>{const pct=Math.min(100,(g.actual/g.objetivo)*100);return `<div class="goal-mini"><div class="goal-mini-header"><span>${esc(g.nombre)}</span><span>${pct.toFixed(0)}%</span></div><div class="goal-mini-bar"><div class="goal-mini-progress" style="width:${pct}%"></div></div></div>`}).join('')}
 
 // ========== COBRAR Y PAGAR (MEJORADO CON FLUJO DE CAJA) ==========
