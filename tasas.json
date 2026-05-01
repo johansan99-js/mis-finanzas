@@ -1,0 +1,15 @@
+{
+  "updated_at": "2026-04-30T12:00:00.000Z",
+  "base": "HNL",
+  "note": "Cada valor representa cuántos HNL equivalen a 1 unidad de esa moneda. Ej: USD: 26.7295 → 1 USD = L. 26.7295",
+  "source": "Tasas iniciales BCH abril 2026 (luego actualizadas automáticamente por GitHub Actions)",
+  "rates": {
+    "USD": 26.7295,
+    "EUR": 31.0000,
+    "GTQ": 3.4813,
+    "NIO": 0.7218,
+    "MXN": 1.5176,
+    "CRC": 0.0530,
+    "PAB": 26.7295
+  }
+}
