@@ -1,0 +1,46 @@
+name: 🌐 Actualizar Tasas de Cambio
+
+# Ejecutar todos los días a las 12:00 UTC (06:00 hora Honduras)
+# y también permitir ejecución manual desde la UI de GitHub
+on:
+  schedule:
+    - cron: '0 12 * * *'   # Diario 12:00 UTC = 06:00 HN
+  workflow_dispatch:        # Permite trigger manual
+
+# Permisos necesarios para hacer push de tasas.json al repo
+permissions:
+  contents: write
+
+jobs:
+  update-rates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 🌐 Ejecutar updater
+        run: node update-rates.js
+
+      - name: 📊 Mostrar tasas obtenidas
+        run: cat tasas.json
+
+      - name: 📝 Commit y push si hay cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet tasas.json; then
+            echo "ℹ️ Sin cambios en tasas.json (tasas idénticas a ayer)"
+          else
+            git add tasas.json
+            git commit -m "🌐 Update tasas $(date -u +%Y-%m-%d)"
+            git push
+            echo "✅ Tasas actualizadas y pusheadas"
+          fi
