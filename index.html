@@ -1758,6 +1758,79 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <div id="modal-pago-recurrente" class="modal" onclick="closeModalIfBg(event,'modal-pago-recurrente')"><div class="modal-content"><h3>🔔 Nuevo Pago Recurrente</h3><input type="text" id="pago-servicio" class="input-field" placeholder="Servicio (Ej. Agua, Luz, Teléfono)"><input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="pago-monto" class="input-field" placeholder="Monto estimado (L)"><input type="number" id="pago-dia" class="input-field" placeholder="Día de pago (1-31)" min="1" max="31"><select id="pago-alerta" class="input-field"><option value="5">Alertarme 5 días antes</option><option value="3" selected>Alertarme 3 días antes</option><option value="1">Alertarme 1 día antes</option></select><label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer"><input type="checkbox" id="pago-notificacion" checked><span style="font-size:12px">Activar notificaciones push</span></label><button class="btn btn-secondary" onclick="closeModal('modal-pago-recurrente')">Cancelar</button><button class="btn btn-primary" onclick="savePagoRecurrente()">Guardar Pago</button></div></div>
 
 <script>
+// ═════════════════════════════════════════════════════════════
+// FIX: Utility - Fetch con timeout compatible con navegadores antiguos
+// (Safari <15.3, Android <13 no tienen AbortSignal.timeout)
+// ═════════════════════════════════════════════════════════════
+function timeoutFetch(url, options = {}, ms = 3000) {
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+    // Navegadores modernos (2024+)
+    return fetch(url, {
+      ...options,
+      signal: AbortSignal.timeout(ms)
+    });
+  }
+  
+  // Fallback para navegadores antiguos
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  
+  return fetch(url, {
+    ...options,
+    signal: controller.signal
+  }).finally(() => clearTimeout(timer));
+}
+
+// ═════════════════════════════════════════════════════════════
+// FIX: Manager centralizado de timeouts (prevenir memory leaks)
+// ═════════════════════════════════════════════════════════════
+window._timeoutIds = [];
+window._intervalIds = [];
+
+window.createTimeout = function(fn, ms) {
+  const id = setTimeout(() => {
+    // Auto-remover de la lista al ejecutarse
+    const idx = window._timeoutIds.indexOf(id);
+    if (idx > -1) window._timeoutIds.splice(idx, 1);
+    fn();
+  }, ms);
+  window._timeoutIds.push(id);
+  return id;
+};
+
+window.createInterval = function(fn, ms) {
+  const id = setInterval(fn, ms);
+  window._intervalIds.push(id);
+  return id;
+};
+
+window.clearAllTimeouts = function() {
+  window._timeoutIds.forEach(id => clearTimeout(id));
+  window._timeoutIds = [];
+};
+
+window.clearAllIntervals = function() {
+  window._intervalIds.forEach(id => clearInterval(id));
+  window._intervalIds = [];
+};
+
+// Cleanup automático al cerrar/recargar página
+window.addEventListener('beforeunload', () => {
+  window.clearAllTimeouts();
+  window.clearAllIntervals();
+});
+
+// Cleanup también en pagehide (Safari móvil)
+window.addEventListener('pagehide', () => {
+  window.clearAllTimeouts();
+  window.clearAllIntervals();
+});
+
+// ═════════════════════════════════════════════════════════════
+// FIX: Constantes globales para validación de tasas
+// ═════════════════════════════════════════════════════════════
+const USD_HNL_VALID_RANGE = { min: 20, max: 35 };
+
 // ========== VARIABLES GLOBALES Y ESTADO ==========
 const LS_KEY='mifinanzashn_pro_v20_full';
 let state={setup:false,nombre:'',saldoInicial:0,cuentas:{efectivo:0,ahorro:0},transactions:[],goals:[],receivables:[],payables:[],prestamos:[],tarjetas:[],pagosRecurrentes:[],budgetRules:{gastos:65,ahorro:20,extra:15}};
@@ -5293,7 +5366,8 @@ window.onload = async function() {
   // Verificar y enviar notificaciones de pagos próximos
   if(localStorage.getItem('notif_activas')==='true'){
     setTimeout(checkNotificacionesPagos, 2000);
-    setInterval(checkNotificacionesPagos, 60*60*1000); // cada hora
+    // FIX: Usar createInterval para cleanup automático y evitar memory leaks
+    window.createInterval(checkNotificacionesPagos, 60*60*1000); // cada hora
   }
   
   // Actualizar estado botón de notificaciones
@@ -5491,21 +5565,31 @@ console.log('✅ Mi Pisto HN v2.0 listo');
         // Cache-busting: añadir timestamp del día para que el SW no sirva
         // un tasas.json viejo cuando ya hay uno nuevo en el repo
         const today = new Date().toISOString().slice(0, 10);  // YYYY-MM-DD
-        const r = await fetch('./tasas.json?d=' + today, {
-          cache: 'no-cache',
-          signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined
-        });
+        // FIX: Usar timeoutFetch (compatible con navegadores antiguos)
+        const r = await timeoutFetch(
+          './tasas.json?d=' + today,
+          { cache: 'no-cache' },
+          3000
+        );
         if (!r.ok) return false;
         const data = await r.json();
 
         // Validar estructura: { updated_at, base, rates: { USD: 26.73, ... } }
         if (!data.rates || typeof data.rates !== 'object') return false;
-        if (!data.rates.USD || data.rates.USD < 10) return false;  // sanity
+        // FIX: Validar rango realista para Honduras (20-35), no solo > 10
+        if (!data.rates.USD || 
+            data.rates.USD < USD_HNL_VALID_RANGE.min || 
+            data.rates.USD > USD_HNL_VALID_RANGE.max) {
+          console.warn(`⚠️ USD/HNL fuera de rango en tasas.json: ${data.rates.USD}`);
+          return false;
+        }
 
-        // Mantener solo monedas soportadas
+        // Mantener solo monedas soportadas (FIX: validar > 0 para evitar Infinity)
         const filtered = {};
         Object.keys(CURRENCIES).forEach(c => {
-          if (c !== 'HNL' && data.rates[c]) filtered[c] = data.rates[c];
+          if (c !== 'HNL' && data.rates[c] && data.rates[c] > 0 && isFinite(data.rates[c])) {
+            filtered[c] = data.rates[c];
+          }
         });
 
         if (Object.keys(filtered).length >= 3) {
@@ -5530,20 +5614,35 @@ console.log('✅ Mi Pisto HN v2.0 listo');
       ];
       for (const apiUrl of apis) {
         try {
-          const ctrl = AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {};
-          const r = await fetch(apiUrl, ctrl);
+          // FIX: Usar timeoutFetch (compatible con navegadores antiguos)
+          const r = await timeoutFetch(apiUrl, {}, 8000);
           if (!r.ok) continue;
           const data = await r.json();
           if (!data || !data.rates) continue;
           const usdToHnl = data.rates.HNL;
-          if (!usdToHnl || usdToHnl < 10) continue;
+          // FIX: Validar rango realista (20-35) para detectar valores corruptos de la API
+          if (!usdToHnl || 
+              usdToHnl < USD_HNL_VALID_RANGE.min || 
+              usdToHnl > USD_HNL_VALID_RANGE.max) {
+            console.warn(`⚠️ USD/HNL fuera de rango en API: ${usdToHnl}`);
+            continue;
+          }
 
           // Calcular "1 X = Y HNL" vía cruzada con USD
+          // FIX: Validar > 0 antes de dividir + isFinite() para prevenir Infinity/NaN
           const newRates = {};
           Object.keys(CURRENCIES).forEach(code => {
             if (code === 'HNL') return;
-            if (code === 'USD') newRates[code] = usdToHnl;
-            else if (data.rates[code]) newRates[code] = usdToHnl / data.rates[code];
+            if (code === 'USD') {
+              newRates[code] = usdToHnl;
+            } else if (data.rates[code] && data.rates[code] > 0) {
+              const calculated = usdToHnl / data.rates[code];
+              if (isFinite(calculated) && calculated > 0) {
+                newRates[code] = calculated;
+              } else {
+                console.warn(`⚠️ Tasa inválida para ${code}: ${calculated}`);
+              }
+            }
           });
 
           if (Object.keys(newRates).length >= 3) {
