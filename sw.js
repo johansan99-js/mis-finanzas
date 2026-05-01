@@ -1,26 +1,30 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v9-metas-cuentas
+//  Mi Pisto HN — Service Worker v10-state-window-fix
 //  ─────────────────────────────────────────────────────────
 //  Cambios en esta versión:
-//   ✅ Bump de versión para invalidar caché de PWAs instaladas
-//      tras el rediseño de Metas de Ahorro:
-//        - Abono ahora descuenta de la cuenta seleccionada
-//          (efectivo o ahorro), validando saldo disponible
-//        - Modal de abono con selector de cuenta + display
-//          de saldo en tiempo real
-//        - Edit/Delete siempre visibles (incluso en metas
-//          completadas)
-//        - Animaciones RGB y confeti retiradas (UX más calma)
+//   ✅ Bump de versión para invalidar caché tras los fixes:
+//        - window.state ahora expuesto vía getter (state era let
+//          y no llegaba al IIFE en otro <script> tag → metas
+//          siempre mostraba "Sin metas" aunque hubiera goals)
+//        - window.fL y window.esc también expuestos
+//        - IDB: handlers onclose/onversionchange para invalidar
+//          el singleton _dbPromise cuando la conexión se cierra
+//        - IDB: saveStateToDB con reintento si la conexión vieja
+//          estaba cerrándose (fixes "InvalidStateError: The
+//          database connection is closing")
+//
+//  Cambios heredados de v9-metas-cuentas:
+//   ✅ Abono descuenta de cuenta seleccionada (efectivo/ahorro)
+//   ✅ Modal de abono con selector + display de saldo
+//   ✅ Sin animaciones RGB ni confeti
 //
 //  Cambios heredados de v8-paths-fixed:
-//   ✅ Rutas auto-detectadas (no más /mis-finanzas/ hardcoded)
-//   ✅ Funciona en cualquier path (/mi-pisto-hn/, /mis-finanzas/, etc)
-//   ✅ AbortSignal.timeout() con fallback para navegadores antiguos
-//   ✅ Race condition en caché de navegación
-//   ✅ tasas.json con fallback completo (no rates vacío)
+//   ✅ Rutas auto-detectadas
+//   ✅ AbortSignal.timeout() con fallback
+//   ✅ tasas.json con fallback completo
 // ============================================================
 
-const VERSION = 'v9-metas-cuentas';
+const VERSION = 'v10-state-window-fix';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
