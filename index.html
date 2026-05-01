@@ -5362,7 +5362,19 @@ console.log('✅ Mi Pisto HN v2.0 listo');
        hamburguesa desktop, FAB+ desktop oculto
 ═══════════════════════════════════════════════════════════════════════ -->
 <script>
-/* ═══════════════════ CURRENCY MANAGER ═══════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   CURRENCY MANAGER v2 (corrige problemas reportados)
+   ─────────────────────────────────────────────────────────────────────
+   Cambios respecto a v1:
+   • SVC eliminado (Colón Salvadoreño obsoleto desde 2001 → El Salvador
+     usa USD desde la dolarización oficial).
+   • Tasas almacenadas como "1 X = Y HNL" (más intuitivo que "1 HNL = Y X").
+   • Tasas iniciales actualizadas a abril 2026 (BCH oficial).
+   • API cambiada a open.er-api.com (gratis, sin auth, más confiable),
+     usando USD como base y calculando cruzadas vía HNL.
+   • Migración automática: si hay tasas viejas en formato invertido,
+     se convierten al nuevo formato sin perder configuración.
+═══════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
@@ -5370,30 +5382,35 @@ console.log('✅ Mi Pisto HN v2.0 listo');
     HNL: { code:'HNL', name:'Lempira Hondureño',     symbol:'L',   decimals:2, format:'L. {amount}',  flag:'🇭🇳' },
     USD: { code:'USD', name:'Dólar Estadounidense',  symbol:'$',   decimals:2, format:'$ {amount}',   flag:'🇺🇸' },
     EUR: { code:'EUR', name:'Euro',                  symbol:'€',   decimals:2, format:'€ {amount}',   flag:'🇪🇺' },
-    MXN: { code:'MXN', name:'Peso Mexicano',         symbol:'MX$', decimals:2, format:'MX$ {amount}', flag:'🇲🇽' },
     GTQ: { code:'GTQ', name:'Quetzal Guatemalteco',  symbol:'Q',   decimals:2, format:'Q {amount}',   flag:'🇬🇹' },
     NIO: { code:'NIO', name:'Córdoba Nicaragüense',  symbol:'C$',  decimals:2, format:'C$ {amount}',  flag:'🇳🇮' },
-    SVC: { code:'SVC', name:'Colón Salvadoreño',     symbol:'₡',   decimals:2, format:'₡ {amount}',   flag:'🇸🇻' }
+    MXN: { code:'MXN', name:'Peso Mexicano',         symbol:'MX$', decimals:2, format:'MX$ {amount}', flag:'🇲🇽' },
+    CRC: { code:'CRC', name:'Colón Costarricense',   symbol:'₡',   decimals:2, format:'₡ {amount}',   flag:'🇨🇷' },
+    PAB: { code:'PAB', name:'Balboa Panameño',       symbol:'B/.', decimals:2, format:'B/. {amount}', flag:'🇵🇦' }
   };
 
-  // Tasas iniciales (aprox. 2025) — siempre se pueden actualizar
+  // ── TASAS REALES BCH/Banco México/Xe.com — abril 2026 ──
+  // Formato NUEVO: 1 X = Y HNL (más natural).
+  // Ej: USD: 26.7295 → "1 USD = L 26.7295"
   const DEFAULT_RATES = {
-    USD: 0.0404,  // 1 HNL = 0.0404 USD  (=> 1 USD ≈ 24.75 HNL)
-    EUR: 0.0366,  // 1 HNL = 0.0366 EUR
-    MXN: 0.6897,  // 1 HNL = 0.69 MXN
-    GTQ: 0.3145,  // 1 HNL = 0.31 GTQ
-    NIO: 1.4925,  // 1 HNL = 1.49 NIO
-    SVC: 0.3534   // 1 HNL = 0.35 SVC
+    USD: 26.7295,  // BCH 28-abr-2026 (venta)
+    EUR: 31.0000,  // Promedio compra/venta abril 2026
+    GTQ:  3.4813,  // Mataf abril 2026
+    NIO:  0.7218,  // Xe.com abril 2026
+    MXN:  1.5176,  // Xe.com 29-abr-2026
+    CRC:  0.0530,  // Aprox 1 USD = 504 CRC → 26.73/504
+    PAB: 26.7295   // PAB está pegado al USD 1:1
   };
 
   class CurrencyManager {
     constructor() {
-      this.baseCurrency = 'HNL';                 // Siempre HNL: el state está en lempiras
-      this.displayCurrency = 'HNL';              // Lo que ve el usuario
-      this.rates = { ...DEFAULT_RATES };         // Tasas: 1 HNL = X moneda
+      this.baseCurrency = 'HNL';
+      this.displayCurrency = 'HNL';
+      this.rates = { ...DEFAULT_RATES };  // ← AHORA: 1 X = Y HNL
       this.ratesLastUpdate = null;
-      this.ratesExpiryMs = 24 * 60 * 60 * 1000;  // 24h
+      this.ratesExpiryMs = 24 * 60 * 60 * 1000;
       this.loadFromStorage();
+      this._migrateOldRatesIfNeeded();
     }
 
     loadFromStorage() {
@@ -5401,10 +5418,42 @@ console.log('✅ Mi Pisto HN v2.0 listo');
         const raw = localStorage.getItem('mph_currency_config');
         if (!raw) return;
         const cfg = JSON.parse(raw);
-        this.displayCurrency = cfg.displayCurrency || 'HNL';
+        if (cfg.displayCurrency && cfg.displayCurrency !== 'SVC') {
+          this.displayCurrency = cfg.displayCurrency;
+        } else if (cfg.displayCurrency === 'SVC') {
+          // SVC eliminado → resetear a HNL
+          this.displayCurrency = 'HNL';
+        }
         if (cfg.rates && Object.keys(cfg.rates).length) this.rates = cfg.rates;
         this.ratesLastUpdate = cfg.ratesLastUpdate ? new Date(cfg.ratesLastUpdate) : null;
+        this._formatVersion = cfg._formatVersion || 1;
       } catch (e) { console.warn('Currency config load fail:', e); }
+    }
+
+    /** Migración: tasas v1 estaban como "1 HNL = X moneda" (valores < 2 típicos).
+        v2 las quiere como "1 moneda = X HNL". Detecta y convierte. */
+    _migrateOldRatesIfNeeded() {
+      if (this._formatVersion === 2) return;
+
+      // Si USD es < 1, está en formato viejo (1 HNL = 0.0404 USD) → invertir
+      if (this.rates.USD && this.rates.USD < 1) {
+        console.log('🔄 Migrando tasas a formato v2 (1 X = Y HNL)...');
+        const newRates = {};
+        Object.keys(this.rates).forEach(code => {
+          const oldRate = this.rates[code];
+          if (oldRate && oldRate > 0) {
+            newRates[code] = 1 / oldRate;  // Invertir
+          }
+        });
+        this.rates = newRates;
+      }
+
+      // Eliminar SVC si existía
+      delete this.rates.SVC;
+
+      this._formatVersion = 2;
+      this.saveToStorage();
+      console.log('✅ Tasas migradas:', this.rates);
     }
 
     saveToStorage() {
@@ -5412,7 +5461,8 @@ console.log('✅ Mi Pisto HN v2.0 listo');
         localStorage.setItem('mph_currency_config', JSON.stringify({
           displayCurrency: this.displayCurrency,
           rates: this.rates,
-          ratesLastUpdate: this.ratesLastUpdate ? this.ratesLastUpdate.toISOString() : null
+          ratesLastUpdate: this.ratesLastUpdate ? this.ratesLastUpdate.toISOString() : null,
+          _formatVersion: 2
         }));
       } catch (e) { console.warn('Currency config save fail:', e); }
     }
@@ -5432,6 +5482,8 @@ console.log('✅ Mi Pisto HN v2.0 listo');
       return (Date.now() - this.ratesLastUpdate.getTime()) > this.ratesExpiryMs;
     }
 
+    /** Actualiza tasas desde API gratuita open.er-api.com (sin auth).
+        Estrategia: pedir tasas con USD como base y calcular cruzadas vs HNL. */
     async updateExchangeRates(customRates = null) {
       if (customRates) {
         this.rates = { ...this.rates, ...customRates };
@@ -5439,41 +5491,69 @@ console.log('✅ Mi Pisto HN v2.0 listo');
         this.saveToStorage();
         return true;
       }
-      try {
-        const r = await fetch('https://api.exchangerate-api.com/v4/latest/HNL', {
-          signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined
-        });
-        if (!r.ok) throw new Error('API ' + r.status);
-        const data = await r.json();
-        if (data && data.rates) {
-          // Solo guardar las monedas que soportamos
-          const filtered = {};
-          Object.keys(CURRENCIES).forEach(c => {
-            if (c !== 'HNL' && data.rates[c]) filtered[c] = data.rates[c];
+
+      // Lista de APIs gratuitas a probar (failover)
+      const apis = [
+        'https://open.er-api.com/v6/latest/USD',
+        'https://api.exchangerate-api.com/v4/latest/USD'
+      ];
+
+      for (const apiUrl of apis) {
+        try {
+          const ctrl = AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {};
+          const r = await fetch(apiUrl, ctrl);
+          if (!r.ok) continue;
+          const data = await r.json();
+          if (!data || !data.rates) continue;
+
+          const usdToHnl = data.rates.HNL;
+          if (!usdToHnl || usdToHnl < 10) continue;  // Sanity: HNL siempre > 10 por USD
+
+          // Calcular "1 X = Y HNL" vía cruzada con USD:
+          //   1 USD = usdToHnl HNL
+          //   1 USD = data.rates[X] X
+          //   → 1 X = usdToHnl / data.rates[X] HNL
+          const newRates = {};
+          Object.keys(CURRENCIES).forEach(code => {
+            if (code === 'HNL') return;
+            if (code === 'USD') {
+              newRates[code] = usdToHnl;
+            } else if (data.rates[code]) {
+              newRates[code] = usdToHnl / data.rates[code];
+            }
           });
-          this.rates = filtered;
-          this.ratesLastUpdate = new Date();
-          this.saveToStorage();
-          return true;
+
+          if (Object.keys(newRates).length >= 3) {
+            this.rates = newRates;
+            this.ratesLastUpdate = new Date();
+            this.saveToStorage();
+            console.log('✅ Tasas actualizadas desde', apiUrl, newRates);
+            return true;
+          }
+        } catch (e) {
+          console.warn('API falló:', apiUrl, e.message);
         }
-      } catch (e) { console.warn('No se pudieron actualizar tasas:', e); }
+      }
+
       return false;
     }
 
-    /** Convierte de HNL (base) a la moneda display */
+    /** Convierte HNL → moneda display.
+        Ej: toDisplay(100) con USD: 100 / 26.73 = 3.74 USD */
     toDisplay(amountInHNL) {
       if (this.displayCurrency === 'HNL') return amountInHNL;
-      const rate = this.rates[this.displayCurrency];
-      if (!rate) return amountInHNL;
-      return amountInHNL * rate;
+      const rate = this.rates[this.displayCurrency];  // 1 X = rate HNL
+      if (!rate || rate <= 0) return amountInHNL;
+      return amountInHNL / rate;
     }
 
-    /** Convierte de moneda display a HNL (para guardar en state) */
+    /** Convierte moneda display → HNL.
+        Ej: toBase(10) con USD: 10 × 26.73 = 267.30 HNL */
     toBase(amountInDisplay) {
       if (this.displayCurrency === 'HNL') return amountInDisplay;
       const rate = this.rates[this.displayCurrency];
-      if (!rate) return amountInDisplay;
-      return amountInDisplay / rate;
+      if (!rate || rate <= 0) return amountInDisplay;
+      return amountInDisplay * rate;
     }
 
     format(amount, currency = null) {
@@ -5487,7 +5567,6 @@ console.log('✅ Mi Pisto HN v2.0 listo');
       return info.format.replace('{amount}', formatted);
     }
 
-    /** Formatea un monto guardado en HNL convirtiéndolo al display */
     formatFromBase(amountInHNL) {
       return this.format(this.toDisplay(amountInHNL));
     }
@@ -5496,7 +5575,9 @@ console.log('✅ Mi Pisto HN v2.0 listo');
   window.currencyManager = new CurrencyManager();
 })();
 
-/* ═══════════════════ CURRENCY UI ═══════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   CURRENCY UI v2 — selector visual + modal de tasas con dirección clara
+═══════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
@@ -5526,19 +5607,22 @@ console.log('✅ Mi Pisto HN v2.0 listo');
           ${cm.areRatesStale()
             ? '<span style="color:var(--red)">⚠️ Tasas desactualizadas</span>'
             : '<span style="color:var(--green)">✓ Tasas actualizadas</span>'}
-          ${cm.ratesLastUpdate ? '· ' + relTime(cm.ratesLastUpdate) : ''}
+          ${cm.ratesLastUpdate ? '· ' + relTime(cm.ratesLastUpdate) : ' · usa las predeterminadas'}
         </div>
-        <div class="rates-grid">
-          ${Object.keys(cm.rates).map(code => `
-            <div class="rate-item">
-              <span class="rate-flag">${(cm.getCurrencyInfo(code) || {}).flag || ''}</span>
-              <span class="rate-code">${code}</span>
-              <span class="rate-value">${cm.rates[code].toFixed(4)}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div style="font-size:10px;color:var(--text2);margin-top:6px">
-          (1 HNL equivale a esta cantidad)
+        <div class="rates-grid-pretty">
+          ${Object.keys(cm.rates).filter(c => c !== 'HNL').map(code => {
+            const info = cm.getCurrencyInfo(code) || {};
+            const rate = cm.rates[code];
+            return `
+              <div class="rate-pretty">
+                <span class="rate-pretty-flag">${info.flag || ''}</span>
+                <span class="rate-pretty-text">
+                  <strong>1 ${code}</strong> =
+                  <span style="color:var(--amber);font-weight:800">L. ${rate.toFixed(4)}</span>
+                </span>
+              </div>
+            `;
+          }).join('')}
         </div>
       </div>
     `;
@@ -5570,11 +5654,17 @@ console.log('✅ Mi Pisto HN v2.0 listo');
   function createRatesModal() {
     const html = `
       <div id="modal-rates" class="modal" onclick="closeModalIfBg(event,'modal-rates')">
-        <div class="modal-content" style="max-width:380px">
-          <h3 style="margin-bottom:12px">📊 Tasas de Cambio</h3>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
-            Cuánto vale 1 HNL en cada moneda. Ej: si 1 USD = 24.75 HNL, escribe <strong>0.0404</strong> en USD.
+        <div class="modal-content" style="max-width:400px">
+          <h3 style="margin-bottom:8px">📊 Tasas de Cambio</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.5">
+            <strong style="color:var(--amber)">¿Cuántos lempiras vale 1 unidad de cada moneda?</strong>
+            Ej: si <strong>1 USD = L 26.73</strong>, escribe <strong>26.73</strong> en USD.
           </p>
+          <div style="background:var(--bg3);border-left:3px solid var(--blue);border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:11px;color:var(--text2)">
+            💡 Las tasas oficiales del BCH están publicadas en
+            <span style="color:var(--amber);font-weight:700">bch.hn</span>.
+            O usa el botón <strong>🌐 Auto</strong> para descargarlas.
+          </div>
           <div id="rates-form-container"></div>
           <div style="display:flex;gap:8px;margin-top:14px">
             <button class="btn btn-secondary" onclick="updateRatesFromAPI()" style="flex:1">🌐 Auto</button>
@@ -5591,16 +5681,21 @@ console.log('✅ Mi Pisto HN v2.0 listo');
     if (!container) return;
     const currencies = cm.getAvailableCurrencies().filter(c => c.code !== 'HNL');
     container.innerHTML = currencies.map(c => `
-      <div class="rate-input-row">
-        <div class="rate-label">
+      <div class="rate-input-row-v2">
+        <div class="rate-label-v2">
           <span style="font-size:18px">${c.flag}</span>
-          <span style="font-weight:700">${c.code}</span>
+          <div>
+            <div style="font-weight:700;font-size:13px">1 ${c.code}</div>
+            <div style="font-size:9px;color:var(--text2)">${c.name}</div>
+          </div>
+          <span style="color:var(--text2);font-weight:700">=</span>
         </div>
-        <input type="number" step="0.0001" class="input-field rate-input"
+        <input type="number" step="0.0001" min="0" class="input-field rate-input"
                data-currency="${c.code}"
-               value="${cm.rates[c.code] || ''}"
+               value="${cm.rates[c.code] ? cm.rates[c.code].toFixed(4) : ''}"
                placeholder="0.0000"
                style="margin:0;flex:1">
+        <span style="color:var(--amber);font-weight:800;font-size:13px">L.</span>
       </div>
     `).join('');
   }
@@ -5622,27 +5717,26 @@ console.log('✅ Mi Pisto HN v2.0 listo');
 
   window.updateRatesFromAPI = async function () {
     const btn = event && event.target;
-    if (btn) { btn.textContent = '🔄 Actualizando...'; btn.disabled = true; }
+    const originalText = btn ? btn.textContent : '';
+    if (btn) { btn.textContent = '🔄 Conectando...'; btn.disabled = true; }
     const ok = await cm.updateExchangeRates();
-    if (btn) { btn.textContent = '🌐 Auto'; btn.disabled = false; }
+    if (btn) { btn.textContent = originalText; btn.disabled = false; }
     if (ok) {
       renderRatesForm();
       renderCurrencySelector('currency-selector-container');
       if (typeof window.renderAll === 'function') window.renderAll();
-      alert('✓ Tasas actualizadas desde internet');
+      alert('✓ Tasas actualizadas\n\n' + Object.entries(cm.rates).filter(([k]) => k !== 'HNL').map(([k,v]) => `1 ${k} = L. ${v.toFixed(4)}`).join('\n'));
     } else {
-      alert('❌ Sin conexión. Ingresa las tasas manualmente.');
+      alert('❌ No se pudo conectar a la API.\n\nPosibles causas:\n• Sin internet\n• El proveedor bloqueó la API\n\nIngresa las tasas manualmente desde bch.hn');
     }
   };
 
   window.renderCurrencySelector = renderCurrencySelector;
 
-  // Render inicial cuando se entre a config
   document.addEventListener('click', e => {
     const sb = e.target.closest('#sb-config, [onclick*="config"]');
     if (sb) setTimeout(() => renderCurrencySelector('currency-selector-container'), 100);
   });
-  // Y al cargar, si ya estamos en config
   setTimeout(() => renderCurrencySelector('currency-selector-container'), 800);
 })();
 </script>
@@ -5707,6 +5801,40 @@ console.log('✅ Mi Pisto HN v2.0 listo');
   display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
 }
 .rate-label { min-width: 70px; display: flex; align-items: center; gap: 6px; }
+
+/* ── v2: tasas con dirección clara "1 USD = L 26.73" ── */
+.rates-grid-pretty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rate-pretty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg4);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.rate-pretty-flag { font-size: 16px; flex-shrink: 0; }
+.rate-pretty-text { color: var(--text); flex: 1; }
+.rate-input-row-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.rate-label-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 110px;
+}
 </style>
 
 <!-- ═══════════════════════════════════════════════════════════════════════
