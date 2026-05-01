@@ -1,14 +1,22 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v7
+//  Mi Pisto HN — Service Worker v7-FIXED
 //  ─────────────────────────────────────────────────────────
-//  Cambios v6 → v7:
-//   • Bump VERSION para invalidar caché (multimoneda v6.2 + GitHub Actions)
-//   • tasas.json con estrategia network-first (siempre intenta fresh)
-//   • Mantenida toda la lógica anterior de v5/v6
+//  Fixes en esta versión:
+//   ✅ AbortSignal.timeout() con fallback para navegadores antiguos
+//   ✅ Race condition en caché de navegación
+//   ✅ tasas.json con fallback completo (no rates vacío)
+//   ✅ Timeouts consistentes definidos en constantes
 // ============================================================
 
-const VERSION = 'v7';
+const VERSION = 'v7-fixed';
 const CACHE_NAME = `mipistohn-${VERSION}`;
+
+// Timeouts consistentes
+const TIMEOUTS = {
+  RATES:        3000,  // tasas.json debe ser fresco
+  NAVIGATION:   4500,  // navegación puede tardar un poco
+  EXTERNAL:     7000   // recursos externos más lentos
+};
 
 const ASSETS_REQUIRED = [
   '/mis-finanzas/',
@@ -17,8 +25,23 @@ const ASSETS_REQUIRED = [
   '/mis-finanzas/manifest.json',
   '/mis-finanzas/icon-192.png',
   '/mis-finanzas/icon-512.png',
-  '/mis-finanzas/tasas.json'   // ← NUEVO en v7
+  '/mis-finanzas/tasas.json'
 ];
+
+// ── HELPER: Fetch con timeout compatible (soluciona bug #2) ──
+function timeoutFetch(request, ms) {
+  if (AbortSignal.timeout) {
+    // Navegadores modernos (2024+)
+    return fetch(request, { signal: AbortSignal.timeout(ms) });
+  }
+  
+  // Fallback para navegadores antiguos (Safari <15.3, Android <13)
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  
+  return fetch(request, { signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
 
 // ── INSTALL ──────────────────────────────────────────────────
 self.addEventListener('install', event => {
@@ -64,26 +87,40 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
-  // ── tasas.json: NETWORK-FIRST (queremos siempre el más fresco)
-  // Si offline o falla, devolver el cacheado.
+  // ── tasas.json: NETWORK-FIRST con fallback completo (FIX #4) ──
   if (url.pathname.endsWith('/tasas.json')) {
     event.respondWith((async () => {
       try {
-        const networkResp = await fetch(event.request, {
-          signal: AbortSignal.timeout(3000)
-        });
+        const networkResp = await timeoutFetch(event.request, TIMEOUTS.RATES);
         if (networkResp && networkResp.status === 200) {
           const clone = networkResp.clone();
           caches.open(CACHE_NAME).then(c => c.put(event.request, clone).catch(() => {}));
           return networkResp;
         }
       } catch (e) { /* offline o timeout */ }
-      // Fallback al caché
+      
+      // Fallback #1: Usar caché
       const cached = await caches.match(event.request);
-      return cached || new Response(JSON.stringify({
-        error: 'tasas.json no disponible offline',
-        rates: {}
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (cached) return cached;
+      
+      // Fallback #2: Devolver tasas por defecto en vez de rates vacío (FIX #4)
+      return new Response(JSON.stringify({
+        error: 'tasas.json no disponible (offline/timeout)',
+        base: 'HNL',
+        updated_at: new Date().toISOString(),
+        rates: {
+          USD: 26.7295,
+          EUR: 31.0000,
+          GTQ: 3.4813,
+          NIO: 0.7218,
+          MXN: 1.5176,
+          CRC: 0.0530,
+          PAB: 26.7295
+        }
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
     })());
     return;
   }
@@ -92,7 +129,7 @@ self.addEventListener('fetch', event => {
   const isExternal = url.origin !== self.location.origin;
   if (isExternal) {
     event.respondWith(
-      fetch(event.request, { signal: AbortSignal.timeout(8000) })
+      timeoutFetch(event.request, TIMEOUTS.EXTERNAL)
         .catch(() => new Response('', {
           status: 503,
           statusText: 'Offline — recurso externo no disponible'
@@ -101,41 +138,66 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Navegación con caché-rápido + revalidación + timeout 4s
+  // ── Navegación: caché-rápido + revalidación en background (FIX #3) ──
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
       const cached = await caches.match(event.request) ||
                      await caches.match('/mis-finanzas/index.html');
-      const networkPromise = fetch(event.request).then(r => {
-        if (r && r.status === 200) {
-          const clone = r.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+      
+      // ✅ FIX #3: Actualización en background SIN race condition
+      const updateCacheInBackground = (async () => {
+        try {
+          const fresh = await timeoutFetch(event.request, TIMEOUTS.NAVIGATION);
+          if (fresh && fresh.status === 200) {
+            const clone = fresh.clone();
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, clone);
+            console.log('✅ Cache actualizado para:', event.request.url);
+          }
+        } catch (e) {
+          console.warn('⚠️ Error actualizando caché:', e.message);
         }
-        return r;
-      }).catch(() => null);
-
-      if (cached) {
-        event.waitUntil(networkPromise);
-        return cached;
+      })();
+      
+      // ✅ event.waitUntil espera realmente al update
+      event.waitUntil(updateCacheInBackground);
+      
+      // Devolver caché inmediatamente (faster)
+      if (cached) return cached;
+      
+      // Si no hay caché, esperar al fetch con timeout
+      try {
+        const timeoutPromise = new Promise((res, rej) => {
+          setTimeout(() => rej(new Error('timeout')), TIMEOUTS.NAVIGATION);
+        });
+        const fresh = await Promise.race([
+          timeoutFetch(event.request, TIMEOUTS.NAVIGATION),
+          timeoutPromise
+        ]);
+        return fresh;
+      } catch (e) {
+        // Si falla, devolver offline.html
+        return caches.match('/mis-finanzas/offline.html') ||
+               new Response('Offline', { status: 503 });
       }
-      const timeoutPromise = new Promise(res => setTimeout(() => res(null), 4000));
-      const result = await Promise.race([networkPromise, timeoutPromise]);
-      return result || (await caches.match('/mis-finanzas/offline.html')) ||
-             new Response('Offline', { status: 503 });
     })());
     return;
   }
 
-  // Assets estáticos: cache-first con actualización en background
+  // ── Assets estáticos: cache-first con actualización en background ──
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
-      const fetchPromise = fetch(event.request).then(response => {
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone).catch(() => {}));
-        }
-        return response;
-      }).catch(() => null);
+      const fetchPromise = timeoutFetch(event.request, TIMEOUTS.EXTERNAL)
+        .then(response => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(c => 
+              c.put(event.request, clone).catch(() => {})
+            );
+          }
+          return response;
+        })
+        .catch(() => null);
 
       return cachedResponse || fetchPromise || new Response('', {
         status: 503,
