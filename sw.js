@@ -1,11 +1,13 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v5 (P0+P1 hotfix)
-//  Paleta Guacamaya Roja · Moneda 50¢ Lempira
-//  Cuentas Efectivo + Ahorro · Conciliación por cuenta
+//  Mi Pisto HN — Service Worker v7
+//  ─────────────────────────────────────────────────────────
+//  Cambios v6 → v7:
+//   • Bump VERSION para invalidar caché (multimoneda v6.2 + GitHub Actions)
+//   • tasas.json con estrategia network-first (siempre intenta fresh)
+//   • Mantenida toda la lógica anterior de v5/v6
 // ============================================================
-// P1-10: bump de versión obligatorio para que activate purgue cachés viejos
-//        y los clientes obtengan la nueva versión del HTML/JS con los fixes.
-const VERSION = 'v6.1';
+
+const VERSION = 'v7';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 const ASSETS_REQUIRED = [
@@ -14,7 +16,8 @@ const ASSETS_REQUIRED = [
   '/mis-finanzas/offline.html',
   '/mis-finanzas/manifest.json',
   '/mis-finanzas/icon-192.png',
-  '/mis-finanzas/icon-512.png'
+  '/mis-finanzas/icon-512.png',
+  '/mis-finanzas/tasas.json'   // ← NUEVO en v7
 ];
 
 // ── INSTALL ──────────────────────────────────────────────────
@@ -61,6 +64,30 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
+  // ── tasas.json: NETWORK-FIRST (queremos siempre el más fresco)
+  // Si offline o falla, devolver el cacheado.
+  if (url.pathname.endsWith('/tasas.json')) {
+    event.respondWith((async () => {
+      try {
+        const networkResp = await fetch(event.request, {
+          signal: AbortSignal.timeout(3000)
+        });
+        if (networkResp && networkResp.status === 200) {
+          const clone = networkResp.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone).catch(() => {}));
+          return networkResp;
+        }
+      } catch (e) { /* offline o timeout */ }
+      // Fallback al caché
+      const cached = await caches.match(event.request);
+      return cached || new Response(JSON.stringify({
+        error: 'tasas.json no disponible offline',
+        rates: {}
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    })());
+    return;
+  }
+
   // Ignorar CDNs externos (Tesseract, Chart.js, SheetJS, etc.)
   const isExternal = url.origin !== self.location.origin;
   if (isExternal) {
@@ -74,9 +101,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // P1-10: navegación con caché-rápido + revalidación + timeout 4s.
-  // En 3G hondureño, esperar 30s a que falle un fetch deja la pantalla en blanco;
-  // ahora servimos el caché de inmediato si existe y refrescamos en background.
+  // Navegación con caché-rápido + revalidación + timeout 4s
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
       const cached = await caches.match(event.request) ||
@@ -89,12 +114,10 @@ self.addEventListener('fetch', event => {
         return r;
       }).catch(() => null);
 
-      // Si hay caché → devolver caché de inmediato (revalidación silenciosa)
       if (cached) {
         event.waitUntil(networkPromise);
         return cached;
       }
-      // Sin caché → carrera red vs timeout 4s
       const timeoutPromise = new Promise(res => setTimeout(() => res(null), 4000));
       const result = await Promise.race([networkPromise, timeoutPromise]);
       return result || (await caches.match('/mis-finanzas/offline.html')) ||
@@ -103,7 +126,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Para assets estáticos: cache-first con actualización en background
+  // Assets estáticos: cache-first con actualización en background
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
       const fetchPromise = fetch(event.request).then(response => {
