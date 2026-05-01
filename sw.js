@@ -1,7 +1,18 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v8-paths-fixed
+//  Mi Pisto HN — Service Worker v9-metas-cuentas
 //  ─────────────────────────────────────────────────────────
-//  Fixes en esta versión:
+//  Cambios en esta versión:
+//   ✅ Bump de versión para invalidar caché de PWAs instaladas
+//      tras el rediseño de Metas de Ahorro:
+//        - Abono ahora descuenta de la cuenta seleccionada
+//          (efectivo o ahorro), validando saldo disponible
+//        - Modal de abono con selector de cuenta + display
+//          de saldo en tiempo real
+//        - Edit/Delete siempre visibles (incluso en metas
+//          completadas)
+//        - Animaciones RGB y confeti retiradas (UX más calma)
+//
+//  Cambios heredados de v8-paths-fixed:
 //   ✅ Rutas auto-detectadas (no más /mis-finanzas/ hardcoded)
 //   ✅ Funciona en cualquier path (/mi-pisto-hn/, /mis-finanzas/, etc)
 //   ✅ AbortSignal.timeout() con fallback para navegadores antiguos
@@ -9,7 +20,7 @@
 //   ✅ tasas.json con fallback completo (no rates vacío)
 // ============================================================
 
-const VERSION = 'v8-paths-fixed';
+const VERSION = 'v9-metas-cuentas';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
