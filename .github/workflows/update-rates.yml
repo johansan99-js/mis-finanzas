@@ -1,46 +1,145 @@
-name: 🌐 Actualizar Tasas de Cambio
+#!/usr/bin/env node
+/**
+ * Mi Pisto HN — Updater de tasas de cambio [VERSIÓN CORREGIDA]
+ * ──────────────────────────────────────────────────────────────
+ * Cambios en esta versión:
+ *  ✅ Validación: no divide por cero
+ *  ✅ Validación: detecta monedas faltantes
+ *  ✅ Validación: rango más estricto para USD/HNL
+ *  ✅ Validación: detecta valores inválidos (NaN, Infinity)
+ */
 
-# Ejecutar todos los días a las 12:00 UTC (06:00 hora Honduras)
-# y también permitir ejecución manual desde la UI de GitHub
-on:
-  schedule:
-    - cron: '0 12 * * *'   # Diario 12:00 UTC = 06:00 HN
-  workflow_dispatch:        # Permite trigger manual
+const fs = require('fs');
+const path = require('path');
 
-# Permisos necesarios para hacer push de tasas.json al repo
-permissions:
-  contents: write
+// Monedas que la app soporta
+const SUPPORTED = ['USD', 'EUR', 'GTQ', 'NIO', 'MXN', 'CRC', 'PAB'];
 
-jobs:
-  update-rates:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+// Rango razonable para USD/HNL (Honduras es economía estable)
+const USD_HNL_RANGE = { min: 20, max: 35 };
 
-    steps:
-      - name: 📥 Checkout repo
-        uses: actions/checkout@v4
+// APIs en orden de preferencia
+const APIS = [
+  'https://open.er-api.com/v6/latest/USD',
+  'https://api.exchangerate-api.com/v4/latest/USD'
+];
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+async function fetchWithTimeout(url, ms = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-      - name: 🌐 Ejecutar updater
-        run: node update-rates.js
+async function getRatesFromApi() {
+  for (const url of APIS) {
+    try {
+      console.log(`🌐 Probando ${url}...`);
+      const data = await fetchWithTimeout(url);
+      if (!data || !data.rates) {
+        console.warn('  ❌ Respuesta sin "rates"');
+        continue;
+      }
+      const usdToHnl = data.rates.HNL;
+      
+      // VALIDACIÓN #1: USD/HNL en rango razonable
+      if (!usdToHnl || usdToHnl < USD_HNL_RANGE.min || usdToHnl > USD_HNL_RANGE.max) {
+        console.warn(`  ❌ Tasa USD/HNL fuera de rango [${USD_HNL_RANGE.min}-${USD_HNL_RANGE.max}]: ${usdToHnl}`);
+        continue;
+      }
 
-      - name: 📊 Mostrar tasas obtenidas
-        run: cat tasas.json
+      // VALIDACIÓN #2: Calcular y validar cada tasa
+      const rates = {};
+      const missingCodes = [];
+      
+      for (const code of SUPPORTED) {
+        if (code === 'USD') {
+          rates[code] = usdToHnl;
+        } else if (data.rates[code] && data.rates[code] > 0) {
+          // VALIDACIÓN #3: No dividir por cero
+          const calculated = usdToHnl / data.rates[code];
+          
+          // VALIDACIÓN #4: No permite Infinity ni NaN
+          if (!isFinite(calculated) || calculated <= 0) {
+            console.warn(`  ⚠️ Tasa inválida para ${code} (calculada: ${calculated}), omitiendo`);
+            missingCodes.push(code);
+            continue;
+          }
+          
+          rates[code] = calculated;
+        } else {
+          console.warn(`  ⚠️ Moneda ${code} no disponible en API`);
+          missingCodes.push(code);
+        }
+      }
 
-      - name: 📝 Commit y push si hay cambios
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      // VALIDACIÓN #5: Debe tener al menos 4 tasas (USD, EUR y 2 más)
+      const obtainedCount = Object.keys(rates).length;
+      if (obtainedCount < 4) {
+        console.warn(`  ❌ Solo se obtuvieron ${obtainedCount} tasas válidas (mínimo: 4)`);
+        continue;
+      }
 
-          if git diff --quiet tasas.json; then
-            echo "ℹ️ Sin cambios en tasas.json (tasas idénticas a ayer)"
-          else
-            git add tasas.json
-            git commit -m "🌐 Update tasas $(date -u +%Y-%m-%d)"
-            git push
-            echo "✅ Tasas actualizadas y pusheadas"
-          fi
+      // ADVERTENCIA: Si faltan monedas pero conseguimos suficientes, continuar
+      if (missingCodes.length > 0) {
+        console.warn(`  ⚠️ Incompleto: faltan [${missingCodes.join(', ')}], pero continuamos con ${obtainedCount} tasas`);
+      }
+
+      console.log('  ✅ OK');
+      return { rates, source: url };
+    } catch (e) {
+      console.warn(`  ❌ ${e.message}`);
+    }
+  }
+  return null;
+}
+
+(async () => {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('  Mi Pisto HN — Update Rates [FIXED]');
+  console.log('  Fecha: ' + new Date().toISOString());
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  const result = await getRatesFromApi();
+  if (!result) {
+    console.error('❌ No se pudo obtener tasas de ninguna API');
+    process.exit(1);
+  }
+
+  const { rates, source } = result;
+
+  // Construir el JSON final
+  const output = {
+    updated_at: new Date().toISOString(),
+    base: 'HNL',
+    note: 'Cada valor representa cuántos HNL equivalen a 1 unidad de esa moneda. Ej: USD: 26.7295 → 1 USD = L. 26.7295',
+    source: source,
+    rates: {}
+  };
+
+  // Redondear a 4 decimales (VALIDACIÓN EXTRA: asegurar números válidos)
+  for (const [code, value] of Object.entries(rates)) {
+    const rounded = parseFloat(value.toFixed(4));
+    if (!isFinite(rounded)) {
+      console.error(`❌ Error: tasa inválida para ${code}: ${value}`);
+      process.exit(1);
+    }
+    output.rates[code] = rounded;
+  }
+
+  // Escribir tasas.json en la raíz del repo
+  const outPath = path.join(__dirname, 'tasas.json');
+  fs.writeFileSync(outPath, JSON.stringify(output, null, 2) + '\n');
+
+  console.log('\n📝 Escrito en:', outPath);
+  console.log('📊 Tasas obtenidas:');
+  for (const [code, value] of Object.entries(output.rates)) {
+    console.log(`   1 ${code} = L. ${value}`);
+  }
+  console.log('\n✅ Done');
+})();
