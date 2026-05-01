@@ -339,7 +339,7 @@
     </div>
 
     <!-- Botón reintentar -->
-    <button class="btn" id="retry-btn" onclick="reintentar()">
+    <button class="btn" id="retry-btn" onclick="retryConnection()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
       Reintentar conexión
     </button>
@@ -353,16 +353,23 @@
   </div>
 
   <script>
-    let offlineSecs = 0;
+    // ─────────────────────────────────────────────────────
+    // FIX #6: Rutas absolutas en lugar de relativas
+    // FIX #9: Memory leak del timer
+    // ─────────────────────────────────────────────────────
+    
+    const APP_ROOT = '/mis-finanzas/';
     let timerInterval = null;
 
-    function reintentar() {
+    function retryConnection() {
       const btn = document.getElementById('retry-btn');
       btn.textContent = 'Verificando...';
       btn.style.animation = 'none';
       btn.style.opacity = '.7';
+      
+      // FIX #6: Usar ruta absoluta
       setTimeout(() => {
-        window.location.href = './index.html';
+        window.location.href = APP_ROOT;
       }, 300);
     }
 
@@ -372,25 +379,67 @@
       const text = document.getElementById('status-text');
       if (dot)  { dot.classList.add('online'); }
       if (text) { text.textContent = '¡Conexión restaurada! Redirigiendo…'; }
-      clearInterval(timerInterval);
-      setTimeout(() => window.location.href = './index.html', 1000);
+      
+      // FIX #9: Limpiar timer antes de redirigir
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      
+      // FIX #6: Usar ruta absoluta
+      setTimeout(() => window.location.href = APP_ROOT, 1000);
     });
 
-    // Contador de tiempo offline
-    timerInterval = setInterval(() => {
-      offlineSecs++;
-      const t = document.getElementById('timer-text');
-      if (!t) return;
-      if (offlineSecs < 60) {
-        t.textContent = `Offline hace ${offlineSecs} seg`;
-      } else if (offlineSecs < 3600) {
-        const m = Math.floor(offlineSecs / 60);
-        t.textContent = `Offline hace ${m} min — tus datos siguen seguros`;
-      } else {
-        const h = Math.floor(offlineSecs / 3600);
-        t.textContent = `Offline hace ${h}h — Mi Pisto HN sigue funcionando`;
+    // ─────────────────────────────────────────────────────
+    // Contador de tiempo offline (FIX #9: con cleanup)
+    // ─────────────────────────────────────────────────────
+    
+    function startOfflineTimer() {
+      let offlineSecs = 0;
+      
+      return setInterval(() => {
+        offlineSecs++;
+        const t = document.getElementById('timer-text');
+        
+        // FIX #9: Limpiar si el elemento desaparece del DOM
+        if (!t) {
+          if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+          return;
+        }
+        
+        // Actualizar texto del timer
+        if (offlineSecs < 60) {
+          t.textContent = `Offline hace ${offlineSecs} seg`;
+        } else if (offlineSecs < 3600) {
+          const m = Math.floor(offlineSecs / 60);
+          t.textContent = `Offline hace ${m} min — tus datos siguen seguros`;
+        } else {
+          const h = Math.floor(offlineSecs / 3600);
+          t.textContent = `Offline hace ${h}h — Mi Pisto HN sigue funcionando`;
+        }
+      }, 1000);
+    }
+
+    // Iniciar timer
+    timerInterval = startOfflineTimer();
+
+    // FIX #9: Cleanup cuando se desmonta la página
+    window.addEventListener('beforeunload', () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
       }
-    }, 1000);
+    });
+
+    window.addEventListener('pagehide', () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    });
   </script>
 </body>
 </html>
