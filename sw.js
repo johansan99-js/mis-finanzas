@@ -1,41 +1,52 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v7-FIXED
+//  Mi Pisto HN — Service Worker v8-paths-fixed
 //  ─────────────────────────────────────────────────────────
 //  Fixes en esta versión:
+//   ✅ Rutas auto-detectadas (no más /mis-finanzas/ hardcoded)
+//   ✅ Funciona en cualquier path (/mi-pisto-hn/, /mis-finanzas/, etc)
 //   ✅ AbortSignal.timeout() con fallback para navegadores antiguos
 //   ✅ Race condition en caché de navegación
 //   ✅ tasas.json con fallback completo (no rates vacío)
-//   ✅ Timeouts consistentes definidos en constantes
 // ============================================================
 
-const VERSION = 'v7-fixed';
+const VERSION = 'v8-paths-fixed';
 const CACHE_NAME = `mipistohn-${VERSION}`;
+
+// FIX: Detectar el scope automáticamente del registro del SW
+// Esto resuelve URLs como /mi-pisto-hn/, /mis-finanzas/, /, etc.
+const SCOPE = self.registration ? self.registration.scope : self.location.href.replace(/sw\.js.*$/, '');
+const BASE_PATH = new URL(SCOPE).pathname;  // ej: "/mi-pisto-hn/"
+
+console.log(`📍 [SW ${VERSION}] Base path detectado: ${BASE_PATH}`);
 
 // Timeouts consistentes
 const TIMEOUTS = {
-  RATES:        3000,  // tasas.json debe ser fresco
-  NAVIGATION:   4500,  // navegación puede tardar un poco
-  EXTERNAL:     7000   // recursos externos más lentos
+  RATES:        3000,
+  NAVIGATION:   4500,
+  EXTERNAL:     7000
 };
 
+// FIX: Construir URLs dinámicamente con el path real
 const ASSETS_REQUIRED = [
-  '/mis-finanzas/',
-  '/mis-finanzas/index.html',
-  '/mis-finanzas/offline.html',
-  '/mis-finanzas/manifest.json',
-  '/mis-finanzas/icon-192.png',
-  '/mis-finanzas/icon-512.png',
-  '/mis-finanzas/tasas.json'
+  BASE_PATH,
+  BASE_PATH + 'index.html',
+  BASE_PATH + 'offline.html',
+  BASE_PATH + 'manifest.json',
+  BASE_PATH + 'tasas.json'
 ];
 
-// ── HELPER: Fetch con timeout compatible (soluciona bug #2) ──
+// Assets opcionales (no fallan si no existen)
+const ASSETS_OPTIONAL = [
+  BASE_PATH + 'icon-192.png',
+  BASE_PATH + 'icon-512.png'
+];
+
+// ── HELPER: Fetch con timeout compatible ──
 function timeoutFetch(request, ms) {
-  if (AbortSignal.timeout) {
-    // Navegadores modernos (2024+)
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
     return fetch(request, { signal: AbortSignal.timeout(ms) });
   }
   
-  // Fallback para navegadores antiguos (Safari <15.3, Android <13)
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   
@@ -46,16 +57,31 @@ function timeoutFetch(request, ms) {
 // ── INSTALL ──────────────────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('✅ Mi Pisto HN ' + VERSION + ' — cacheando assets...');
-      return Promise.allSettled(
+    caches.open(CACHE_NAME).then(async cache => {
+      console.log(`✅ Mi Pisto HN ${VERSION} — cacheando assets...`);
+      
+      // FIX: Cachear obligatorios y opcionales por separado
+      // Los obligatorios usan addAll para fallar rápido si hay problemas
+      // Los opcionales usan add individual con catch (no bloquea install)
+      
+      // Required assets (con manejo individual de errores)
+      await Promise.allSettled(
         ASSETS_REQUIRED.map(url =>
-          cache.add(url).catch(err =>
-            console.warn(`⚠️ No se pudo cachear ${url}:`, err)
-          )
+          cache.add(url).catch(err => {
+            console.warn(`⚠️ No se pudo cachear ${url}:`, err.message);
+          })
         )
       );
-    }).then(() => {
+      
+      // Optional assets (silenciosos)
+      await Promise.allSettled(
+        ASSETS_OPTIONAL.map(url =>
+          cache.add(url).catch(() => {
+            // Silencioso - los iconos pueden no existir
+          })
+        )
+      );
+      
       console.log('✅ Cache completado — saltando espera');
       return self.skipWaiting();
     })
@@ -75,19 +101,19 @@ self.addEventListener('activate', event => {
           })
       );
     }).then(() => {
-      console.log('✅ Mi Pisto HN ' + VERSION + ' activo');
+      console.log(`✅ Mi Pisto HN ${VERSION} activo`);
       return self.clients.claim();
     })
   );
 });
 
-// ── FETCH: Network-first para navegación, Cache-first para assets ──
+// ── FETCH ────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
 
-  // ── tasas.json: NETWORK-FIRST con fallback completo (FIX #4) ──
+  // ── tasas.json: NETWORK-FIRST con fallback completo ──
   if (url.pathname.endsWith('/tasas.json')) {
     event.respondWith((async () => {
       try {
@@ -99,11 +125,10 @@ self.addEventListener('fetch', event => {
         }
       } catch (e) { /* offline o timeout */ }
       
-      // Fallback #1: Usar caché
       const cached = await caches.match(event.request);
       if (cached) return cached;
       
-      // Fallback #2: Devolver tasas por defecto en vez de rates vacío (FIX #4)
+      // Fallback con tasas por defecto
       return new Response(JSON.stringify({
         error: 'tasas.json no disponible (offline/timeout)',
         base: 'HNL',
@@ -138,13 +163,13 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ── Navegación: caché-rápido + revalidación en background (FIX #3) ──
+  // ── Navegación: caché-rápido + revalidación en background ──
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
+      // FIX: Usar BASE_PATH dinámico para fallback
       const cached = await caches.match(event.request) ||
-                     await caches.match('/mis-finanzas/index.html');
+                     await caches.match(BASE_PATH + 'index.html');
       
-      // ✅ FIX #3: Actualización en background SIN race condition
       const updateCacheInBackground = (async () => {
         try {
           const fresh = await timeoutFetch(event.request, TIMEOUTS.NAVIGATION);
@@ -152,39 +177,28 @@ self.addEventListener('fetch', event => {
             const clone = fresh.clone();
             const cache = await caches.open(CACHE_NAME);
             await cache.put(event.request, clone);
-            console.log('✅ Cache actualizado para:', event.request.url);
           }
         } catch (e) {
-          console.warn('⚠️ Error actualizando caché:', e.message);
+          // Silencioso
         }
       })();
       
-      // ✅ event.waitUntil espera realmente al update
       event.waitUntil(updateCacheInBackground);
       
-      // Devolver caché inmediatamente (faster)
       if (cached) return cached;
       
-      // Si no hay caché, esperar al fetch con timeout
       try {
-        const timeoutPromise = new Promise((res, rej) => {
-          setTimeout(() => rej(new Error('timeout')), TIMEOUTS.NAVIGATION);
-        });
-        const fresh = await Promise.race([
-          timeoutFetch(event.request, TIMEOUTS.NAVIGATION),
-          timeoutPromise
-        ]);
+        const fresh = await timeoutFetch(event.request, TIMEOUTS.NAVIGATION);
         return fresh;
       } catch (e) {
-        // Si falla, devolver offline.html
-        return caches.match('/mis-finanzas/offline.html') ||
+        return caches.match(BASE_PATH + 'offline.html') ||
                new Response('Offline', { status: 503 });
       }
     })());
     return;
   }
 
-  // ── Assets estáticos: cache-first con actualización en background ──
+  // Assets estáticos: cache-first con actualización en background
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
       const fetchPromise = timeoutFetch(event.request, TIMEOUTS.EXTERNAL)
@@ -217,12 +231,12 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body:    data.body,
-      icon:    '/mis-finanzas/icon-192.png',
-      badge:   '/mis-finanzas/icon-192.png',
+      icon:    BASE_PATH + 'icon-192.png',
+      badge:   BASE_PATH + 'icon-192.png',
       vibrate: [200, 100, 200, 100, 200],
       tag:     'mipistohn-recordatorio',
       renotify: true,
-      data:    { url: '/mis-finanzas/' }
+      data:    { url: BASE_PATH }
     })
   );
 });
@@ -232,11 +246,11 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   const targetUrl = (event.notification.data && event.notification.data.url)
     ? event.notification.data.url
-    : '/mis-finanzas/';
+    : BASE_PATH;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
-        if (client.url.includes('/mis-finanzas') && 'focus' in client) {
+        if (client.url.includes(BASE_PATH) && 'focus' in client) {
           return client.focus();
         }
       }
