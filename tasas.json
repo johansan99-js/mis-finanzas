@@ -1,15 +1,25 @@
 {
-  "updated_at": "2026-04-30T12:00:00.000Z",
+  "updated_at": "2026-04-28T17:00:00.000Z",
   "base": "HNL",
-  "note": "Cada valor representa cuántos HNL equivalen a 1 unidad de esa moneda. Ej: USD: 26.7295 → 1 USD = L. 26.7295",
-  "source": "Tasas iniciales BCH abril 2026 (luego actualizadas automáticamente por GitHub Actions)",
+  "format_version": 2,
+  "note": "format_version 2: cada moneda tiene { bid, ask, mid }. bid=tasa de compra del banco (cuando TÚ vendes esa moneda), ask=tasa de venta (cuando TÚ compras esa moneda). Ej: USD bid 26.5965 → si tienes USD y los cambias a HNL, recibes L.26.5965 por dólar. USD ask 26.7295 → si quieres comprar USD, pagas L.26.7295 por dólar.",
+  "source": "BCH oficial 28-abr-2026 (USD); resto: derivados con spread típico 0.5%",
   "rates": {
-    "USD": 26.7295,
+    "USD": { "bid": 26.5965, "ask": 26.7295, "mid": 26.6630 },
+    "EUR": { "bid": 30.8450, "ask": 31.1550, "mid": 31.0000 },
+    "GTQ": { "bid":  3.4639, "ask":  3.4987, "mid":  3.4813 },
+    "NIO": { "bid":  0.7182, "ask":  0.7254, "mid":  0.7218 },
+    "MXN": { "bid":  1.5100, "ask":  1.5252, "mid":  1.5176 },
+    "CRC": { "bid":  0.0527, "ask":  0.0533, "mid":  0.0530 },
+    "PAB": { "bid": 26.5965, "ask": 26.7295, "mid": 26.6630 }
+  },
+  "_legacy_rates_for_compat": {
+    "USD": 26.6630,
     "EUR": 31.0000,
-    "GTQ": 3.4813,
-    "NIO": 0.7218,
-    "MXN": 1.5176,
-    "CRC": 0.0530,
-    "PAB": 26.7295
+    "GTQ":  3.4813,
+    "NIO":  0.7218,
+    "MXN":  1.5176,
+    "CRC":  0.0530,
+    "PAB": 26.6630
   }
 }
