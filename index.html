@@ -1135,9 +1135,13 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       </button>
     </div>
     <p id="pin-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none">❌ PIN incorrecto</p>
-    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
-      <p style="font-size:11px;color:var(--text2)"><button onclick="olvidePIN()" style="background:none;border:none;color:var(--amber);cursor:pointer;text-decoration:underline">¿Olvidaste tu PIN?</button></p>
-      <p style="font-size:11px;color:var(--text2);margin-top:10px"><button onclick="configurarPIN()" style="background:none;border:none;color:var(--text2);cursor:pointer;text-decoration:underline" id="btn-config-pin">Configurar PIN</button></p>
+    <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border)">
+      <p style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">
+        ¿Olvidaste tu PIN? Tus datos están cifrados con AES-256 y <strong>no es posible recuperarlos sin el PIN</strong>.
+      </p>
+      <button onclick="olvidePIN()" style="background:none;border:1px solid var(--red);color:var(--red);cursor:pointer;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700">
+        🗑️ Borrar todo y empezar de cero
+      </button>
     </div>
   </div>
 </div>
@@ -1459,11 +1463,8 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 
     <h5 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin:14px 0 10px">PIN de respaldo</h5>
     <button class="btn btn-secondary" onclick="configurarPIN()" style="margin-bottom:10px;min-height:52px">🔑 Cambiar PIN de Acceso</button>
-    <div style="font-size:11px;color:var(--text2)">
-      <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer">
-        <input type="checkbox" id="recordar-pin" onchange="toggleRecordarPIN()">
-        <span>Recordar PIN en este dispositivo (30 días)</span>
-      </label>
+    <div style="font-size:11px;color:var(--text2);background:var(--bg3);padding:10px 12px;border-radius:8px;border-left:3px solid var(--amber)">
+      💡 <strong>Tip:</strong> Para no escribir el PIN cada vez, configura tu huella o reconocimiento facial arriba. La opción "recordar PIN" se eliminó porque debilitaba el cifrado.
     </div>
   </div>
 
@@ -1912,7 +1913,12 @@ async function loadAndDecryptState() {
 if (state.transactions && state.transactions.length > 0) { state.transactions.forEach(t => { if (t.type === 'expense' && !t.tipo) { t.tipo = (t.cat === 'Vivienda' || t.cat === 'Alimentación' || t.cat === '🏠 Vivienda') ? 'fijo' : 'extra'; } }); save(); }
 let mainChart = null;
 // P0-1: appPIN ahora almacena el HASH (no el PIN en crudo)
-let appPIN=localStorage.getItem('finanzas_pin_hash')||'';let recordarPIN=localStorage.getItem('finanzas_recordar')==='true';
+// FIX SEGURIDAD: recordarPIN deshabilitado permanentemente — era un bypass
+// del cifrado AES-256 (entraba sin pedir PIN, leyendo state plano de IDB).
+// Limpiamos el flag por si quedó activado de versiones anteriores.
+let appPIN = localStorage.getItem('finanzas_pin_hash') || '';
+try { localStorage.removeItem('finanzas_recordar'); } catch(e) {}
+let recordarPIN = false;
 // ─────────────────────────────────────────────────────────────────
 // MULTIMONEDA: fL ahora delega en window.currencyManager si existe.
 // Mantiene fallback a L. para no romper nada antes de que cargue.
@@ -2735,16 +2741,69 @@ async function configurarPIN() {
 // se asigna más abajo en el archivo (sección "MEJORAS CRÍTICAS v1.1").
 // Stub temprano por si algo invoca verificarPIN antes de que se sobrescriba:
 var verificarPIN = function(){ /* será sobrescrita por la versión async */ };
-// P0-3: ELIMINADO el bypass. olvidePIN ya NO permite entrar sin autenticar.
-// Si el usuario olvidó su PIN, su único camino legítimo es:
-//   (a) restaurar desde un backup cifrado (si tiene uno guardado), o
-//   (b) restablecer la app por completo desde Configuración (resetApp), lo que borra todos los datos.
+
+// olvidePIN: si el usuario olvidó su PIN, la ÚNICA opción real es borrar
+// todo y volver al onboarding (los datos están cifrados con AES-256 y no
+// hay puerta trasera). Antes era un alert estéril; ahora ejecuta el reset
+// completo con doble confirmación (mismo flujo que resetApp).
 function olvidePIN(){
-  alert('🔐 Sin tu PIN no es posible acceder a tus datos.\n\n' +
-        'Opciones disponibles:\n' +
-        '• Restaurar desde un respaldo cifrado (si tienes uno guardado).\n' +
-        '• Restablecer la app por completo (Configuración → Borrar todos los datos). ' +
-        'Esta acción es IRREVERSIBLE y eliminará todos tus movimientos.');
+  const c1 = confirm(
+    '🚨 BORRAR TODO Y EMPEZAR DE CERO\n\n' +
+    'Tus datos están cifrados con AES-256 y NO se pueden recuperar sin tu PIN.\n\n' +
+    'Si continúas, se BORRARÁ:\n' +
+    '• Todas tus transacciones (ingresos y gastos)\n' +
+    '• Préstamos, tarjetas y deudas\n' +
+    '• Metas de ahorro\n' +
+    '• Tu PIN, datos personales y configuración\n\n' +
+    '¿Quieres continuar?'
+  );
+  if (!c1) return;
+  
+  const c2 = confirm(
+    '⚠️ ÚLTIMA ADVERTENCIA\n\n' +
+    'Esta acción NO se puede deshacer.\n' +
+    'Volverás al tutorial inicial como una instalación nueva.\n\n' +
+    '¿Confirmar borrado total?'
+  );
+  if (!c2) return;
+  
+  // Limpiar localStorage
+  try { localStorage.clear(); } catch(e) {}
+  
+  // Limpiar sessionStorage
+  try { sessionStorage.clear(); } catch(e) {}
+  
+  // Limpiar IndexedDB (importante: incluye la copia plana del state)
+  try {
+    if (window.indexedDB) {
+      indexedDB.databases().then(dbs => {
+        dbs.forEach(db => {
+          try { indexedDB.deleteDatabase(db.name); } catch(e) {}
+        });
+      }).catch(()=>{});
+    }
+  } catch(e) {}
+  
+  // Limpiar caches del Service Worker
+  try {
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        keys.forEach(k => caches.delete(k));
+      }).catch(()=>{});
+    }
+  } catch(e) {}
+  
+  // Desregistrar Service Workers
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(reg => reg.unregister());
+      }).catch(()=>{});
+    }
+  } catch(e) {}
+  
+  alert('✅ Todo borrado. La app se reiniciará al tutorial.');
+  setTimeout(() => location.reload(), 500);
 }
 function toggleRecordarPIN(){recordarPIN=document.getElementById('recordar-pin').checked;localStorage.setItem('finanzas_recordar',recordarPIN);}
 
@@ -4640,49 +4699,50 @@ function verificarPINmejorado() {
   const tienePin = appPIN && appPIN.length > 0;
   _updatePinBioBtn();
 
+  // FIX SEGURIDAD: si hay PIN configurado, SIEMPRE exigir verificación.
+  // El antiguo "Recordar PIN 30 días" entraba sin verificar y dependía
+  // de que IDB tuviera state plano — eso ya no aplica.
+  if (!tienePin) {
+    // Sin PIN: flujo libre
+    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
+    else renderAll();
+    return;
+  }
+
   // Si biometría está configurada, intentarla primero
   if (credId && isWebAuthnAvailable()) {
     _showBioScreen();
-    authenticateWithWebAuthn().then(ok => {
+    authenticateWithWebAuthn().then(async ok => {
       _setBioResult(ok);
-      setTimeout(() => {
+      setTimeout(async () => {
         _hideBioScreen();
         if (ok) {
-          sessionStorage.setItem('pinVerificado','true');
-          if (!state.setup) document.getElementById('onboarding').style.display='flex';
-          else renderAll();
-        } else {
-          // Falló biometría → caer al PIN si existe, si no al onboarding
-          if (tienePin) {
-            document.getElementById('modal-pin').style.display = 'flex';
-            document.getElementById('pin-input')?.focus();
-          } else {
+          // Biometría OK → simular el flujo completo de verificarPIN: descifrar y cargar
+          // (esto requiere que el PIN esté guardado o que la biometría libere la DEK
+          //  por otro mecanismo; si no, caemos al PIN)
+          const tieneSesionPIN = !!_sessionPIN;
+          if (tieneSesionPIN) {
+            sessionStorage.setItem('pinVerificado','true');
             if (!state.setup) document.getElementById('onboarding').style.display='flex';
             else renderAll();
+          } else {
+            // Biometría OK pero sin DEK accesible — pedir PIN para descifrar
+            document.getElementById('modal-pin').style.display = 'flex';
+            document.getElementById('pin-input')?.focus();
           }
+        } else {
+          // Falló biometría → caer al PIN
+          document.getElementById('modal-pin').style.display = 'flex';
+          document.getElementById('pin-input')?.focus();
         }
       }, 1000);
     });
-    return; // esperar la promesa
+    return;
   }
 
-  // Sin biometría: flujo PIN clásico
-  if (tienePin && !recordarPIN) {
-    var pinVerificado = sessionStorage.getItem('pinVerificado');
-    if (!pinVerificado) {
-      document.getElementById('modal-pin').style.display = 'flex';
-      document.getElementById('pin-input').focus();
-    } else {
-      if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
-      else renderAll();
-    }
-  } else if (tienePin && recordarPIN) {
-    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
-    else renderAll();
-  } else {
-    if (!state.setup) document.getElementById('onboarding').style.display = 'flex';
-    else renderAll();
-  }
+  // Sin biometría: siempre pedir PIN (ignoramos recordarPIN por seguridad)
+  document.getElementById('modal-pin').style.display = 'flex';
+  document.getElementById('pin-input')?.focus();
 }
 
 // P0-1: verificarPIN async con comparación de hash PBKDF2
@@ -4725,18 +4785,43 @@ verificarPIN = async function() {
         return;
       }
       
-      // Descifrar state con la DEK
+      // Descifrar state desde localStorage
       const loaded = await loadAndDecryptState();
       if (!loaded) {
+        // No había LS cifrado → cargar desde IDB (usuario que solo tenía IDB)
+        if (typeof _completarCargaApp === 'function') {
+          await _completarCargaApp();
+          document.getElementById('modal-pin').style.display='none';
+          document.getElementById('pin-input').value='';
+          document.getElementById('pin-error').style.display='none';
+          return;
+        }
         alert('❌ Error cargando tus datos. Restaura desde backup cifrado.');
         return;
       }
+      
+      // FIX SEGURIDAD: re-sincronizar IDB con el state descifrado.
+      // (Antes IDB tenía una copia plana que se cargaba sin PIN; ahora la
+      //  sobreescribimos con los datos descifrados y autoritativos.)
+      try { await saveStateToDB(state); } catch(e) { console.warn('Sync IDB tras unlock:', e); }
       
       console.log('🔓 Datos descifrados correctamente');
     } else {
       // No hay DEK cifrada → usuario legacy con state en plano
       // Necesitamos MIGRAR: generar DEK, cifrar state, guardar
       console.log('📦 Migrando usuario legacy a cifrado...');
+      // Si el state está vacío (porque no lo cargamos en onload por seguridad),
+      // primero hay que cargar desde IDB para tener algo que migrar
+      if (!state.setup) {
+        try {
+          const idbState = await loadStateFromDB();
+          if (idbState) {
+            Object.keys(state).forEach(key => {
+              if (idbState[key] !== undefined) state[key] = idbState[key];
+            });
+          }
+        } catch(e) { console.warn('Carga IDB pre-migración:', e); }
+      }
       await _migrarStatePlanoACifrado(intento, salt);
     }
     
@@ -5541,6 +5626,44 @@ async function migrarPINLegadoSiNecesario() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// FIX SEGURIDAD: Helper para completar la carga de la app DESPUÉS de
+// verificar el PIN exitosamente. Antes, loadStateFromDB() se llamaba al
+// inicio sin importar el PIN — los datos quedaban en memoria aunque no
+// hubieras ingresado el PIN, lo que invalidaba todo el cifrado AES-256.
+// ═══════════════════════════════════════════════════════════════════════
+async function _completarCargaApp() {
+  // Cargar state desde IndexedDB (ya pasamos la verificación de PIN)
+  const idbState = await loadStateFromDB();
+  if (idbState) {
+    Object.keys(state).forEach(key => {
+      if (idbState[key] !== undefined) state[key] = idbState[key];
+    });
+    if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+    if (!state.prestamos) state.prestamos = [];
+    if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+    if (!state.receivables) state.receivables = [];
+    if (!state.payables) state.payables = [];
+    if (!state.tarjetas) state.tarjetas = [];
+    if (!state.goals) state.goals = [];
+    console.log('✅ Estado restaurado desde IndexedDB (post-PIN)');
+  } else {
+    if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+    if (!state.prestamos) state.prestamos = [];
+    if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+    if (state.setup) saveStateToDB(state);
+  }
+  purgarEliminadosViejos();
+  // Renderizar la app con los datos ya cargados
+  if (state.setup) {
+    if (typeof renderAll === 'function') renderAll();
+  } else {
+    const ob = document.getElementById('onboarding');
+    if (ob) ob.style.display = 'flex';
+  }
+}
+window._completarCargaApp = _completarCargaApp; // exponer por si el IIFE lo necesita
+
 window.onload = async function() {
   console.log('🚀 Mi Pisto HN cargando...');
 
@@ -5550,14 +5673,39 @@ window.onload = async function() {
   // 1. Solicitar persistencia al SO
   await requestPersistence();
 
-  // 2. Intentar cargar desde IndexedDB primero
+  // 2. ¿Hay PIN configurado?
+  const tienePIN = !!localStorage.getItem('finanzas_pin_hash');
+
+  if (tienePIN) {
+    // 🔒 NO cargar state desde IDB hasta que el PIN se verifique.
+    // El state queda con valores por defecto (vacío) hasta el desbloqueo.
+    console.log('🔒 PIN detectado — esperando verificación antes de cargar datos');
+    // Resetear el state a vacío por si localStorage cargó algo en plano (legacy)
+    state = {
+      setup: false, nombre: '', saldoInicial: 0,
+      cuentas: { efectivo: 0, ahorro: 0 },
+      transactions: [], goals: [], receivables: [], payables: [],
+      prestamos: [], tarjetas: [], pagosRecurrentes: [],
+      budgetRules: { gastos: 65, ahorro: 20, extra: 15 }
+    };
+    // Mostrar modal de PIN (o biometría si está disponible)
+    verificarPINmejorado();
+    renderBiometriaConfig();
+    _updatePinBioBtn();
+    // El resto se completa en _completarCargaApp() después de verificar el PIN
+    var recordarEl = document.getElementById('recordar-pin');
+    if (recordarEl) recordarEl.checked = recordarPIN;
+    if (typeof setupCurrencyHandlers === 'function') setupCurrencyHandlers();
+    if (typeof initOfflineDetection === 'function') initOfflineDetection();
+    return;
+  }
+
+  // 3. Sin PIN: flujo normal (primera vez o usuario sin cifrado)
   const idbState = await loadStateFromDB();
   if (idbState) {
-    // Combinar el estado de IDB con las claves esperadas del state actual
     Object.keys(state).forEach(key => {
       if (idbState[key] !== undefined) state[key] = idbState[key];
     });
-    // Migrar campos nuevos si no existen
     if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
     if (!state.prestamos) state.prestamos = [];
     if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
@@ -5567,21 +5715,14 @@ window.onload = async function() {
     if (!state.goals) state.goals = [];
     console.log('✅ Estado restaurado desde IndexedDB');
   } else {
-    // Si IDB no tiene datos, el state ya fue cargado desde localStorage al inicio del script
     if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
     if (!state.prestamos) state.prestamos = [];
     if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
-    // Hacer una primera escritura en IDB del estado existente en localStorage
     if (state.setup) saveStateToDB(state);
   }
 
-  // 2b. P1-5: Purgar transacciones en papelera con más de 30 días
   purgarEliminadosViejos();
-
-  // 3. Verificar PIN / Biometría
   verificarPINmejorado();
-
-  // 4. Setup UI de biometría
   renderBiometriaConfig();
   _updatePinBioBtn();
 
@@ -5722,23 +5863,62 @@ console.log('✅ Mi Pisto HN v2.0 listo');
   };
 
   // ── TASAS FALLBACK (Nivel 3) — abril 2026, BCH oficial ──
-  // Formato: 1 X = Y HNL (más natural). Estas son el último recurso si
-  // tasas.json y la API externa fallan. Se actualizan al hacer release.
+  // Formato v2: cada moneda tiene { bid, ask, mid }
+  //   bid = tasa de COMPRA del banco (cuando tú VENDES esa moneda al banco)
+  //   ask = tasa de VENTA del banco  (cuando tú COMPRAS esa moneda al banco)
+  //   mid = punto medio (referencia/promedio)
+  // Estas son el último recurso si tasas.json y la API externa fallan.
   const DEFAULT_RATES = {
-    USD: 26.7295,  // BCH 28-abr-2026 (venta)
-    EUR: 31.0000,  // Promedio compra/venta abril 2026
-    GTQ:  3.4813,  // Mataf abril 2026
-    NIO:  0.7218,  // Xe.com abril 2026
-    MXN:  1.5176,  // Xe.com 29-abr-2026
-    CRC:  0.0530,  // Calculado (1 USD ≈ 504 CRC → 26.73/504)
-    PAB: 26.7295   // PAB pegado al USD 1:1
+    USD: { bid: 26.5965, ask: 26.7295, mid: 26.6630 },  // BCH 28-abr-2026
+    EUR: { bid: 30.8450, ask: 31.1550, mid: 31.0000 },
+    GTQ: { bid:  3.4639, ask:  3.4987, mid:  3.4813 },
+    NIO: { bid:  0.7182, ask:  0.7254, mid:  0.7218 },
+    MXN: { bid:  1.5100, ask:  1.5252, mid:  1.5176 },
+    CRC: { bid:  0.0527, ask:  0.0533, mid:  0.0530 },
+    PAB: { bid: 26.5965, ask: 26.7295, mid: 26.6630 }   // PAB pegado al USD 1:1
   };
+  // Spread implícito que aplicamos a tasas legacy (formato número plano)
+  // cuando no tenemos bid/ask explícitos. 0.5% es el promedio de los bancos
+  // hondureños sobre el TCR del BCH.
+  const DEFAULT_SPREAD = 0.0025;  // ±0.25% del mid → spread total 0.5%
+
+  /** Helper: convierte un valor de tasa (sea número o {bid,ask,mid}) al formato {bid,ask,mid} */
+  function _normalizeRate(rate) {
+    if (rate === null || rate === undefined) return null;
+    if (typeof rate === 'number' && rate > 0 && isFinite(rate)) {
+      return {
+        bid: rate * (1 - DEFAULT_SPREAD),
+        ask: rate * (1 + DEFAULT_SPREAD),
+        mid: rate
+      };
+    }
+    if (typeof rate === 'object' &&
+        typeof rate.bid === 'number' && rate.bid > 0 &&
+        typeof rate.ask === 'number' && rate.ask > 0) {
+      return {
+        bid: rate.bid,
+        ask: rate.ask,
+        mid: typeof rate.mid === 'number' ? rate.mid : (rate.bid + rate.ask) / 2
+      };
+    }
+    return null;
+  }
+
+  /** Helper: extrae el valor mid de una tasa (para legacy) */
+  function _midOf(rate) {
+    if (typeof rate === 'number') return rate;
+    if (rate && typeof rate.mid === 'number') return rate.mid;
+    if (rate && typeof rate.bid === 'number' && typeof rate.ask === 'number') {
+      return (rate.bid + rate.ask) / 2;
+    }
+    return 0;
+  }
 
   class CurrencyManager {
     constructor() {
       this.baseCurrency = 'HNL';
       this.displayCurrency = 'HNL';
-      this.rates = { ...DEFAULT_RATES };
+      this.rates = JSON.parse(JSON.stringify(DEFAULT_RATES));  // deep clone
       this.ratesLastUpdate = null;
       this.ratesSource = 'default';   // 'default' | 'json' | 'api' | 'manual'
       this.ratesExpiryMs = 24 * 60 * 60 * 1000;  // 24h
@@ -5756,7 +5936,15 @@ console.log('✅ Mi Pisto HN v2.0 listo');
         } else if (cfg.displayCurrency === 'SVC') {
           this.displayCurrency = 'HNL';  // SVC eliminado → reset
         }
-        if (cfg.rates && Object.keys(cfg.rates).length) this.rates = cfg.rates;
+        if (cfg.rates && Object.keys(cfg.rates).length) {
+          // Normalizar cada tasa al formato {bid,ask,mid}
+          const normalized = {};
+          Object.keys(cfg.rates).forEach(code => {
+            const n = _normalizeRate(cfg.rates[code]);
+            if (n) normalized[code] = n;
+          });
+          if (Object.keys(normalized).length) this.rates = normalized;
+        }
         this.ratesLastUpdate = cfg.ratesLastUpdate ? new Date(cfg.ratesLastUpdate) : null;
         this.ratesSource = cfg.ratesSource || 'default';
         this._formatVersion = cfg._formatVersion || 1;
@@ -5764,22 +5952,40 @@ console.log('✅ Mi Pisto HN v2.0 listo');
     }
 
     /** Migración: tasas v1 estaban como "1 HNL = X moneda" (valores < 2 típicos).
-        v2 las quiere como "1 moneda = X HNL". Detecta y convierte. */
+        v2 las quiere como "1 moneda = X HNL". v3 además usa {bid,ask,mid}.
+        Detecta y convierte. */
     _migrateOldRatesIfNeeded() {
-      if (this._formatVersion === 2) return;
-      if (this.rates.USD && this.rates.USD < 1) {
-        console.log('🔄 Migrando tasas a formato v2 (1 X = Y HNL)...');
+      // Detección de v1: alguna tasa USD < 1 (formato invertido)
+      const firstUSD = this.rates.USD;
+      const usdMid = _midOf(firstUSD);
+      if (this._formatVersion < 2 && usdMid > 0 && usdMid < 1) {
+        console.log('🔄 Migrando tasas a formato v3 (1 X = Y HNL, con bid/ask)...');
         const newRates = {};
         Object.keys(this.rates).forEach(code => {
-          const oldRate = this.rates[code];
-          if (oldRate && oldRate > 0) newRates[code] = 1 / oldRate;
+          const oldMid = _midOf(this.rates[code]);
+          if (oldMid && oldMid > 0) {
+            const inverted = 1 / oldMid;
+            newRates[code] = {
+              bid: inverted * (1 - DEFAULT_SPREAD),
+              ask: inverted * (1 + DEFAULT_SPREAD),
+              mid: inverted
+            };
+          }
+        });
+        this.rates = newRates;
+      } else if (this._formatVersion < 3) {
+        // v2 → v3: las tasas eran números planos, normalizar a {bid,ask,mid}
+        const newRates = {};
+        Object.keys(this.rates).forEach(code => {
+          const n = _normalizeRate(this.rates[code]);
+          if (n) newRates[code] = n;
         });
         this.rates = newRates;
       }
       delete this.rates.SVC;  // Colón Salvadoreño obsoleto
-      this._formatVersion = 2;
+      this._formatVersion = 3;
       this.saveToStorage();
-      console.log('✅ Tasas migradas:', this.rates);
+      console.log('✅ Tasas en formato v3:', this.rates);
     }
 
     saveToStorage() {
@@ -5789,13 +5995,40 @@ console.log('✅ Mi Pisto HN v2.0 listo');
           rates: this.rates,
           ratesLastUpdate: this.ratesLastUpdate ? this.ratesLastUpdate.toISOString() : null,
           ratesSource: this.ratesSource,
-          _formatVersion: 2
+          _formatVersion: 3
         }));
       } catch (e) { console.warn('Currency config save fail:', e); }
     }
 
     getAvailableCurrencies() { return Object.values(CURRENCIES); }
     getCurrencyInfo(code)    { return CURRENCIES[code] || null; }
+
+    /** Devuelve la tasa de una moneda en formato {bid,ask,mid}.
+        Garantiza siempre los 3 campos (deriva con spread si solo hay número). */
+    getRate(code) {
+      if (code === 'HNL') return { bid: 1, ask: 1, mid: 1 };
+      return _normalizeRate(this.rates[code]);
+    }
+
+    /** Tasa de compra del banco (lo que el banco te paga cuando le VENDES esa moneda).
+        Esta es la tasa que aplica cuando recibes/cobras en moneda extranjera. */
+    getBidRate(code) {
+      const r = this.getRate(code);
+      return r ? r.bid : null;
+    }
+
+    /** Tasa de venta del banco (lo que el banco te cobra cuando le COMPRAS esa moneda).
+        Esta es la tasa que aplica cuando pagas/gastas en moneda extranjera. */
+    getAskRate(code) {
+      const r = this.getRate(code);
+      return r ? r.ask : null;
+    }
+
+    /** Tasa media (referencia, sin spread). Para reportes contables, no para conversión real. */
+    getMidRate(code) {
+      const r = this.getRate(code);
+      return r ? r.mid : null;
+    }
 
     setDisplayCurrency(code) {
       if (!CURRENCIES[code]) throw new Error('Moneda no soportada: ' + code);
@@ -5827,22 +6060,21 @@ console.log('✅ Mi Pisto HN v2.0 listo');
         if (!r.ok) return false;
         const data = await r.json();
 
-        // Validar estructura: { updated_at, base, rates: { USD: 26.73, ... } }
+        // Validar estructura: { updated_at, base, rates: { USD: ... } }
         if (!data.rates || typeof data.rates !== 'object') return false;
-        // FIX: Validar rango realista para Honduras (20-35), no solo > 10
-        if (!data.rates.USD || 
-            data.rates.USD < USD_HNL_VALID_RANGE.min || 
-            data.rates.USD > USD_HNL_VALID_RANGE.max) {
-          console.warn(`⚠️ USD/HNL fuera de rango en tasas.json: ${data.rates.USD}`);
+        // Validar USD: aceptar número o {bid,ask,mid}
+        const usdMid = _midOf(data.rates.USD);
+        if (!usdMid || usdMid < USD_HNL_VALID_RANGE.min || usdMid > USD_HNL_VALID_RANGE.max) {
+          console.warn(`⚠️ USD/HNL fuera de rango en tasas.json: ${usdMid}`);
           return false;
         }
 
-        // Mantener solo monedas soportadas (FIX: validar > 0 para evitar Infinity)
+        // Mantener solo monedas soportadas, normalizando cada una a {bid,ask,mid}
         const filtered = {};
         Object.keys(CURRENCIES).forEach(c => {
-          if (c !== 'HNL' && data.rates[c] && data.rates[c] > 0 && isFinite(data.rates[c])) {
-            filtered[c] = data.rates[c];
-          }
+          if (c === 'HNL') return;
+          const n = _normalizeRate(data.rates[c]);
+          if (n) filtered[c] = n;
         });
 
         if (Object.keys(filtered).length >= 3) {
@@ -5850,7 +6082,7 @@ console.log('✅ Mi Pisto HN v2.0 listo');
           this.ratesLastUpdate = data.updated_at ? new Date(data.updated_at) : new Date();
           this.ratesSource = 'json';
           this.saveToStorage();
-          console.log('✅ [Nivel 1] Tasas cargadas de tasas.json:', filtered);
+          console.log('✅ [Nivel 1] Tasas cargadas de tasas.json (formato v' + (data.format_version || 1) + '):', filtered);
           return true;
         }
       } catch (e) {
@@ -5881,20 +6113,26 @@ console.log('✅ Mi Pisto HN v2.0 listo');
             continue;
           }
 
-          // Calcular "1 X = Y HNL" vía cruzada con USD
-          // FIX: Validar > 0 antes de dividir + isFinite() para prevenir Infinity/NaN
+          // Calcular "1 X = Y HNL" vía cruzada con USD; las APIs públicas
+          // solo retornan tasa media, así que derivamos bid/ask con spread implícito.
           const newRates = {};
           Object.keys(CURRENCIES).forEach(code => {
             if (code === 'HNL') return;
+            let mid = null;
             if (code === 'USD') {
-              newRates[code] = usdToHnl;
+              mid = usdToHnl;
             } else if (data.rates[code] && data.rates[code] > 0) {
               const calculated = usdToHnl / data.rates[code];
-              if (isFinite(calculated) && calculated > 0) {
-                newRates[code] = calculated;
-              } else {
-                console.warn(`⚠️ Tasa inválida para ${code}: ${calculated}`);
-              }
+              if (isFinite(calculated) && calculated > 0) mid = calculated;
+            }
+            if (mid !== null) {
+              newRates[code] = {
+                bid: mid * (1 - DEFAULT_SPREAD),
+                ask: mid * (1 + DEFAULT_SPREAD),
+                mid: mid
+              };
+            } else {
+              console.warn(`⚠️ Tasa inválida para ${code}`);
             }
           });
 
@@ -5903,7 +6141,7 @@ console.log('✅ Mi Pisto HN v2.0 listo');
             this.ratesLastUpdate = new Date();
             this.ratesSource = 'api';
             this.saveToStorage();
-            console.log('✅ [Nivel 2] Tasas cargadas desde', apiUrl);
+            console.log('✅ [Nivel 2] Tasas cargadas desde', apiUrl, '(bid/ask derivados con spread', (DEFAULT_SPREAD*200).toFixed(2)+'%)');
             return true;
           }
         } catch (e) {
@@ -5931,7 +6169,13 @@ console.log('✅ Mi Pisto HN v2.0 listo');
     /** Actualiza tasas manualmente o desde API (botón "🌐 Auto") */
     async updateExchangeRates(customRates = null) {
       if (customRates) {
-        this.rates = { ...this.rates, ...customRates };
+        // Normalizar cada tasa nueva al formato {bid,ask,mid}
+        const merged = { ...this.rates };
+        Object.keys(customRates).forEach(code => {
+          const n = _normalizeRate(customRates[code]);
+          if (n) merged[code] = n;
+        });
+        this.rates = merged;
         this.ratesLastUpdate = new Date();
         this.ratesSource = 'manual';
         this.saveToStorage();
@@ -5943,18 +6187,40 @@ console.log('✅ Mi Pisto HN v2.0 listo');
       return false;
     }
 
-    /** Convierte HNL → moneda display.  toDisplay(L.100) en USD = $3.74 */
-    toDisplay(amountInHNL) {
+    /** Convierte HNL → moneda display. 
+        El parámetro `side` define qué tasa usar:
+          - 'buy'  / 'sell-foreign' → tasa ask: "si quisiera comprar esa moneda con mis lempiras"
+          - 'sell' / 'buy-foreign'  → tasa bid: "si quisiera vender esa moneda y recibir lempiras"
+          - 'mid'  / undefined      → tasa media (referencia)
+        
+        Por defecto usamos 'ask' porque el caso típico de ver tu balance L→USD es:
+        "¿cuántos USD podría comprar con mis lempiras?" → tasa de venta del banco.
+    */
+    toDisplay(amountInHNL, side = 'ask') {
       if (this.displayCurrency === 'HNL') return amountInHNL;
-      const rate = this.rates[this.displayCurrency];
+      const r = this.getRate(this.displayCurrency);
+      if (!r) return amountInHNL;
+      let rate;
+      if (side === 'bid' || side === 'sell' || side === 'buy-foreign') rate = r.bid;
+      else if (side === 'mid') rate = r.mid;
+      else rate = r.ask;  // 'ask' / 'buy' / 'sell-foreign' / default
       if (!rate || rate <= 0) return amountInHNL;
       return amountInHNL / rate;
     }
 
-    /** Convierte moneda display → HNL.  toBase($10) en USD = L.267.30 */
-    toBase(amountInDisplay) {
+    /** Convierte moneda display → HNL.
+        - 'sell-foreign' / 'buy' (default): tasa bid → "tengo USD y los cambio a HNL en el banco"
+        - 'buy-foreign'  / 'sell':           tasa ask → "necesito HNL para comprar USD"
+        - 'mid':                              tasa media (referencia)
+    */
+    toBase(amountInDisplay, side = 'bid') {
       if (this.displayCurrency === 'HNL') return amountInDisplay;
-      const rate = this.rates[this.displayCurrency];
+      const r = this.getRate(this.displayCurrency);
+      if (!r) return amountInDisplay;
+      let rate;
+      if (side === 'ask' || side === 'sell' || side === 'buy-foreign') rate = r.ask;
+      else if (side === 'mid') rate = r.mid;
+      else rate = r.bid;  // 'bid' / 'buy' / 'sell-foreign' / default
       if (!rate || rate <= 0) return amountInDisplay;
       return amountInDisplay * rate;
     }
@@ -5970,8 +6236,11 @@ console.log('✅ Mi Pisto HN v2.0 listo');
       return info.format.replace('{amount}', formatted);
     }
 
-    formatFromBase(amountInHNL) {
-      return this.format(this.toDisplay(amountInHNL));
+    /** Formatea un monto en HNL en la moneda de display.
+        Acepta opcionalmente un side ('ask'|'bid'|'mid') — por defecto 'ask'
+        que es lo que el usuario espera al ver "cuánto valen mis lempiras". */
+    formatFromBase(amountInHNL, side = 'ask') {
+      return this.format(this.toDisplay(amountInHNL, side));
     }
 
     /** Etiqueta humana para la fuente actual de las tasas */
@@ -6107,39 +6376,83 @@ console.log('✅ Mi Pisto HN v2.0 listo');
     const container = document.getElementById('rates-form-container');
     if (!container) return;
     const currencies = cm.getAvailableCurrencies().filter(c => c.code !== 'HNL');
-    container.innerHTML = currencies.map(c => `
-      <div class="rate-input-row-v2">
-        <div class="rate-label-v2">
-          <span style="font-size:18px">${c.flag}</span>
-          <div>
-            <div style="font-weight:700;font-size:13px">1 ${c.code}</div>
-            <div style="font-size:9px;color:var(--text2)">${c.name}</div>
-          </div>
-          <span style="color:var(--text2);font-weight:700">=</span>
-        </div>
-        <input type="number" step="0.0001" min="0" class="input-field rate-input"
-               data-currency="${c.code}"
-               value="${cm.rates[c.code] ? cm.rates[c.code].toFixed(4) : ''}"
-               placeholder="0.0000"
-               style="margin:0;flex:1">
-        <span style="color:var(--amber);font-weight:800;font-size:13px">L.</span>
+    container.innerHTML = `
+      <div style="background:var(--bg3);border-left:3px solid var(--amber);padding:12px;border-radius:8px;margin-bottom:14px;font-size:11px;color:var(--text2);line-height:1.5">
+        💡 <strong>Compra</strong>: tasa cuando RECIBES esa moneda y la cambias a Lempiras (ej: te pagan en USD).<br>
+        💡 <strong>Venta</strong>: tasa cuando NECESITAS esa moneda (ej: compras algo en USD o pagas un precio en USD).<br>
+        Los bancos siempre cobran un margen entre las dos.
       </div>
-    `).join('');
+    ` + currencies.map(c => {
+      const r = cm.getRate(c.code) || { bid: 0, ask: 0, mid: 0 };
+      return `
+        <div class="rate-input-row-v3" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="font-size:22px">${c.flag}</span>
+            <div style="flex:1">
+              <div style="font-weight:800;font-size:14px">1 ${c.code}</div>
+              <div style="font-size:10px;color:var(--text2)">${c.name}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="display:block;font-size:10px;color:var(--green);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">📥 Compra (bid)</label>
+              <div style="display:flex;align-items:center;gap:4px">
+                <input type="number" step="0.0001" min="0" class="input-field rate-input-bid"
+                       data-currency="${c.code}"
+                       value="${r.bid ? r.bid.toFixed(4) : ''}"
+                       placeholder="0.0000"
+                       style="margin:0;flex:1;font-size:13px;padding:8px">
+                <span style="color:var(--green);font-weight:700;font-size:11px">L.</span>
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-size:10px;color:var(--red);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">📤 Venta (ask)</label>
+              <div style="display:flex;align-items:center;gap:4px">
+                <input type="number" step="0.0001" min="0" class="input-field rate-input-ask"
+                       data-currency="${c.code}"
+                       value="${r.ask ? r.ask.toFixed(4) : ''}"
+                       placeholder="0.0000"
+                       style="margin:0;flex:1;font-size:13px;padding:8px">
+                <span style="color:var(--red);font-weight:700;font-size:11px">L.</span>
+              </div>
+            </div>
+          </div>
+          ${r.mid ? `<div style="font-size:10px;color:var(--text2);margin-top:6px;text-align:center">Spread: ${(((r.ask - r.bid) / r.mid) * 100).toFixed(2)}% · Media: L. ${r.mid.toFixed(4)}</div>` : ''}
+        </div>
+      `;
+    }).join('');
   }
 
   window.saveManualRates = async function () {
-    const inputs = document.querySelectorAll('.rate-input');
+    const bidInputs = document.querySelectorAll('.rate-input-bid');
+    const askInputs = document.querySelectorAll('.rate-input-ask');
     const newRates = {};
-    inputs.forEach(i => {
-      const v = parseFloat(i.value);
-      if (v && v > 0) newRates[i.dataset.currency] = v;
+    bidInputs.forEach(i => {
+      const code = i.dataset.currency;
+      const bid = parseFloat(i.value);
+      const askInput = document.querySelector(`.rate-input-ask[data-currency="${code}"]`);
+      const ask = askInput ? parseFloat(askInput.value) : null;
+      if (bid > 0 && ask > 0) {
+        if (ask < bid) {
+          alert(`⚠️ Para ${code}: la tasa de venta debe ser mayor o igual a la de compra.`);
+          return;
+        }
+        newRates[code] = { bid, ask, mid: (bid + ask) / 2 };
+      } else if (bid > 0 && !ask) {
+        // Si solo dieron bid, derivar ask con spread por defecto
+        newRates[code] = {
+          bid: bid,
+          ask: bid * (1 + 0.005),
+          mid: bid * (1 + 0.0025)
+        };
+      }
     });
     if (!Object.keys(newRates).length) { alert('⚠️ Ingresa al menos una tasa'); return; }
     await cm.updateExchangeRates(newRates);
     closeModal('modal-rates');
     renderCurrencySelector('currency-selector-container');
     if (typeof window.renderAll === 'function') window.renderAll();
-    alert('✓ Tasas guardadas');
+    alert('✓ Tasas guardadas (con compra/venta)');
   };
 
   window.updateRatesFromAPI = async function () {
@@ -6153,9 +6466,13 @@ console.log('✅ Mi Pisto HN v2.0 listo');
       renderCurrencySelector('currency-selector-container');
       if (typeof window.renderAll === 'function') window.renderAll();
       const sourceLabel = cm.getSourceLabel();
-      alert('✓ Tasas actualizadas (' + sourceLabel + ')\n\n' +
-        Object.entries(cm.rates).filter(([k]) => k !== 'HNL')
-          .map(([k,v]) => `1 ${k} = L. ${v.toFixed(4)}`).join('\n'));
+      const lines = Object.entries(cm.rates).filter(([k]) => k !== 'HNL').map(([k, v]) => {
+        const r = (typeof v === 'object' && v.bid && v.ask)
+          ? `Compra L. ${Number(v.bid).toFixed(4)} · Venta L. ${Number(v.ask).toFixed(4)}`
+          : `L. ${Number(v).toFixed(4)}`;
+        return `${k}: ${r}`;
+      });
+      alert('✓ Tasas actualizadas (' + sourceLabel + ')\n\n' + lines.join('\n'));
     } else {
       alert('❌ No se pudo conectar.\n\n• Verifica internet\n• O ingresa las tasas manualmente desde bch.hn');
     }
