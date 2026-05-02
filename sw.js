@@ -1,28 +1,27 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v13-multimoneda-tx
+//  Mi Pisto HN — Service Worker v14-cloud-sync-fase1
 //  ─────────────────────────────────────────────────────────
-//  Cambios en esta versión:
-//   ✅ MULTIMONEDA EN TRANSACCIONES (Caso A):
-//        - Modal de Gasto e Ingreso: selector de moneda
-//          (HNL/USD/EUR/GTQ/MXN/NIO/CRC)
-//        - Conversión en vivo mientras tecleás: muestra
-//          el equivalente en HNL con la tasa correcta
-//          y de qué lado (compra/venta)
-//        - Gasto en USD → tasa ASK (venta) automática
-//          (necesitás dólares = banco te los vende)
-//        - Ingreso en USD → tasa BID (compra) automática
-//          (recibís dólares = banco te los compra)
-//        - Las transacciones guardan originalAmount,
-//          originalCurrency, conversionRate y conversionSide
-//        - El historial muestra: "+\$100.00 USD ≈ +L.2,659.65
-//          @ L.26.5965 (compra)" para trazabilidad total
+//  Cambios en esta versión (FASE 1 de Cloud Sync):
+//   ✅ Cliente Supabase cargado desde CDN (async, no bloquea offline)
+//   ✅ Card "Sincronización en la nube" en Configuración
+//   ✅ Login con magic link (sin contraseñas)
+//   ✅ Cifrado E2E preparado (los datos del usuario NUNCA se
+//      enviarán al servidor en plano — Fase 2 implementará
+//      el cifrado del blob antes de subir)
+//   ✅ Tracking de dispositivos (device_log) para que el
+//      usuario vea desde dónde está usando la app
+//   ⏳ NO sincroniza datos todavía (eso es Fase 2)
 //
-//  Cambios heredados de v12-bid-ask-rates:
-//   ✅ Tasas con compra/venta (bid/ask)
-//   ✅ tasas.json con formato v2 + retrocompat
+//  Cambios heredados de v13-multimoneda-tx:
+//   ✅ Selector de moneda en gastos/ingresos con bid/ask
+//   ✅ originalAmount/originalCurrency/conversionRate guardados
+//
+//  IMPORTANTE: Las claves Supabase (anon/publishable) están en
+//  el HTML. Eso es seguro y diseñado así por Supabase — la
+//  protección real es Row Level Security en el servidor.
 // ============================================================
 
-const VERSION = 'v13-multimoneda-tx';
+const VERSION = 'v14-cloud-sync-fase1';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
