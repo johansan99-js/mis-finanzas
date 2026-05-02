@@ -1,30 +1,30 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v10-state-window-fix
+//  Mi Pisto HN — Service Worker v12-bid-ask-rates
 //  ─────────────────────────────────────────────────────────
 //  Cambios en esta versión:
-//   ✅ Bump de versión para invalidar caché tras los fixes:
-//        - window.state ahora expuesto vía getter (state era let
-//          y no llegaba al IIFE en otro <script> tag → metas
-//          siempre mostraba "Sin metas" aunque hubiera goals)
-//        - window.fL y window.esc también expuestos
-//        - IDB: handlers onclose/onversionchange para invalidar
-//          el singleton _dbPromise cuando la conexión se cierra
-//        - IDB: saveStateToDB con reintento si la conexión vieja
-//          estaba cerrándose (fixes "InvalidStateError: The
-//          database connection is closing")
+//   ✅ Tasas con compra/venta (bid/ask) en lugar de tasa única
+//        - tasas.json migrado a formato v2: cada moneda
+//          es { bid, ask, mid } en vez de un número plano
+//        - CurrencyManager normaliza cualquier tasa al
+//          formato {bid,ask,mid}, derivando con spread 0.5%
+//          si solo hay un número (retrocompat con cachés viejos)
+//        - toDisplay/toBase aceptan parámetro `side`:
+//            'ask' (default toDisplay): "tengo L, ¿cuánto USD vale?"
+//            'bid' (default toBase): "tengo USD, ¿cuánto L recibo?"
+//        - UI de tasas en Configuración: 2 inputs por moneda
+//          (compra/venta) con tooltip explicativo
+//   ✅ update-rates.js v3: scrapea BCH para USD oficial,
+//      deriva resto con spread implícito 0.5%
+//   ✅ Tasas iniciales: BCH 28-abr-2026 (compra L.26.5965,
+//      venta L.26.7295)
 //
-//  Cambios heredados de v9-metas-cuentas:
-//   ✅ Abono descuenta de cuenta seleccionada (efectivo/ahorro)
-//   ✅ Modal de abono con selector + display de saldo
-//   ✅ Sin animaciones RGB ni confeti
-//
-//  Cambios heredados de v8-paths-fixed:
-//   ✅ Rutas auto-detectadas
-//   ✅ AbortSignal.timeout() con fallback
-//   ✅ tasas.json con fallback completo
+//  Cambios heredados de v11-security-pin-fix:
+//   ✅ State no se carga de IDB antes de PIN
+//   ✅ "Recordar PIN" eliminado (era bypass del cifrado)
+//   ✅ olvidePIN borra todo y reinicia
 // ============================================================
 
-const VERSION = 'v10-state-window-fix';
+const VERSION = 'v12-bid-ask-rates';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
