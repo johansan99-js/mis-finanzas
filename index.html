@@ -6015,7 +6015,8 @@ window.esc = esc;
 
 const CLOUD_SYNC_CONFIG = {
   url: 'https://aetaktkexbtluoxehuwi.supabase.co',
-  anonKey: 'sb_publishable_hwfbR-iuRTImb9gZziAl7g_bYt1aTc1',
+  // anon JWT legacy — el SDK 2.45.x espera este formato (no el sb_publishable_*)
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldGFrdGtleGJ0bHVveGVodXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MzcwNzYsImV4cCI6MjA5MzMxMzA3Nn0.4kvz7wVxK-H69jY208bqEuF06UP9-p_ysHzo1_jfERE',
   // localStorage flag: si true, el usuario activó sync en este dispositivo
   enabledKey: 'mph_cloud_sync_enabled',
   // localStorage flag: identificador único del dispositivo (persistente)
