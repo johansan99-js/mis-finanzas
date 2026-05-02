@@ -1539,6 +1539,24 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     </div>
   </div>
 
+  <!-- Modal de descarga: confirmación + PIN -->
+  <div id="modal-cloud-download" class="modal" onclick="closeModalIfBg(event,'modal-cloud-download')">
+    <div class="modal-content">
+      <h3 style="margin-bottom:6px">⬇️ Bajar datos de la nube</h3>
+      <div style="background:rgba(255,68,68,.1);border:1px solid var(--red);padding:10px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;color:var(--text)">
+        ⚠️ <strong>Atención:</strong> Esta acción <strong>reemplazará tus datos locales</strong> con los que están en la nube. Si tu dispositivo tiene cambios sin subir, se perderán.
+      </div>
+      <div id="cloud-download-info" style="font-size:11px;background:var(--bg3);padding:10px;border-radius:8px;margin-bottom:14px;line-height:1.6"></div>
+      <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:5px">Tu PIN (para descifrar los datos)</label>
+      <input type="password" id="cloud-download-pin" class="input-field" placeholder="••••" maxlength="8" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+      <div id="cloud-download-status" style="font-size:12px;margin-bottom:10px;display:none;line-height:1.4"></div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-secondary" onclick="closeModal('modal-cloud-download')" style="flex:1">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarBajarCloud()" style="flex:2;background:var(--red);color:white" id="btn-confirmar-bajar">⬇️ Sí, sobrescribir con datos de la nube</button>
+      </div>
+    </div>
+  </div>
+
   <div class="security-notice">
     <h4>📋 Tu Privacidad</h4>
     <ul style="margin:0;font-size:11px">
@@ -6191,6 +6209,183 @@ const cloudSync = {
       console.warn('listDevices:', e.message);
       return [];
     }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FASE 2: UPLOAD / DOWNLOAD del state cifrado E2E
+  // ───────────────────────────────────────────────────────────────────
+  // Modelo: el servidor recibe SIEMPRE blobs cifrados que NO puede leer:
+  //   • ciphertext: state completo cifrado con DEK del usuario
+  //   • dek_ciphertext + dek_iv: la DEK cifrada con KEK derivada del PIN
+  //   • pin_salt: salt PBKDF2 (público por diseño, necesario para
+  //     que un dispositivo nuevo pueda re-derivar la KEK desde el PIN)
+  // ═══════════════════════════════════════════════════════════════════
+
+  /** Sube el state local cifrado a Supabase. Requiere que el usuario
+      esté autenticado Y que tenga la DEK desbloqueada (sesión activa). */
+  async uploadState() {
+    if (!this.user) return { ok: false, error: 'No has iniciado sesión en la nube' };
+    if (!await this.init()) return { ok: false, error: 'Sin conexión con el servidor' };
+    // Validar que tengamos la DEK en sesión (usuario desbloqueó con PIN)
+    if (typeof _sessionDEK === 'undefined' || _sessionDEK === null) {
+      return { ok: false, error: 'Necesitas tener PIN configurado y la sesión desbloqueada para subir' };
+    }
+    // Validar que tengamos la DEK cifrada y el salt en localStorage
+    const dekData = (typeof _loadDEKFromStorage === 'function') ? _loadDEKFromStorage() : null;
+    if (!dekData) return { ok: false, error: 'No se encontró la DEK cifrada local. Reconfigura el PIN.' };
+    const pinSalt = localStorage.getItem('finanzas_pin_salt');
+    if (!pinSalt) return { ok: false, error: 'No se encontró el salt del PIN. Reconfigura el PIN.' };
+
+    try {
+      // 1) Cifrar el state con la DEK actual (el resultado ya incluye IV embebido)
+      const stateClone = JSON.parse(JSON.stringify(state));
+      const ciphertextB64 = await _encryptState(stateClone, _sessionDEK);
+      if (!ciphertextB64) return { ok: false, error: 'Error al cifrar el state' };
+
+      // 2) Empaquetar la DEK cifrada (ya está en localStorage en formato base64)
+      const dekCiphertextB64 = _b64EncodeArr(dekData.encrypted);
+      const dekIvB64         = _b64EncodeArr(dekData.iv);
+
+      // 3) Construir payload
+      const payload = {
+        user_id: this.user.id,
+        ciphertext:     ciphertextB64,
+        iv:             '',  // IV embebido en ciphertext, columna queda vacía pero no NULL
+        dek_ciphertext: dekCiphertextB64,
+        dek_iv:         dekIvB64,
+        pin_salt:       pinSalt,
+        device_id:      this.getDeviceId(),
+        device_name:    this.getDeviceName(),
+        size_bytes:     ciphertextB64.length
+      };
+
+      // 4) Upsert (insert si no existe, update si ya tenía blob este usuario)
+      // El trigger en SQL incrementa `version` automáticamente en cada update.
+      const { data, error } = await this.client
+        .from('encrypted_states')
+        .upsert(payload, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (error) return { ok: false, error: error.message };
+
+      // 5) Actualizar device_log también (último uso)
+      this._logDevice().catch(()=>{});
+
+      console.log('☁️ Upload OK. Versión nube:', data.version, 'Tamaño:', ciphertextB64.length, 'B');
+      return { ok: true, version: data.version, sizeBytes: ciphertextB64.length, updatedAt: data.updated_at };
+    } catch (e) {
+      console.error('☁️ uploadState:', e);
+      return { ok: false, error: e.message || String(e) };
+    }
+  },
+
+  /** Bajá el blob de Supabase y descifralo con el PIN dado.
+      Si todo va bien, REEMPLAZA el state local con el de la nube,
+      sincroniza la DEK y el salt local, y guarda en localStorage+IDB.
+      
+      Esta función está diseñada para funcionar incluso si el dispositivo
+      perdió la DEK local (ej. tras un reset) — solo necesita el PIN. */
+  async downloadState({ pin } = {}) {
+    if (!this.user) return { ok: false, error: 'No has iniciado sesión en la nube' };
+    if (!await this.init()) return { ok: false, error: 'Sin conexión con el servidor' };
+    if (!pin || !/^\d{4,8}$/.test(pin)) return { ok: false, error: 'PIN inválido' };
+
+    try {
+      // 1) Bajar el blob
+      const { data, error } = await this.client
+        .from('encrypted_states')
+        .select('ciphertext, dek_ciphertext, dek_iv, pin_salt, version, updated_at, size_bytes, device_name')
+        .eq('user_id', this.user.id)
+        .maybeSingle();
+
+      if (error) return { ok: false, error: error.message };
+      if (!data) return { ok: false, error: 'No hay datos sincronizados todavía. Sube primero desde otro dispositivo.' };
+      if (!data.ciphertext || !data.dek_ciphertext || !data.dek_iv || !data.pin_salt) {
+        return { ok: false, error: 'El blob de la nube está incompleto o corrupto.' };
+      }
+
+      // 2) Derivar la KEK desde el PIN ingresado y el salt bajado
+      const saltBytes = _b64DecodeArr(data.pin_salt);
+      const kek = await _deriveKEKFromPIN(pin, saltBytes);
+
+      // 3) Descifrar la DEK con la KEK
+      const dekEncrypted = _b64DecodeArr(data.dek_ciphertext);
+      const dekIv        = _b64DecodeArr(data.dek_iv);
+      const dek = await _decryptDEK(dekEncrypted, dekIv, kek);
+      if (!dek) {
+        return { ok: false, error: 'PIN incorrecto. No se pudo descifrar la clave de tus datos.' };
+      }
+
+      // 4) Descifrar el state con la DEK
+      const decryptedState = await _decryptState(data.ciphertext, dek);
+      if (!decryptedState) {
+        return { ok: false, error: 'Datos en la nube corruptos o de versión incompatible.' };
+      }
+
+      // 5) Validación básica: el state debe verse como un state real
+      if (typeof decryptedState !== 'object' || decryptedState === null) {
+        return { ok: false, error: 'Formato del state descifrado inválido.' };
+      }
+
+      // 6) ÉXITO. Sincronizar todo localmente:
+      //    a) Reemplazar la DEK en sesión y en localStorage
+      _sessionDEK = dek;
+      _sessionPIN = pin;
+      _saveDEKToStorage(dekEncrypted, dekIv);
+      localStorage.setItem('finanzas_pin_salt', data.pin_salt);
+      // Hash del PIN local para que verificarPIN funcione
+      const pinHash = await _derivarHashPIN(pin, saltBytes);
+      localStorage.setItem('finanzas_pin_hash', pinHash);
+      appPIN = pinHash;
+
+      //    b) Reemplazar state global y persistir cifrado en localStorage
+      Object.keys(state).forEach(k => delete state[k]);
+      Object.assign(state, decryptedState);
+      // Migraciones de campos faltantes
+      if (!state.pagosRecurrentes) state.pagosRecurrentes = [];
+      if (!state.prestamos) state.prestamos = [];
+      if (!state.budgetRules) state.budgetRules = { gastos: 65, ahorro: 20, extra: 15 };
+      if (!state.receivables) state.receivables = [];
+      if (!state.payables) state.payables = [];
+      if (!state.tarjetas) state.tarjetas = [];
+      if (!state.goals) state.goals = [];
+      if (!state.cuentas) state.cuentas = { efectivo: 0, ahorro: 0 };
+
+      //    c) Re-cifrar y guardar en localStorage + IDB
+      const reEncryptedB64 = await _encryptState(state, dek);
+      localStorage.setItem(LS_KEY, reEncryptedB64);
+      try { await saveStateToDB(state); } catch(e) { console.warn('IDB sync:', e); }
+
+      console.log('☁️ Download OK. Versión:', data.version, 'Subido por:', data.device_name);
+      return {
+        ok: true,
+        version: data.version,
+        sizeBytes: data.size_bytes,
+        updatedAt: data.updated_at,
+        deviceName: data.device_name
+      };
+    } catch (e) {
+      console.error('☁️ downloadState:', e);
+      return { ok: false, error: e.message || String(e) };
+    }
+  },
+
+  /** Lee metadata del blob remoto (sin descifrar). Útil para mostrar
+      "Última sincronización: hace X tiempo" en la UI. */
+  async getRemoteInfo() {
+    if (!this.user || !this.client) return null;
+    try {
+      const { data, error } = await this.client
+        .from('encrypted_states')
+        .select('version, updated_at, size_bytes, device_name')
+        .eq('user_id', this.user.id)
+        .maybeSingle();
+      if (error || !data) return null;
+      return data;
+    } catch (e) {
+      return null;
+    }
   }
 };
 
@@ -6218,7 +6413,7 @@ async function renderCloudSyncUI() {
     await cloudSync.init();
   }
 
-  // Estado 2: usuario autenticado → mostrar info + botón cerrar sesión
+  // Estado 2: usuario autenticado → mostrar info + botones de sync
   if (cloudSync.user) {
     const devices = await cloudSync.listDevices();
     const deviceItems = devices.length
@@ -6234,6 +6429,32 @@ async function renderCloudSyncUI() {
         }).join('')
       : '<div style="font-size:11px;color:var(--text2);padding:8px">Solo este dispositivo registrado.</div>';
 
+    // Bajar metadata del blob remoto (no descifra nada, solo info)
+    const remoteInfo = await cloudSync.getRemoteInfo();
+    let remoteStatusHtml;
+    if (remoteInfo) {
+      const fecha = new Date(remoteInfo.updated_at);
+      const ahora = new Date();
+      const diffMin = Math.floor((ahora - fecha) / 60000);
+      let cuando;
+      if (diffMin < 1)        cuando = 'hace unos segundos';
+      else if (diffMin < 60)  cuando = 'hace ' + diffMin + ' min';
+      else if (diffMin < 1440)cuando = 'hace ' + Math.floor(diffMin/60) + ' h';
+      else                    cuando = fecha.toLocaleDateString('es-HN', { dateStyle: 'medium' });
+      const sizeKB = (remoteInfo.size_bytes / 1024).toFixed(1);
+      remoteStatusHtml =
+        '<div style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.25);padding:10px 12px;border-radius:8px;font-size:11px;margin-bottom:10px;line-height:1.6">' +
+          '<div>📦 <strong>Última sincronización:</strong> ' + cuando + '</div>' +
+          '<div>📏 Tamaño cifrado: ' + sizeKB + ' KB · Versión #' + remoteInfo.version + '</div>' +
+          '<div style="color:var(--text2)">📱 Subido desde: ' + esc(remoteInfo.device_name || '?') + '</div>' +
+        '</div>';
+    } else {
+      remoteStatusHtml =
+        '<div style="background:var(--bg3);padding:10px 12px;border-radius:8px;font-size:11px;margin-bottom:10px;color:var(--text2);line-height:1.5">' +
+          '☁️ Aún no has subido tus datos. Toca <strong>"Subir ahora"</strong> para empezar.' +
+        '</div>';
+    }
+
     container.innerHTML =
       '<div style="padding:14px;background:linear-gradient(135deg,rgba(76,175,80,.1),rgba(76,175,80,.04));border:1px solid rgba(76,175,80,.3);border-radius:10px;margin-bottom:12px">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
@@ -6243,13 +6464,19 @@ async function renderCloudSyncUI() {
             '<div style="font-size:11px;color:var(--text2);word-break:break-all">' + esc(cloudSync.user.email || '') + '</div>' +
           '</div>' +
         '</div>' +
-        '<div style="font-size:11px;color:var(--amber);margin-top:8px;padding:8px;background:rgba(245,200,0,.1);border-radius:6px;line-height:1.4">' +
-          '⚠️ <strong>Fase 1 activa:</strong> conexión establecida. La sincronización automática de datos estará en la próxima actualización.' +
-        '</div>' +
       '</div>' +
+
+      remoteStatusHtml +
+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">' +
+        '<button class="btn btn-primary" onclick="subirDatosCloud()" id="btn-cloud-upload" style="font-size:13px;padding:12px 8px">⬆️ Subir ahora</button>' +
+        '<button class="btn btn-secondary" onclick="abrirModalBajarCloud()" id="btn-cloud-download" style="font-size:13px;padding:12px 8px">⬇️ Bajar de la nube</button>' +
+      '</div>' +
+
       '<h5 style="font-size:11px;text-transform:uppercase;color:var(--text2);margin:14px 0 8px;letter-spacing:.5px">📱 Tus dispositivos</h5>' +
       deviceItems +
-      '<button class="btn btn-secondary" onclick="cerrarSesionCloud()" style="margin-top:14px;width:100%">🚪 Cerrar sesión en este dispositivo</button>';
+
+      '<button class="btn btn-secondary" onclick="cerrarSesionCloud()" style="margin-top:14px;width:100%;font-size:12px">🚪 Cerrar sesión en este dispositivo</button>';
     return;
   }
 
@@ -6327,6 +6554,106 @@ async function cerrarSesionCloud() {
   alert('🚪 Sesión cerrada. Tus datos locales siguen intactos.');
 }
 window.cerrarSesionCloud = cerrarSesionCloud;
+
+// ─────────────────────────────────────────────────────────────────────
+// FASE 2 UI: Subir / Bajar datos cifrados
+// ─────────────────────────────────────────────────────────────────────
+
+async function subirDatosCloud() {
+  const btn = document.getElementById('btn-cloud-upload');
+  if (!btn) return;
+  // Validación previa: tener PIN configurado y desbloqueado
+  if (typeof _sessionDEK === 'undefined' || _sessionDEK === null) {
+    alert('⚠️ Para subir tus datos a la nube necesitás:\n\n1. Tener un PIN configurado (Configuración → Cambiar PIN)\n2. Haber desbloqueado la app con tu PIN en esta sesión\n\nSin PIN no hay cifrado, y sin cifrado no podemos subir nada (la nube nunca debe ver tus datos en plano).');
+    return;
+  }
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Cifrando y subiendo...';
+
+  const result = await cloudSync.uploadState();
+  btn.disabled = false;
+  btn.textContent = originalText;
+
+  if (result.ok) {
+    const sizeKB = (result.sizeBytes / 1024).toFixed(1);
+    alert('✅ Subido exitosamente\n\n📦 Tamaño cifrado: ' + sizeKB + ' KB\n📌 Versión en la nube: #' + result.version + '\n\n🔒 Tus datos están cifrados con AES-256. El servidor solo ve un blob ilegible.');
+    // Refrescar UI para mostrar la nueva info de "última sincronización"
+    renderCloudSyncUI();
+  } else {
+    alert('❌ Error al subir:\n\n' + (result.error || 'Error desconocido'));
+  }
+}
+window.subirDatosCloud = subirDatosCloud;
+
+function abrirModalBajarCloud() {
+  // Verificar que hay datos en la nube antes de pedir PIN
+  cloudSync.getRemoteInfo().then(info => {
+    if (!info) {
+      alert('☁️ No hay datos sincronizados en la nube todavía.\n\nDesde otro dispositivo, primero usá "⬆️ Subir ahora" para crear el primer respaldo. Luego podés bajarlo en este dispositivo.');
+      return;
+    }
+    // Mostrar el modal con info del blob remoto
+    const fecha = new Date(info.updated_at).toLocaleString('es-HN', { dateStyle: 'medium', timeStyle: 'short' });
+    const sizeKB = (info.size_bytes / 1024).toFixed(1);
+    document.getElementById('cloud-download-info').innerHTML =
+      '📦 <strong>Datos disponibles en la nube:</strong><br>' +
+      '• Subido: ' + fecha + '<br>' +
+      '• Desde: ' + esc(info.device_name || '?') + '<br>' +
+      '• Tamaño: ' + sizeKB + ' KB · Versión #' + info.version;
+    document.getElementById('cloud-download-pin').value = '';
+    const status = document.getElementById('cloud-download-status');
+    if (status) status.style.display = 'none';
+    const btn = document.getElementById('btn-confirmar-bajar');
+    if (btn) { btn.disabled = false; btn.textContent = '⬇️ Sí, sobrescribir con datos de la nube'; }
+    openModal('modal-cloud-download');
+    setTimeout(() => document.getElementById('cloud-download-pin')?.focus(), 100);
+  });
+}
+window.abrirModalBajarCloud = abrirModalBajarCloud;
+
+async function confirmarBajarCloud() {
+  const pin = (document.getElementById('cloud-download-pin')?.value || '').trim();
+  const status = document.getElementById('cloud-download-status');
+  const btn = document.getElementById('btn-confirmar-bajar');
+  if (!/^\d{4,8}$/.test(pin)) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = '⚠️ Ingresa tu PIN (4 a 8 dígitos)';
+    }
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Bajando y descifrando...'; }
+  if (status) {
+    status.style.display = 'block';
+    status.style.color = 'var(--text2)';
+    status.textContent = '🔓 Descifrando con tu PIN...';
+  }
+
+  const result = await cloudSync.downloadState({ pin });
+
+  if (result.ok) {
+    if (status) {
+      status.style.color = 'var(--green)';
+      status.textContent = '✅ Datos restaurados. Recargando app...';
+    }
+    setTimeout(() => {
+      closeModal('modal-cloud-download');
+      // Forzar render completo con los nuevos datos
+      if (typeof renderAll === 'function') renderAll();
+      alert('✅ Datos sincronizados desde la nube.\n\nVersión #' + result.version + ' · Subido desde: ' + (result.deviceName || '?') + '\n\nTus datos locales fueron reemplazados por los de la nube.');
+      renderCloudSyncUI();
+    }, 800);
+  } else {
+    if (status) {
+      status.style.color = 'var(--red)';
+      status.textContent = '❌ ' + (result.error || 'Error desconocido');
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '⬇️ Reintentar'; }
+  }
+}
+window.confirmarBajarCloud = confirmarBajarCloud;
 
 // Inicializar cloudSync al cargar (si el SDK ya estaba listo) o cuando esté disponible
 function _initCloudSyncWhenReady() {
