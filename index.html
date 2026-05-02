@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#130507">
 <!-- P1-6: Content Security Policy. unsafe-inline temporal mientras se migra a delegación de eventos.
      Las CDNs listadas son las que carga la app: Chart.js (jsdelivr), SheetJS, Tesseract (unpkg + projectnaptha) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://unpkg.com https://tessdata.projectnaptha.com; worker-src 'self' blob: https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://unpkg.com https://tessdata.projectnaptha.com blob:; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://unpkg.com https://tessdata.projectnaptha.com; worker-src 'self' blob: https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://unpkg.com https://tessdata.projectnaptha.com blob: https://aetaktkexbtluoxehuwi.supabase.co wss://aetaktkexbtluoxehuwi.supabase.co; manifest-src 'self'">
 <title>Mi Pisto HN · Tu dinero, tu control</title>
 <link rel="manifest" href="manifest.json">
 <!-- FIX: Removed invalid SRI hashes that blocked Chart.js and SheetJS loading.
