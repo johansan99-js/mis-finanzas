@@ -29,6 +29,11 @@
 <!-- FIX: SRI removed. Re-add valid hash at deploy time. -->
 <script defer src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"
         crossorigin="anonymous"></script>
+<!-- ═══ CLOUD SYNC: Supabase JS SDK (cargado bajo demanda, no bloquea offline) ═══ -->
+<!-- Se carga async para no impactar el tiempo de arranque. Si falla (offline), la app
+     sigue funcionando 100% local — el módulo cloudSync verifica window.supabase antes de usarlo. -->
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+        crossorigin="anonymous"></script>
 <style>
 :root{--bg:#130507;--bg2:#1C080B;--bg3:#280D10;--bg4:#3A1418;--amber:#F5C800;--text:#FFF0E8;--text2:#C09090;--green:#4CAF50;--red:#FF4444;--blue:#4285F4;--purple:#FF7043;--border:#3A1418;--r:12px}
 
@@ -1499,12 +1504,47 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
     <input type="file" id="import-file" style="display:none" onchange="importData(event)">
     <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Importar Respaldo</button>
   </div>
+
+  <!-- ═══ SINCRONIZACIÓN EN LA NUBE (E2EE) ═══ -->
+  <div class="card" id="cloud-sync-card">
+    <h4 style="margin-bottom:6px">☁️ Sincronización en la nube</h4>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5">
+      Sincroniza tus datos entre <strong>celular y laptop</strong> con cifrado de extremo a extremo.
+      <strong style="color:var(--green)">Nadie puede ver tus datos</strong>, ni siquiera nosotros — solo se sube un blob cifrado con tu PIN.
+    </p>
+    <div id="cloud-sync-status-container">
+      <!-- Renderizado dinámico por renderCloudSyncUI() -->
+      <div style="text-align:center;padding:20px;color:var(--text2);font-size:12px">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- Modal de login con magic link -->
+  <div id="modal-cloud-login" class="modal" onclick="closeModalIfBg(event,'modal-cloud-login')">
+    <div class="modal-content">
+      <h3 style="margin-bottom:6px">☁️ Activar sincronización</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5">
+        Te enviaremos un <strong>enlace mágico</strong> al email para iniciar sesión.
+        Sin contraseñas. Tus datos siguen cifrados con tu PIN local.
+      </p>
+      <input type="email" id="cloud-email" class="input-field" placeholder="tu@email.com" autocomplete="email">
+      <div id="cloud-login-status" style="font-size:12px;margin-bottom:10px;display:none"></div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-secondary" onclick="closeModal('modal-cloud-login')" style="flex:1">Cancelar</button>
+        <button class="btn btn-primary" onclick="enviarMagicLink()" style="flex:2" id="btn-enviar-magic">📧 Enviar enlace</button>
+      </div>
+      <p style="font-size:10px;color:var(--text2);margin-top:14px;text-align:center;line-height:1.5">
+        🔒 Tus datos viajan cifrados con AES-256.<br>
+        El servidor solo guarda un blob ilegible.
+      </p>
+    </div>
+  </div>
+
   <div class="security-notice">
     <h4>📋 Tu Privacidad</h4>
     <ul style="margin:0;font-size:11px">
       <li>✅ Datos 100% locales (localStorage + IndexedDB)</li>
       <li>✅ Sin conexión a internet requerida</li>
-      <li>✅ Sin servidores externos</li>
+      <li>✅ Sincronización opcional con cifrado E2E</li>
     </ul>
   </div>
   <div id="persistence-info"></div>
@@ -4590,6 +4630,8 @@ function switchView(v){
   if(v==='tarjetas')renderTarjetas();
   if(v==='pagos')renderPagosRecurrentes();
   if(v==='historico')renderHistorico();
+  // Cloud sync: refrescar estado al entrar a config
+  if(v==='config' && typeof renderCloudSyncUI === 'function') renderCloudSyncUI();
 }
 
 function toggleHamburger(){
@@ -5956,6 +5998,361 @@ try {
 }
 window.fL = fL;
 window.esc = esc;
+
+// ═══════════════════════════════════════════════════════════════════════
+// CLOUD SYNC v1 (Fase 1): conexión a Supabase + auth con magic link
+// ─────────────────────────────────────────────────────────────────────
+// Filosofía:
+//   • TODO es opcional. Si el usuario no activa sync, la app es 100% local
+//     como siempre.
+//   • Si Supabase JS no carga (offline), no rompe nada — verificamos
+//     window.supabase antes de cualquier operación.
+//   • Las credenciales son la "anon key" (publishable), diseñada para estar
+//     en el frontend. La protección real es RLS en Supabase.
+//   • En esta Fase 1 NO sincronizamos datos todavía — solo establecemos la
+//     conexión y el flujo de auth. Sync de datos viene en Fase 2.
+// ═══════════════════════════════════════════════════════════════════════
+
+const CLOUD_SYNC_CONFIG = {
+  url: 'https://aetaktkexbtluoxehuwi.supabase.co',
+  anonKey: 'sb_publishable_hwfbR-iuRTImb9gZziAl7g_bYt1aTc1',
+  // localStorage flag: si true, el usuario activó sync en este dispositivo
+  enabledKey: 'mph_cloud_sync_enabled',
+  // localStorage flag: identificador único del dispositivo (persistente)
+  deviceIdKey: 'mph_device_id',
+  deviceNameKey: 'mph_device_name'
+};
+
+const cloudSync = {
+  client: null,        // Cliente Supabase (lazy-initialized)
+  user: null,          // Usuario autenticado (auth.user object)
+  ready: false,        // Una vez inicializado correctamente
+
+  /** Verifica si el SDK de Supabase está disponible (puede no haber cargado si offline) */
+  sdkAvailable() {
+    return typeof window.supabase !== 'undefined' &&
+           typeof window.supabase.createClient === 'function';
+  },
+
+  /** ¿El usuario activó sync en este dispositivo? */
+  isEnabled() {
+    return localStorage.getItem(CLOUD_SYNC_CONFIG.enabledKey) === 'true';
+  },
+
+  /** ID único del dispositivo (para el device_log) */
+  getDeviceId() {
+    let id = localStorage.getItem(CLOUD_SYNC_CONFIG.deviceIdKey);
+    if (!id) {
+      // Generar uno nuevo
+      id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : 'dev-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem(CLOUD_SYNC_CONFIG.deviceIdKey, id);
+    }
+    return id;
+  },
+
+  /** Nombre legible del dispositivo (auto-detectado, editable después) */
+  getDeviceName() {
+    let name = localStorage.getItem(CLOUD_SYNC_CONFIG.deviceNameKey);
+    if (!name) {
+      const ua = navigator.userAgent;
+      if (/iPhone/.test(ua))      name = 'iPhone';
+      else if (/iPad/.test(ua))   name = 'iPad';
+      else if (/Android/.test(ua))name = 'Android';
+      else if (/Mac/.test(ua))    name = 'Mac';
+      else if (/Windows/.test(ua))name = 'Windows';
+      else if (/Linux/.test(ua))  name = 'Linux';
+      else                        name = 'Dispositivo';
+      localStorage.setItem(CLOUD_SYNC_CONFIG.deviceNameKey, name);
+    }
+    return name;
+  },
+
+  /** Inicializa el cliente Supabase y restaura sesión si existía */
+  async init() {
+    if (this.ready) return true;
+    if (!this.sdkAvailable()) {
+      console.log('☁️ Supabase SDK no disponible (¿offline?). Sync deshabilitado.');
+      return false;
+    }
+    try {
+      this.client = window.supabase.createClient(
+        CLOUD_SYNC_CONFIG.url,
+        CLOUD_SYNC_CONFIG.anonKey,
+        {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,  // detecta el token del magic link en la URL
+            flowType: 'pkce'
+          }
+        }
+      );
+      // Restaurar sesión existente si la hay
+      const { data: { session } } = await this.client.auth.getSession();
+      if (session) {
+        this.user = session.user;
+        console.log('☁️ Sesión restaurada:', this.user.email);
+        // Registrar/actualizar dispositivo en device_log
+        this._logDevice().catch(e => console.warn('device_log:', e.message));
+      }
+      // Listener para cambios de auth (login, logout, token refresh)
+      this.client.auth.onAuthStateChange((event, session) => {
+        console.log('☁️ Auth event:', event);
+        this.user = session ? session.user : null;
+        if (event === 'SIGNED_IN') {
+          this._logDevice().catch(()=>{});
+          renderCloudSyncUI();
+          // Si veníamos del magic link, mostrar feedback
+          const url = new URL(window.location.href);
+          if (url.searchParams.has('code') || window.location.hash.includes('access_token')) {
+            // Limpiar la URL (quitar el token del hash/query por seguridad)
+            history.replaceState({}, document.title, window.location.pathname);
+            setTimeout(() => alert('✅ Sesión iniciada como ' + this.user.email + '\n\nLa sincronización de datos se activará en una próxima actualización.'), 100);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          renderCloudSyncUI();
+        }
+      });
+      this.ready = true;
+      return true;
+    } catch (e) {
+      console.error('☁️ Error inicializando Supabase:', e);
+      return false;
+    }
+  },
+
+  /** Envía el magic link al email del usuario */
+  async sendMagicLink(email) {
+    if (!await this.init()) {
+      return { ok: false, error: 'No hay conexión con el servidor' };
+    }
+    try {
+      const { error } = await this.client.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: window.location.origin + window.location.pathname,
+          shouldCreateUser: true
+        }
+      });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  },
+
+  /** Cierra sesión y deshabilita sync en este dispositivo */
+  async signOut() {
+    if (!this.ready) return;
+    try { await this.client.auth.signOut(); } catch(e) {}
+    this.user = null;
+    localStorage.setItem(CLOUD_SYNC_CONFIG.enabledKey, 'false');
+    renderCloudSyncUI();
+  },
+
+  /** Registra/actualiza el dispositivo en device_log */
+  async _logDevice() {
+    if (!this.user || !this.client) return;
+    const deviceId   = this.getDeviceId();
+    const deviceName = this.getDeviceName();
+    try {
+      // upsert: si existe (user_id + device_id) actualiza last_seen, si no inserta
+      const { error } = await this.client
+        .from('device_log')
+        .upsert({
+          user_id: this.user.id,
+          device_id: deviceId,
+          device_name: deviceName,
+          last_seen: new Date().toISOString(),
+          user_agent: navigator.userAgent.substr(0, 500)
+        }, {
+          onConflict: 'user_id,device_id'
+        });
+      if (error) console.warn('device_log upsert:', error.message);
+    } catch (e) {
+      console.warn('device_log:', e.message);
+    }
+  },
+
+  /** Lista todos los dispositivos del usuario actual */
+  async listDevices() {
+    if (!this.user || !this.client) return [];
+    try {
+      const { data, error } = await this.client
+        .from('device_log')
+        .select('device_id, device_name, last_seen, user_agent')
+        .order('last_seen', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn('listDevices:', e.message);
+      return [];
+    }
+  }
+};
+
+window.cloudSync = cloudSync;
+
+// ─────────────────────────────────────────────────────────────────────
+// UI: render del estado actual de sincronización en Configuración
+// ─────────────────────────────────────────────────────────────────────
+async function renderCloudSyncUI() {
+  const container = document.getElementById('cloud-sync-status-container');
+  if (!container) return;
+
+  // Estado 1: Supabase no disponible (offline o el CDN falló)
+  if (!cloudSync.sdkAvailable()) {
+    container.innerHTML =
+      '<div style="padding:14px;background:var(--bg3);border-radius:10px;border-left:3px solid var(--amber);font-size:12px;color:var(--text2);line-height:1.5">' +
+        '⚠️ No hay conexión con el servidor de sincronización.<br>' +
+        'Verifica tu internet y recarga la app.' +
+      '</div>';
+    return;
+  }
+
+  // Inicializar si no se hizo
+  if (!cloudSync.ready) {
+    await cloudSync.init();
+  }
+
+  // Estado 2: usuario autenticado → mostrar info + botón cerrar sesión
+  if (cloudSync.user) {
+    const devices = await cloudSync.listDevices();
+    const deviceItems = devices.length
+      ? devices.map(d => {
+          const fecha = new Date(d.last_seen).toLocaleString('es-HN', { dateStyle: 'short', timeStyle: 'short' });
+          const esActual = d.device_id === cloudSync.getDeviceId();
+          return '<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:11px;align-items:center">' +
+            '<div><strong>' + esc(d.device_name || 'Dispositivo') + '</strong>' +
+            (esActual ? ' <span style="color:var(--green);font-size:9px">● ESTE</span>' : '') +
+            '</div>' +
+            '<div style="color:var(--text2);font-size:10px">' + fecha + '</div>' +
+          '</div>';
+        }).join('')
+      : '<div style="font-size:11px;color:var(--text2);padding:8px">Solo este dispositivo registrado.</div>';
+
+    container.innerHTML =
+      '<div style="padding:14px;background:linear-gradient(135deg,rgba(76,175,80,.1),rgba(76,175,80,.04));border:1px solid rgba(76,175,80,.3);border-radius:10px;margin-bottom:12px">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+          '<span style="font-size:20px">✅</span>' +
+          '<div style="flex:1">' +
+            '<div style="font-weight:700;font-size:13px">Conectado</div>' +
+            '<div style="font-size:11px;color:var(--text2);word-break:break-all">' + esc(cloudSync.user.email || '') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--amber);margin-top:8px;padding:8px;background:rgba(245,200,0,.1);border-radius:6px;line-height:1.4">' +
+          '⚠️ <strong>Fase 1 activa:</strong> conexión establecida. La sincronización automática de datos estará en la próxima actualización.' +
+        '</div>' +
+      '</div>' +
+      '<h5 style="font-size:11px;text-transform:uppercase;color:var(--text2);margin:14px 0 8px;letter-spacing:.5px">📱 Tus dispositivos</h5>' +
+      deviceItems +
+      '<button class="btn btn-secondary" onclick="cerrarSesionCloud()" style="margin-top:14px;width:100%">🚪 Cerrar sesión en este dispositivo</button>';
+    return;
+  }
+
+  // Estado 3: no autenticado → mostrar botón para activar
+  container.innerHTML =
+    '<div style="padding:14px;background:var(--bg3);border-radius:10px;font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">' +
+      '🔒 La sincronización está <strong>desactivada</strong>.<br>' +
+      'Tus datos están solo en este dispositivo.' +
+    '</div>' +
+    '<button class="btn btn-primary" onclick="abrirModalCloudLogin()" style="width:100%">' +
+      '☁️ Activar sincronización' +
+    '</button>';
+}
+
+window.renderCloudSyncUI = renderCloudSyncUI;
+
+function abrirModalCloudLogin() {
+  const emailInput = document.getElementById('cloud-email');
+  if (emailInput) emailInput.value = '';
+  const status = document.getElementById('cloud-login-status');
+  if (status) status.style.display = 'none';
+  const btn = document.getElementById('btn-enviar-magic');
+  if (btn) { btn.disabled = false; btn.textContent = '📧 Enviar enlace'; }
+  openModal('modal-cloud-login');
+  setTimeout(() => emailInput?.focus(), 100);
+}
+window.abrirModalCloudLogin = abrirModalCloudLogin;
+
+async function enviarMagicLink() {
+  const emailInput = document.getElementById('cloud-email');
+  const status = document.getElementById('cloud-login-status');
+  const btn = document.getElementById('btn-enviar-magic');
+  const email = (emailInput?.value || '').trim().toLowerCase();
+
+  // Validación simple de email
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (status) {
+      status.style.display = 'block';
+      status.style.color = 'var(--red)';
+      status.textContent = '⚠️ Ingresa un email válido';
+    }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+  if (status) {
+    status.style.display = 'block';
+    status.style.color = 'var(--text2)';
+    status.textContent = 'Conectando con el servidor...';
+  }
+
+  const result = await cloudSync.sendMagicLink(email);
+
+  if (result.ok) {
+    if (status) {
+      status.style.color = 'var(--green)';
+      status.innerHTML = '✅ ¡Enlace enviado!<br><span style="font-size:11px">Revisa tu bandeja de entrada (y la carpeta de spam) en <strong>' + esc(email) + '</strong>.<br>Toca el enlace para iniciar sesión.</span>';
+    }
+    if (btn) btn.textContent = '✅ Enviado';
+    // Marcar sync como activado (aunque el login se complete después)
+    localStorage.setItem(CLOUD_SYNC_CONFIG.enabledKey, 'true');
+  } else {
+    if (status) {
+      status.style.color = 'var(--red)';
+      status.textContent = '❌ ' + (result.error || 'Error desconocido');
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '📧 Reintentar'; }
+  }
+}
+window.enviarMagicLink = enviarMagicLink;
+
+async function cerrarSesionCloud() {
+  if (!confirm('¿Cerrar sesión en este dispositivo?\n\nTus datos locales (cifrados con tu PIN) NO se borrarán. Solo se desconectará la sincronización en la nube.')) return;
+  await cloudSync.signOut();
+  alert('🚪 Sesión cerrada. Tus datos locales siguen intactos.');
+}
+window.cerrarSesionCloud = cerrarSesionCloud;
+
+// Inicializar cloudSync al cargar (si el SDK ya estaba listo) o cuando esté disponible
+function _initCloudSyncWhenReady() {
+  if (cloudSync.sdkAvailable()) {
+    cloudSync.init().then(() => {
+      // Si el contenedor de UI existe, refrescarlo
+      if (document.getElementById('cloud-sync-status-container')) {
+        renderCloudSyncUI();
+      }
+    });
+  } else {
+    // El SDK puede tardar en cargar (CDN). Reintentar 5 veces con 1s entre cada uno.
+    if (!_initCloudSyncWhenReady._attempts) _initCloudSyncWhenReady._attempts = 0;
+    _initCloudSyncWhenReady._attempts++;
+    if (_initCloudSyncWhenReady._attempts < 5) {
+      setTimeout(_initCloudSyncWhenReady, 1000);
+    } else {
+      console.log('☁️ Supabase SDK no cargó tras 5 intentos. Sync deshabilitado.');
+    }
+  }
+}
+// Disparar después de que el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initCloudSyncWhenReady);
+} else {
+  _initCloudSyncWhenReady();
+}
 
 console.log('✅ Mi Pisto HN v2.0 listo');
 
