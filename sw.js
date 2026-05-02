@@ -1,18 +1,27 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v16-cloud-sync-csp-fix
+//  Mi Pisto HN — Service Worker v17-cloud-sync-fase2
 //  ─────────────────────────────────────────────────────────
-//  Cambios en esta versión:
-//   ✅ FIX: Content Security Policy agregó el dominio Supabase
-//      a connect-src. Sin esto, el navegador bloqueaba TODAS
-//      las requests a Supabase antes de salir (error "Failed
-//      to fetch"). Ahora permite https + wss al proyecto
-//      específico (no a *.supabase.co por seguridad).
+//  FASE 2 COMPLETA — Sync manual de blob cifrado E2E
 //
-//  Cambios heredados:
-//   ✅ Auth con magic link, anon JWT, card en Configuración
+//  ✅ Botón "⬆️ Subir ahora": cifra state con DEK, sube blob
+//      junto con DEK cifrada y salt PIN. Servidor solo ve
+//      blobs ilegibles.
+//  ✅ Botón "⬇️ Bajar de la nube": pide PIN, deriva KEK, 
+//      descifra DEK, descifra state, reemplaza local.
+//      Funciona incluso en dispositivo nuevo / tras reset.
+//  ✅ UI muestra "Última sincronización: hace X min", 
+//      tamaño del blob (KB), versión, dispositivo origen.
+//  ✅ Modal de descarga con doble confirmación (sobreescribe
+//      datos locales) + validación de PIN antes de descifrar.
+//
+//  Aún NO incluido (Fase 3+):
+//   ⏳ Sync automático en cada cambio (debounce)
+//   ⏳ Detección de conflictos entre dispositivos
+//   ⏳ Pantalla "primera vez en este dispositivo" 
+//      (¿es nuevo o quieres recuperar de la nube?)
 // ============================================================
 
-const VERSION = 'v16-cloud-sync-csp-fix';
+const VERSION = 'v17-cloud-sync-fase2';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
