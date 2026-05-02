@@ -1,20 +1,18 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v15-cloud-sync-fixkey
+//  Mi Pisto HN — Service Worker v16-cloud-sync-csp-fix
 //  ─────────────────────────────────────────────────────────
 //  Cambios en esta versión:
-//   ✅ FIX: API key Supabase cambiada de sb_publishable_* a
-//      anon JWT legacy (eyJ...). El SDK 2.45.x requiere el
-//      formato JWT, no el nuevo formato publishable.
-//      El error "Failed to fetch" se debía a esto: el SDK
-//      armaba requests con la key vieja, Supabase las rechazaba.
+//   ✅ FIX: Content Security Policy agregó el dominio Supabase
+//      a connect-src. Sin esto, el navegador bloqueaba TODAS
+//      las requests a Supabase antes de salir (error "Failed
+//      to fetch"). Ahora permite https + wss al proyecto
+//      específico (no a *.supabase.co por seguridad).
 //
-//  Cambios heredados de v14-cloud-sync-fase1:
-//   ✅ Cliente Supabase + auth con magic link (Fase 1)
-//   ✅ Card "Sincronización en la nube" en Configuración
-//   ✅ Tracking de dispositivos en device_log
+//  Cambios heredados:
+//   ✅ Auth con magic link, anon JWT, card en Configuración
 // ============================================================
 
-const VERSION = 'v15-cloud-sync-fixkey';
+const VERSION = 'v16-cloud-sync-csp-fix';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
