@@ -90,6 +90,17 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 .btn-secondary{background:var(--bg3);color:var(--text)}
 .btn-danger{background:var(--red);color:white}
 .input-field{width:100%;background:var(--bg3);border:1px solid var(--border);padding:14px;border-radius:8px;color:var(--text);margin-bottom:12px;font-size:14px}
+/* MULTIMONEDA: grupo monto + moneda */
+.monto-moneda-group{display:flex;gap:8px;margin-bottom:12px}
+.monto-moneda-group .monto-input{flex:1;margin-bottom:0}
+.monto-moneda-group .moneda-select{width:120px;margin-bottom:0;flex-shrink:0;font-weight:700;text-align:center}
+.conversion-info{background:linear-gradient(135deg,rgba(245,200,0,.12),rgba(255,112,67,.08));border:1px solid rgba(245,200,0,.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.5}
+.conversion-info .conv-amount{font-weight:800;color:var(--amber);font-size:14px}
+.conversion-info .conv-note{display:block;font-size:10px;color:var(--text2);margin-top:3px}
+.conversion-info.error{background:rgba(255,68,68,.1);border-color:var(--red);color:var(--red)}
+/* Badge de moneda en historial de transacciones */
+.tx-currency-badge{display:inline-block;background:var(--bg4);color:var(--amber);font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:6px;letter-spacing:.5px;vertical-align:middle}
+.tx-original-amount{font-size:11px;color:var(--text2);margin-top:2px}
 .input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:300;justify-content:center;align-items:center;padding:20px}
 .modal-content{background:var(--bg2);border-radius:var(--r);width:100%;max-width:380px;padding:25px;max-height:90vh;overflow-y:auto}
@@ -1656,7 +1667,20 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
         <div id="ocr-status" style="font-size: 11px; color: var(--amber); margin-top: 8px; display: none;">Analizando imagen...</div>
     </div>
 
-    <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="gasto-monto" class="input-field" placeholder="Monto (L)">
+    <!-- MULTIMONEDA: monto + moneda con conversión en vivo -->
+    <div class="monto-moneda-group">
+      <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="gasto-monto" class="input-field monto-input" placeholder="Monto" oninput="actualizarConversionGasto()">
+      <select id="gasto-moneda" class="input-field moneda-select" onchange="actualizarConversionGasto()">
+        <option value="HNL" selected>L (HNL)</option>
+        <option value="USD">$ (USD)</option>
+        <option value="EUR">€ (EUR)</option>
+        <option value="GTQ">Q (GTQ)</option>
+        <option value="MXN">MX$ (MXN)</option>
+        <option value="NIO">C$ (NIO)</option>
+        <option value="CRC">₡ (CRC)</option>
+      </select>
+    </div>
+    <div id="gasto-conversion-info" class="conversion-info" style="display:none"></div>
     <input type="text" id="gasto-cat" class="input-field" placeholder="Categoría">
     <input type="text" id="gasto-subcat" class="input-field" placeholder="Comercio / Subcategoría">
     
@@ -1704,7 +1728,20 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
 <div id="modal-ingreso" class="modal" onclick="closeModalIfBg(event,'modal-ingreso')">
   <div class="modal-content">
     <h3 style="margin-bottom:16px">💰 Nuevo Ingreso</h3>
-    <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="ingreso-monto" class="input-field" placeholder="Monto (L)">
+    <!-- MULTIMONEDA: monto + moneda con conversión en vivo -->
+    <div class="monto-moneda-group">
+      <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="ingreso-monto" class="input-field monto-input" placeholder="Monto" oninput="actualizarConversionIngreso()">
+      <select id="ingreso-moneda" class="input-field moneda-select" onchange="actualizarConversionIngreso()">
+        <option value="HNL" selected>L (HNL)</option>
+        <option value="USD">$ (USD)</option>
+        <option value="EUR">€ (EUR)</option>
+        <option value="GTQ">Q (GTQ)</option>
+        <option value="MXN">MX$ (MXN)</option>
+        <option value="NIO">C$ (NIO)</option>
+        <option value="CRC">₡ (CRC)</option>
+      </select>
+    </div>
+    <div id="ingreso-conversion-info" class="conversion-info" style="display:none"></div>
     <select id="ingreso-tipo" class="input-field">
       <option value="salario">Salario / Quincena</option>
       <option value="extra">Ingreso Extra</option>
@@ -2904,9 +2941,90 @@ document.addEventListener('click_legacy',(e)=>{/* reemplazado por la v2 */});
 function calculateLoan(){const P=parseFloat(document.getElementById('prest-monto').value)||0,r=(parseFloat(document.getElementById('prest-tasa').value)||0)/100/12,n=parseInt(document.getElementById('prest-cuotas').value)||1;let cuota=r===0?P/n:P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);document.getElementById('prest-cuota-calc').value=fL(cuota);const interes=P*r,capital=cuota-interes;document.getElementById('prest-breakdown').classList.remove('hidden');document.getElementById('prest-breakdown').innerHTML=`<div class="loan-breakdown-row"><span>Cuota mensual:</span><strong>${fL(cuota)}</strong></div><div class="loan-breakdown-row"><span>→ Interés:</span><span style="color:var(--red)">${fL(interes)}</span></div>`;return cuota}
 function checkCreditCard(){const cuentaEl=document.getElementById('gasto-cuenta');const pagoType=cuentaEl?cuentaEl.value:document.getElementById('gasto-pago').value;const tarjetaSelect=document.getElementById('gasto-tarjeta');if(pagoType==='credito'){tarjetaSelect.classList.remove('hidden');tarjetaSelect.innerHTML='<option value="">Selecciona tarjeta...</option>';state.tarjetas.forEach(t=>{tarjetaSelect.innerHTML+=`<option value="${t.id}">${esc(t.nombre)} (Saldo: ${fL(t.saldo)})</option>`})}else{tarjetaSelect.classList.add('hidden')}}
 
+// ═══════════════════════════════════════════════════════════════════════
+// MULTIMONEDA: helpers para conversión en vivo en modales de gasto/ingreso
+// ─────────────────────────────────────────────────────────────────────
+// REGLA DE NEGOCIO:
+//   Gasto en USD  → necesitas USD para pagar → banco te VENDE USD → tasa ASK
+//   Ingreso en USD → recibiste USD y los conviertes → banco te COMPRA USD → tasa BID
+// ═══════════════════════════════════════════════════════════════════════
+
+function _formatMoneda(amount, code) {
+  const cm = window.currencyManager;
+  if (cm && typeof cm.format === 'function') return cm.format(amount, code);
+  return code + ' ' + Number(amount).toFixed(2);
+}
+
+function _renderConversion(infoEl, monto, moneda, tipoTx) {
+  if (!infoEl) return;
+  if (!moneda || moneda === 'HNL' || !monto || monto <= 0) {
+    infoEl.style.display = 'none';
+    return;
+  }
+  const cm = window.currencyManager;
+  if (!cm) {
+    infoEl.style.display = 'none';
+    return;
+  }
+  const rate = cm.getRate(moneda);
+  if (!rate) {
+    infoEl.className = 'conversion-info error';
+    infoEl.innerHTML = '⚠️ No hay tasa configurada para ' + moneda;
+    infoEl.style.display = 'block';
+    return;
+  }
+  // Gasto → ask (compras moneda extranjera). Ingreso → bid (vendes moneda extranjera).
+  const usaAsk = (tipoTx === 'expense');
+  const tasa = usaAsk ? rate.ask : rate.bid;
+  const ladoLabel = usaAsk ? 'venta' : 'compra';
+  const ladoIcon = usaAsk ? '📤' : '📥';
+  const equivalenteHNL = monto * tasa;
+  infoEl.className = 'conversion-info';
+  infoEl.innerHTML =
+    '💱 Equivale a <span class="conv-amount">L. ' + equivalenteHNL.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>' +
+    '<span class="conv-note">' + ladoIcon + ' Tasa de ' + ladoLabel + ' del banco: 1 ' + moneda + ' = L. ' + tasa.toFixed(4) + ' · Se guardará en HNL</span>';
+  infoEl.style.display = 'block';
+}
+
+function actualizarConversionGasto() {
+  const monto = parseMonto(document.getElementById('gasto-monto')?.value);
+  const moneda = document.getElementById('gasto-moneda')?.value || 'HNL';
+  const info = document.getElementById('gasto-conversion-info');
+  _renderConversion(info, monto, moneda, 'expense');
+}
+
+function actualizarConversionIngreso() {
+  const monto = parseMonto(document.getElementById('ingreso-monto')?.value);
+  const moneda = document.getElementById('ingreso-moneda')?.value || 'HNL';
+  const info = document.getElementById('ingreso-conversion-info');
+  _renderConversion(info, monto, moneda, 'income');
+}
+
+/** MULTIMONEDA: Helper para renderizar el monto de una transacción.
+    Si la transacción tiene originalCurrency, muestra:
+       - badge de moneda extranjera (ej: $50.00 USD)
+       - valor convertido en HNL debajo (ej: L 1,336.48 al cambio)
+    Si no, muestra solo el HNL como antes. */
+function renderMontoTx(t, signo, color) {
+  const sign = signo || '';
+  const colorStyle = color ? 'color:' + color + ';' : '';
+  if (t.originalCurrency && t.originalAmount && t.originalCurrency !== 'HNL' && window.currencyManager) {
+    const originalFormatted = window.currencyManager.format(t.originalAmount, t.originalCurrency);
+    const sideLabel = t.conversionSide === 'ask' ? 'venta' : (t.conversionSide === 'bid' ? 'compra' : '');
+    const tasaInfo = t.conversionRate ? ' @ L. ' + Number(t.conversionRate).toFixed(4) + (sideLabel ? ' (' + sideLabel + ')' : '') : '';
+    return '<div style="text-align:right">' +
+      '<div style="font-size:17px;font-weight:800;' + colorStyle + '">' + sign + originalFormatted +
+        '<span class="tx-currency-badge">' + esc(t.originalCurrency) + '</span></div>' +
+      '<div class="tx-original-amount">≈ ' + sign + fL(t.amount) + tasaInfo + '</div>' +
+    '</div>';
+  }
+  return '<div style="font-size:17px;font-weight:800;' + colorStyle + 'margin-left:12px;flex-shrink:0">' + sign + fL(t.amount) + '</div>';
+}
+
 // ========== GUARDAR GASTO CON FACTURA ADJUNTA ==========
 function saveGasto(){
-    const monto = parseMonto(document.getElementById('gasto-monto').value),
+    const montoInput = parseMonto(document.getElementById('gasto-monto').value),
+          moneda = document.getElementById('gasto-moneda')?.value || 'HNL',
           cat = document.getElementById('gasto-cat').value || 'General',
           subcat = document.getElementById('gasto-subcat').value || '',
           pago = (document.getElementById('gasto-cuenta')?.value||document.getElementById('gasto-pago').value),
@@ -2914,7 +3032,26 @@ function saveGasto(){
           banco = document.getElementById('gasto-banco').value || '',
           etiqueta = (document.getElementById('etiqueta-input')?.value || '').trim();
           
-    if(monto===null || monto<=0) return alert('Monto inválido (no se permite notación científica ni valores >1.000.000.000)');
+    if(montoInput===null || montoInput<=0) return alert('Monto inválido (no se permite notación científica ni valores >1.000.000.000)');
+    
+    // ─────────────────────────────────────────────────────────────
+    // MULTIMONEDA: convertir a HNL si es necesario
+    // Gasto → tasa ASK (banco te VENDE la moneda extranjera)
+    // ─────────────────────────────────────────────────────────────
+    let monto = montoInput;
+    let originalAmount = null;
+    let originalCurrency = null;
+    let conversionRate = null;
+    let conversionSide = null;
+    if (moneda && moneda !== 'HNL' && window.currencyManager) {
+      const rate = window.currencyManager.getRate(moneda);
+      if (!rate) return alert('⚠️ No hay tasa configurada para ' + moneda + '. Configúrala en Configuración → Tasas.');
+      monto = Math.round(montoInput * rate.ask * 100) / 100;
+      originalAmount = montoInput;
+      originalCurrency = moneda;
+      conversionRate = rate.ask;
+      conversionSide = 'ask';
+    }
     
     // Recuperar ID de imagen desde IDB (no base64 de localStorage)
     const facturaImagenId = _tempFacturaId || null;
@@ -2944,6 +3081,13 @@ function saveGasto(){
         facturaImagen: null,
         numeroFactura: `FAC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`
     };
+    // MULTIMONEDA: agregar campos opcionales solo si la transacción fue en moneda extranjera
+    if (originalCurrency) {
+        transaction.originalAmount = originalAmount;
+        transaction.originalCurrency = originalCurrency;
+        transaction.conversionRate = conversionRate;
+        transaction.conversionSide = conversionSide;
+    }
     
     if(pago === 'credito'){
         const tarjetaId = document.getElementById('gasto-tarjeta').value; // P1-4: no parseInt
@@ -2969,6 +3113,11 @@ function saveGasto(){
     
     ['gasto-monto','gasto-cat','gasto-subcat','gasto-banco'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('gasto-tipo').value = 'extra';
+    // MULTIMONEDA: resetear moneda y ocultar info de conversión
+    const monedaSel = document.getElementById('gasto-moneda');
+    if (monedaSel) monedaSel.value = 'HNL';
+    const convInfo = document.getElementById('gasto-conversion-info');
+    if (convInfo) convInfo.style.display = 'none';
     document.getElementById('ocr-status').style.display = 'none';
     const prevEl = document.getElementById('ocr-preview');
     if (prevEl) prevEl.style.display = 'none';
@@ -2978,14 +3127,34 @@ function saveGasto(){
 }
 
 function saveIngreso(){
-  const monto=parseMonto(document.getElementById('ingreso-monto').value);
-  if(monto===null||monto<=0)return alert('Monto inválido');
+  const montoInput=parseMonto(document.getElementById('ingreso-monto').value);
+  if(montoInput===null||montoInput<=0)return alert('Monto inválido');
+  const moneda = document.getElementById('ingreso-moneda')?.value || 'HNL';
   // P0-4: capturar la cuenta de destino y la nota — antes ambos campos se ignoraban
   const cuentaSel=document.getElementById('ingreso-cuenta')?.value||'efectivo';
   const cuenta=(cuentaSel==='efectivo'||cuentaSel==='ahorro')?cuentaSel:'efectivo';
   const tipoSel=document.getElementById('ingreso-tipo').value;
   const nota=(document.getElementById('ingreso-nota')?.value||'').trim();
-  state.transactions.push({
+  
+  // ─────────────────────────────────────────────────────────────
+  // MULTIMONEDA: convertir a HNL si es necesario
+  // Ingreso → tasa BID (banco te COMPRA la moneda extranjera)
+  // ─────────────────────────────────────────────────────────────
+  let monto = montoInput;
+  let extraFields = {};
+  if (moneda && moneda !== 'HNL' && window.currencyManager) {
+    const rate = window.currencyManager.getRate(moneda);
+    if (!rate) return alert('⚠️ No hay tasa configurada para ' + moneda + '. Configúrala en Configuración → Tasas.');
+    monto = Math.round(montoInput * rate.bid * 100) / 100;
+    extraFields = {
+      originalAmount: montoInput,
+      originalCurrency: moneda,
+      conversionRate: rate.bid,
+      conversionSide: 'bid'
+    };
+  }
+  
+  state.transactions.push(Object.assign({
     id:uid(),
     type:'income',
     amount:monto,
@@ -2994,10 +3163,15 @@ function saveIngreso(){
     cuenta: cuenta,
     nota: nota,
     date:new Date().toISOString()
-  });
+  }, extraFields));
   save();closeModal('modal-ingreso');renderAll();
   document.getElementById('ingreso-monto').value='';
   if(document.getElementById('ingreso-nota'))document.getElementById('ingreso-nota').value='';
+  // MULTIMONEDA: resetear moneda y ocultar info de conversión
+  const monedaSel = document.getElementById('ingreso-moneda');
+  if (monedaSel) monedaSel.value = 'HNL';
+  const convInfo = document.getElementById('ingreso-conversion-info');
+  if (convInfo) convInfo.style.display = 'none';
   renderWelcome();
 }
 
@@ -3693,7 +3867,7 @@ function renderGastos(){
                     <div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString('es-HN')}</div>
                     ${etiqPill}
                 </div>
-                <div style="font-size:17px;font-weight:800;color:var(--red);margin-left:12px;flex-shrink:0">-${fL(t.amount)}</div>
+                ${renderMontoTx(t, '-', 'var(--red)')}
             </div>
             <div class="tx-actions" style="${tieneFactura?'grid-template-columns:1fr 1fr 1fr':'grid-template-columns:1fr 1fr'}">
                 <button class="btn-tx-edit" onclick=\"abrirEdicionTx('${esc(t.id)}')\"">✏️ Editar</button>
@@ -3724,7 +3898,7 @@ function renderIngresos(){
                     <div style="font-weight:700;font-size:14px">${esc(t.cat)}</div>
                     <div style="font-size:11px;color:var(--text2)">${new Date(t.date).toLocaleDateString('es-HN')}</div>
                 </div>
-                <div style="font-size:17px;font-weight:800;color:var(--green)">+${fL(t.amount)}</div>
+                ${renderMontoTx(t, '+', 'var(--green)')}
             </div>
             <div class="tx-actions">
                 <button class="btn-tx-edit" onclick=\"abrirEdicionTx('${esc(t.id)}')\"">✏️ Editar</button>
@@ -3804,9 +3978,7 @@ function renderDashboard(){
                     <div style="font-size:11px;color:var(--text2)">${esc(t.subcat||'')} ${t.banco?'('+t.banco+')':''}</div>
                     ${etiqPill}
                 </div>
-                <div style="font-weight:700;font-size:15px;color:${t.esConciliacion?(t.type==='income'?'var(--blue)':'var(--purple)'):(t.type==='income'?'var(--green)':'var(--red)')};margin-left:10px;flex-shrink:0">
-                    ${t.type==='income'?'+':'-'}${fL(t.amount)}
-                </div>
+                ${renderMontoTx(t, t.type==='income'?'+':'-', t.esConciliacion?(t.type==='income'?'var(--blue)':'var(--purple)'):(t.type==='income'?'var(--green)':'var(--red)'))}
             </div>
             <div class="tx-actions" style="${tieneFactura?'grid-template-columns:1fr 1fr 1fr':'grid-template-columns:1fr 1fr'}">
                 <button class="btn-tx-edit" onclick=\"abrirEdicionTx('${esc(t.id)}')\"">✏️ Editar</button>
