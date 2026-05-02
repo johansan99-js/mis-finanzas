@@ -1,30 +1,28 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v12-bid-ask-rates
+//  Mi Pisto HN — Service Worker v13-multimoneda-tx
 //  ─────────────────────────────────────────────────────────
 //  Cambios en esta versión:
-//   ✅ Tasas con compra/venta (bid/ask) en lugar de tasa única
-//        - tasas.json migrado a formato v2: cada moneda
-//          es { bid, ask, mid } en vez de un número plano
-//        - CurrencyManager normaliza cualquier tasa al
-//          formato {bid,ask,mid}, derivando con spread 0.5%
-//          si solo hay un número (retrocompat con cachés viejos)
-//        - toDisplay/toBase aceptan parámetro `side`:
-//            'ask' (default toDisplay): "tengo L, ¿cuánto USD vale?"
-//            'bid' (default toBase): "tengo USD, ¿cuánto L recibo?"
-//        - UI de tasas en Configuración: 2 inputs por moneda
-//          (compra/venta) con tooltip explicativo
-//   ✅ update-rates.js v3: scrapea BCH para USD oficial,
-//      deriva resto con spread implícito 0.5%
-//   ✅ Tasas iniciales: BCH 28-abr-2026 (compra L.26.5965,
-//      venta L.26.7295)
+//   ✅ MULTIMONEDA EN TRANSACCIONES (Caso A):
+//        - Modal de Gasto e Ingreso: selector de moneda
+//          (HNL/USD/EUR/GTQ/MXN/NIO/CRC)
+//        - Conversión en vivo mientras tecleás: muestra
+//          el equivalente en HNL con la tasa correcta
+//          y de qué lado (compra/venta)
+//        - Gasto en USD → tasa ASK (venta) automática
+//          (necesitás dólares = banco te los vende)
+//        - Ingreso en USD → tasa BID (compra) automática
+//          (recibís dólares = banco te los compra)
+//        - Las transacciones guardan originalAmount,
+//          originalCurrency, conversionRate y conversionSide
+//        - El historial muestra: "+\$100.00 USD ≈ +L.2,659.65
+//          @ L.26.5965 (compra)" para trazabilidad total
 //
-//  Cambios heredados de v11-security-pin-fix:
-//   ✅ State no se carga de IDB antes de PIN
-//   ✅ "Recordar PIN" eliminado (era bypass del cifrado)
-//   ✅ olvidePIN borra todo y reinicia
+//  Cambios heredados de v12-bid-ask-rates:
+//   ✅ Tasas con compra/venta (bid/ask)
+//   ✅ tasas.json con formato v2 + retrocompat
 // ============================================================
 
-const VERSION = 'v12-bid-ask-rates';
+const VERSION = 'v13-multimoneda-tx';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
