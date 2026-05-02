@@ -1,27 +1,20 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v14-cloud-sync-fase1
+//  Mi Pisto HN — Service Worker v15-cloud-sync-fixkey
 //  ─────────────────────────────────────────────────────────
-//  Cambios en esta versión (FASE 1 de Cloud Sync):
-//   ✅ Cliente Supabase cargado desde CDN (async, no bloquea offline)
+//  Cambios en esta versión:
+//   ✅ FIX: API key Supabase cambiada de sb_publishable_* a
+//      anon JWT legacy (eyJ...). El SDK 2.45.x requiere el
+//      formato JWT, no el nuevo formato publishable.
+//      El error "Failed to fetch" se debía a esto: el SDK
+//      armaba requests con la key vieja, Supabase las rechazaba.
+//
+//  Cambios heredados de v14-cloud-sync-fase1:
+//   ✅ Cliente Supabase + auth con magic link (Fase 1)
 //   ✅ Card "Sincronización en la nube" en Configuración
-//   ✅ Login con magic link (sin contraseñas)
-//   ✅ Cifrado E2E preparado (los datos del usuario NUNCA se
-//      enviarán al servidor en plano — Fase 2 implementará
-//      el cifrado del blob antes de subir)
-//   ✅ Tracking de dispositivos (device_log) para que el
-//      usuario vea desde dónde está usando la app
-//   ⏳ NO sincroniza datos todavía (eso es Fase 2)
-//
-//  Cambios heredados de v13-multimoneda-tx:
-//   ✅ Selector de moneda en gastos/ingresos con bid/ask
-//   ✅ originalAmount/originalCurrency/conversionRate guardados
-//
-//  IMPORTANTE: Las claves Supabase (anon/publishable) están en
-//  el HTML. Eso es seguro y diseñado así por Supabase — la
-//  protección real es Row Level Security en el servidor.
+//   ✅ Tracking de dispositivos en device_log
 // ============================================================
 
-const VERSION = 'v14-cloud-sync-fase1';
+const VERSION = 'v15-cloud-sync-fixkey';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
