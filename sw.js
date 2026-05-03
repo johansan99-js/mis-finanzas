@@ -1,27 +1,38 @@
 // ============================================================
-//  Mi Pisto HN — Service Worker v17-cloud-sync-fase2
+//  Mi Pisto HN — Service Worker v19-cloud-sync-fase4
 //  ─────────────────────────────────────────────────────────
-//  FASE 2 COMPLETA — Sync manual de blob cifrado E2E
+//  FASE 4 — Merge inteligente de conflictos
 //
-//  ✅ Botón "⬆️ Subir ahora": cifra state con DEK, sube blob
-//      junto con DEK cifrada y salt PIN. Servidor solo ve
-//      blobs ilegibles.
-//  ✅ Botón "⬇️ Bajar de la nube": pide PIN, deriva KEK, 
-//      descifra DEK, descifra state, reemplaza local.
-//      Funciona incluso en dispositivo nuevo / tras reset.
-//  ✅ UI muestra "Última sincronización: hace X min", 
-//      tamaño del blob (KB), versión, dispositivo origen.
-//  ✅ Modal de descarga con doble confirmación (sobreescribe
-//      datos locales) + validación de PIN antes de descifrar.
+//  ✅ mergeStates(local, remote): algoritmo de unión inteligente
+//       • Escalares (nombre, cuentas, budgetRules): remoto gana
+//       • Arrays por ID: unión completa
+//         – Solo en local → sobrevive (añadido offline en este device)
+//         – Solo en remoto → sobrevive (añadido en otro device)
+//         – En ambos, sin cambios → incluido una sola vez
+//         – En ambos, con deletedAt → eliminación se propaga
+//         – En ambos, con diferencias → remoto gana (tiebreaker)
+//         – goals.actual en conflicto → max(local, remoto)
+//           para preservar el mayor progreso de ahorro
 //
-//  Aún NO incluido (Fase 3+):
-//   ⏳ Sync automático en cada cambio (debounce)
-//   ⏳ Detección de conflictos entre dispositivos
-//   ⏳ Pantalla "primera vez en este dispositivo" 
-//      (¿es nuevo o quieres recuperar de la nube?)
+//  ✅ Auto-sync silencioso: descarga, merge, sube. El usuario
+//      ve el indicador "☁️✓ +N fusionados" si hubo merge.
+//
+//  ✅ Modal de merge en upload manual: muestra diff legible
+//      ("📱 ESTE DISPOSITIVO: +3 transacciones / ☁️ NUBE: 
+//       +5 transacciones / ⚠️ 1 conflicto resuelto") con 3
+//      opciones: ✅ Combinar (recomendado), ⬆️ Solo lo mío,
+//      ❌ Cancelar.
+//
+//  ✅ Anti-loop: flag _isSyncing evita que el merge dispare
+//      otro auto-sync, y que el guardado local del merge
+//      vuelva a triggerear _scheduleAutoSync.
+//
+//  ✅ Código zombie de versiones anteriores eliminado
+//      (mergeArr, uploadWithMerge, fragmento huérfano de
+//       getRemoteInfo — causaban "Unexpected token '!'").
 // ============================================================
 
-const VERSION = 'v17-cloud-sync-fase2';
+const VERSION = 'v19-cloud-sync-fase4';
 const CACHE_NAME = `mipistohn-${VERSION}`;
 
 // FIX: Detectar el scope automáticamente del registro del SW
