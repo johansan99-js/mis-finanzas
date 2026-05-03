@@ -232,6 +232,41 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   justify-self:end;
 }
 .hamburger-btn:active{background:var(--bg3)}
+
+/* ═══ CLOUD SYNC FASE 3: indicador, banner, tooltip ═══ */
+#cloud-sync-indicator{
+  position:absolute;right:52px;top:50%;transform:translateY(-50%);
+  font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;
+  display:none;align-items:center;gap:4px;cursor:default;
+  transition:opacity .3s,background .3s;white-space:nowrap;letter-spacing:.2px
+}
+#cloud-sync-indicator.synced {
+  display:flex;background:rgba(76,175,80,.2);color:var(--green);border:1px solid rgba(76,175,80,.35)
+}
+#cloud-sync-indicator.pending {
+  display:flex;background:rgba(245,200,0,.15);color:var(--amber);border:1px solid rgba(245,200,0,.3)
+}
+#cloud-sync-indicator.uploading {
+  display:flex;background:rgba(66,133,244,.15);color:#4285F4;border:1px solid rgba(66,133,244,.3)
+}
+#cloud-sync-indicator.error {
+  display:flex;background:rgba(255,68,68,.12);color:var(--red);border:1px solid rgba(255,68,68,.3)
+}
+#cloud-sync-indicator.offline {
+  display:flex;background:var(--bg3);color:var(--text2);border:1px solid var(--border)
+}
+
+.cloud-banner{
+  position:fixed;top:58px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(135deg,rgba(66,133,244,.95),rgba(66,133,244,.85));
+  backdrop-filter:blur(8px);color:white;padding:10px 16px;border-radius:12px;
+  font-size:12px;font-weight:600;z-index:500;max-width:calc(100vw - 24px);
+  display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.4);
+  animation:slideDown .3s ease;border:1px solid rgba(255,255,255,.15)
+}
+@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.cloud-banner button{background:rgba(255,255,255,.2);border:none;color:white;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+.cloud-banner button:hover{background:rgba(255,255,255,.3)}
 .hamburger-title{
   text-align:center;
   font-size:17px;font-weight:800;
@@ -883,7 +918,7 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <!-- Mobile welcome (solo móvil) -->
   <div class="mobile-welcome" id="mobile-welcome-wrap"></div>
 
-<div class="hamburger-menu">
+<div class="hamburger-menu" style="position:relative">
   <div class="hamburger-spacer"></div>
   <div class="hamburger-title" style="display:flex;align-items:center;justify-content:center;gap:7px;-webkit-text-fill-color:initial;background:none">
     <svg width="28" height="28" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(160,160,160,.5))">
@@ -918,6 +953,8 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
   <button class="hamburger-btn" onclick="toggleHamburger()" title="Más secciones">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
+  <!-- Indicador de sync en la nube - visible solo si el usuario activó sync -->
+  <div id="cloud-sync-indicator" title="Estado de sincronización en la nube"></div>
 </div>
 
 <div class="hamburger-overlay" id="hamburgerOverlay" onclick="toggleHamburger()"></div>
@@ -1553,6 +1590,28 @@ body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color
       <div style="display:flex;gap:10px;margin-top:8px">
         <button class="btn btn-secondary" onclick="closeModal('modal-cloud-download')" style="flex:1">Cancelar</button>
         <button class="btn btn-primary" onclick="confirmarBajarCloud()" style="flex:2;background:var(--red);color:white" id="btn-confirmar-bajar">⬇️ Sí, sobrescribir con datos de la nube</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de merge (FASE 4): muestra diff y 3 opciones -->
+  <div id="modal-cloud-merge" class="modal" onclick="closeModalIfBg(event,'modal-cloud-merge')">
+    <div class="modal-content">
+      <h3 style="margin-bottom:6px">⚠️ Conflicto de sincronización</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5">
+        Otro dispositivo también realizó cambios mientras estabas offline. Revisá el resumen y elegí cómo resolver.
+      </p>
+      <div id="cloud-merge-diff" style="font-size:12px;background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:14px;line-height:1.7;max-height:260px;overflow-y:auto"></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" onclick="confirmarEstrategiaMerge('merge')" id="btn-merge-combinar" style="font-size:13px">
+          ✅ Combinar todo (recomendado)
+        </button>
+        <button class="btn btn-secondary" onclick="confirmarEstrategiaMerge('local')" style="font-size:12px;opacity:.8">
+          ⬆️ Usar solo MIS datos (descarta cambios de la nube)
+        </button>
+        <button class="btn btn-secondary" onclick="closeModal('modal-cloud-merge')" style="font-size:12px;opacity:.7">
+          ❌ Cancelar (no hacer nada)
+        </button>
       </div>
     </div>
   </div>
@@ -2352,6 +2411,8 @@ function save() {
   _encryptState(state, _sessionDEK).then(encrypted => {
     localStorage.setItem(LS_KEY, encrypted);
     saveStateToDB(state); // IDB sigue en plano (acceso rápido, no crítico)
+    // FASE 3: disparar auto-sync si el usuario tiene la nube activada
+    if (typeof cloudSync !== 'undefined') cloudSync._scheduleAutoSync();
   }).catch(error => {
     console.error('❌ Error cifrando state:', error);
     // Fallback: guardar en plano para no perder datos
@@ -6113,8 +6174,12 @@ const cloudSync = {
       if (session) {
         this.user = session.user;
         console.log('☁️ Sesión restaurada:', this.user.email);
-        // Registrar/actualizar dispositivo en device_log
         this._logDevice().catch(e => console.warn('device_log:', e.message));
+        // FASE 3: Mostrar indicador y chequear si hay versión nueva en nube
+        setTimeout(() => {
+          this._updateIndicator('synced');
+          this.checkForNewerVersion();
+        }, 3000); // Esperar 3s para que la app termine de cargar primero
       }
       // Listener para cambios de auth (login, logout, token refresh)
       this.client.auth.onAuthStateChange((event, session) => {
@@ -6126,12 +6191,48 @@ const cloudSync = {
           // Si veníamos del magic link, mostrar feedback
           const url = new URL(window.location.href);
           if (url.searchParams.has('code') || window.location.hash.includes('access_token')) {
-            // Limpiar la URL (quitar el token del hash/query por seguridad)
             history.replaceState({}, document.title, window.location.pathname);
-            setTimeout(() => alert('✅ Sesión iniciada como ' + this.user.email + '\n\nLa sincronización de datos se activará en una próxima actualización.'), 100);
+            setTimeout(async () => {
+              const isNewDevice = !state.setup || !state.transactions || state.transactions.length === 0;
+              if (isNewDevice) {
+                // FASE 3: dispositivo nuevo — ofrecer restaurar de la nube
+                const remInfo = await this.getRemoteInfo();
+                if (remInfo) {
+                  const ok = confirm(
+                    '☁️ Sesión iniciada como ' + this.user.email + '\n\n' +
+                    '¡Bienvenido a un dispositivo nuevo!\n\n' +
+                    'Encontramos datos en la nube:\n' +
+                    '• Versión #' + remInfo.version + '\n' +
+                    '• Subidos: ' + new Date(remInfo.updated_at).toLocaleString('es-HN') + '\n' +
+                    '• Desde: ' + (remInfo.device_name || 'otro dispositivo') + '\n\n' +
+                    '¿Querés restaurar tus datos aquí?\n' +
+                    '(Vas a necesitar tu PIN)'
+                  );
+                  if (ok) {
+                    if (typeof switchView === 'function') switchView('config');
+                    setTimeout(() => { if (typeof abrirModalBajarCloud === 'function') abrirModalBajarCloud(); }, 300);
+                  } else {
+                    alert('✅ Sesión iniciada. Podés descargar tus datos en cualquier momento desde Configuración → Sincronización.');
+                  }
+                } else {
+                  alert('✅ Sesión iniciada como ' + this.user.email + '\n\nLa sincronización de datos está activa. Subí tus datos desde Configuración → Sincronización.');
+                }
+              } else {
+                // Dispositivo que ya tenía datos — solo avisamos y chequeamos versiones
+                alert('✅ Sesión iniciada como ' + this.user.email);
+                setTimeout(() => this.checkForNewerVersion(), 1000);
+              }
+            }, 100);
+          } else {
+            // Login en segundo plano (refresh de token) — solo chequear versiones
+            setTimeout(() => this.checkForNewerVersion(), 2000);
           }
         } else if (event === 'SIGNED_OUT') {
+          this._cancelAutoSync();
           renderCloudSyncUI();
+        } else if (event === 'TOKEN_REFRESHED') {
+          // Sesión renovada: chequear si hay cambios en la nube
+          setTimeout(() => this.checkForNewerVersion(), 1000);
         }
       });
       this.ready = true;
@@ -6273,6 +6374,8 @@ const cloudSync = {
       this._logDevice().catch(()=>{});
 
       console.log('☁️ Upload OK. Versión nube:', data.version, 'Tamaño:', ciphertextB64.length, 'B');
+      // FASE 3: guardar la versión para detección de conflictos
+      cloudSync.setLocalSyncVersion(data.version);
       return { ok: true, version: data.version, sizeBytes: ciphertextB64.length, updatedAt: data.updated_at };
     } catch (e) {
       console.error('☁️ uploadState:', e);
@@ -6358,6 +6461,8 @@ const cloudSync = {
       try { await saveStateToDB(state); } catch(e) { console.warn('IDB sync:', e); }
 
       console.log('☁️ Download OK. Versión:', data.version, 'Subido por:', data.device_name);
+      // FASE 3: sincronizar versión local
+      cloudSync.setLocalSyncVersion(data.version);
       return {
         ok: true,
         version: data.version,
@@ -6371,20 +6476,271 @@ const cloudSync = {
     }
   },
 
-  /** Lee metadata del blob remoto (sin descifrar). Útil para mostrar
-      "Última sincronización: hace X tiempo" en la UI. */
-  async getRemoteInfo() {
-    if (!this.user || !this.client) return null;
+  /** Descarga y descifra el estado remoto SIN reemplazar el local.
+      Usa _sessionDEK que ya está en memoria — no pide PIN de nuevo. */
+  async fetchRemoteState() {
+    if (!this.user || !this.client) return { ok: false, error: 'No autenticado' };
+    if (typeof _sessionDEK === 'undefined' || !_sessionDEK) {
+      return { ok: false, error: 'PIN no desbloqueado en esta sesión' };
+    }
     try {
       const { data, error } = await this.client
         .from('encrypted_states')
-        .select('version, updated_at, size_bytes, device_name')
+        .select('ciphertext, version, updated_at, device_name, size_bytes')
         .eq('user_id', this.user.id)
         .maybeSingle();
-      if (error || !data) return null;
-      return data;
+      if (error) return { ok: false, error: error.message };
+      if (!data || !data.ciphertext) return { ok: false, noData: true };
+      const decrypted = await _decryptState(data.ciphertext, _sessionDEK);
+      if (!decrypted) return { ok: false, error: 'No se pudo descifrar el blob remoto' };
+      return { ok: true, state: decrypted, version: data.version,
+               updatedAt: data.updated_at, deviceName: data.device_name };
     } catch (e) {
-      return null;
+      return { ok: false, error: e.message || String(e) };
+    }
+  },
+
+
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FASE 3 + 4: AUTO-SYNC, INDICADOR, CHECK ON-OPEN, MERGE INTELIGENTE
+  // ═══════════════════════════════════════════════════════════════════
+
+  getLocalSyncVersion() {
+    return parseInt(localStorage.getItem('mph_cloud_version') || '0', 10);
+  },
+  setLocalSyncVersion(v) {
+    localStorage.setItem('mph_cloud_version', String(v));
+  },
+
+  _updateIndicator(st, msg) {
+    const el = document.getElementById('cloud-sync-indicator');
+    if (!el) return;
+    el.className = st;
+    const icons  = { synced:'☁️✓', pending:'☁️…', uploading:'☁️⬆', error:'☁️⚠', offline:'☁️✗' };
+    const labels = { synced:'Sincronizado', pending:'Guardando…', uploading:'Subiendo…', error:'Error sync', offline:'Offline', hidden:'' };
+    if (st === 'hidden') { el.style.display = 'none'; return; }
+    el.innerHTML = (icons[st]||'☁️') + ' ' + (msg || labels[st]);
+  },
+
+  _scheduleAutoSync() {
+    if (!this.user || !this.isEnabled() || this._isSyncing) return;
+    if (this._autoSyncTimer) clearTimeout(this._autoSyncTimer);
+    this._updateIndicator('pending');
+    this._autoSyncTimer = setTimeout(async () => {
+      this._autoSyncTimer = null;
+      if (!navigator.onLine) { this._updateIndicator('offline'); return; }
+      this._updateIndicator('uploading');
+      const result = await this._autoMergeAndUpload();
+      if (result.ok) {
+        this.setLocalSyncVersion(result.version);
+        const msg = result.mergeStats ? '✓ +' + result.mergeStats.totalRemoteNew + ' fusionados' : 'v' + result.version;
+        this._updateIndicator('synced', msg);
+        setTimeout(() => { if (document.getElementById('cloud-sync-indicator')?.className==='synced') this._updateIndicator('hidden'); }, 4000);
+      } else {
+        this._updateIndicator('error', result.error?.substr(0,25) || 'Error');
+        console.warn('☁️ Auto-sync falló:', result.error);
+      }
+    }, 3000);
+  },
+
+  _cancelAutoSync() {
+    if (this._autoSyncTimer) { clearTimeout(this._autoSyncTimer); this._autoSyncTimer = null; }
+    this._updateIndicator('hidden');
+  },
+
+  async checkForNewerVersion() {
+    if (!this.user || !this.isEnabled()) return;
+    try {
+      const info = await this.getRemoteInfo();
+      if (!info) return;
+      const remoteV = info.version || 0;
+      const localV  = this.getLocalSyncVersion();
+      const diffMs  = Date.now() - new Date(info.updated_at).getTime();
+      if (remoteV > localV && diffMs > 10000 && info.device_name !== this.getDeviceName()) {
+        this._showNewerVersionBanner(info);
+      } else {
+        this._updateIndicator('synced', 'v' + remoteV);
+        setTimeout(() => this._updateIndicator('hidden'), 3000);
+      }
+    } catch (e) { console.warn('checkForNewerVersion:', e.message); }
+  },
+
+  _showNewerVersionBanner(info) {
+    const existing = document.getElementById('cloud-newer-banner');
+    if (existing) existing.remove();
+    const fecha = new Date(info.updated_at);
+    const diffMin = Math.floor((Date.now() - fecha) / 60000);
+    const cuando = diffMin < 1 ? 'hace unos segundos' : diffMin < 60 ? 'hace ' + diffMin + ' min' : fecha.toLocaleTimeString('es-HN',{timeStyle:'short'});
+    const banner = document.createElement('div');
+    banner.id = 'cloud-newer-banner';
+    banner.className = 'cloud-banner';
+    banner.innerHTML =
+      '<span>☁️ Datos nuevos en la nube (' + cuando + ', desde <strong>' + (info.device_name||'otro dispositivo') + '</strong>)</span>' +
+      '<button onclick="window._onCloudBannerDownload()">⬇️ Combinar</button>' +
+      '<button onclick="document.getElementById(\'cloud-newer-banner\')?.remove()" style="background:rgba(255,255,255,.1)">✕</button>';
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 20000);
+  },
+
+  // ─────────── FASE 4: MERGE INTELIGENTE ─────────────────────────────
+
+  /** Descifra el blob remoto con la DEK de la sesión (para auto-merge) */
+  async _downloadAndDecrypt() {
+    if (!this.user || !this.client) return { ok: false, error: 'Sin sesión' };
+    if (typeof _sessionDEK === 'undefined' || !_sessionDEK) return { ok: false, error: 'PIN no desbloqueado' };
+    try {
+      const { data, error } = await this.client
+        .from('encrypted_states')
+        .select('ciphertext, version, updated_at, device_name, size_bytes')
+        .eq('user_id', this.user.id)
+        .maybeSingle();
+      if (error) return { ok: false, error: error.message };
+      if (!data || !data.ciphertext) return { ok: false, noRemote: true };
+      const decrypted = await _decryptState(data.ciphertext, _sessionDEK);
+      if (!decrypted) return { ok: false, error: 'Error descifrando (¿PIN cambiado en otro dispositivo?)' };
+      return { ok: true, data: decrypted, version: data.version, updatedAt: data.updated_at, deviceName: data.device_name };
+    } catch (e) { return { ok: false, error: e.message }; }
+  },
+
+  /**
+   * MERGE de 2 estados. Retorna { merged, diff }.
+   * diff = { localNew:{}, remoteNew:{}, conflicts:{}, totalLocalNew, totalRemoteNew, totalConflicts }
+   */
+  mergeStates(localState, remoteState) {
+    const diff = { localNew:{}, remoteNew:{}, conflicts:{}, totalLocalNew:0, totalRemoteNew:0, totalConflicts:0 };
+    const merged = {};
+    // Escalares: remoto gana
+    ['nombre','saldoInicial','cuentas','cuentasIniciales','budgetRules','setup'].forEach(f => {
+      merged[f] = (remoteState[f] !== undefined) ? remoteState[f] : localState[f];
+    });
+    // Arrays: unión inteligente por ID
+    const LABELS = { transactions:'transacciones', goals:'metas de ahorro', receivables:'deudas a cobrar',
+      payables:'deudas a pagar', prestamos:'préstamos', tarjetas:'tarjetas', pagosRecurrentes:'pagos recurrentes' };
+    for (const field of Object.keys(LABELS)) {
+      const localArr  = Array.isArray(localState[field])  ? localState[field]  : [];
+      const remoteArr = Array.isArray(remoteState[field]) ? remoteState[field] : [];
+      const localMap  = new Map(localArr.map(x  => [String(x.id),  x]));
+      const remoteMap = new Map(remoteArr.map(x => [String(x.id), x]));
+      const allIds    = new Set([...localMap.keys(), ...remoteMap.keys()]);
+      const result    = [];
+      for (const id of allIds) {
+        const L = localMap.get(id), R = remoteMap.get(id);
+        if (L && !R) {
+          result.push(L);
+          if (!L.deletedAt) { if (!diff.localNew[field]) diff.localNew[field]=[]; diff.localNew[field].push(L); diff.totalLocalNew++; }
+        } else if (!L && R) {
+          result.push(R);
+          if (!R.deletedAt) { if (!diff.remoteNew[field]) diff.remoteNew[field]=[]; diff.remoteNew[field].push(R); diff.totalRemoteNew++; }
+        } else if (JSON.stringify(L) === JSON.stringify(R)) {
+          result.push(L);
+        } else {
+          const lDel = !!L.deletedAt, rDel = !!R.deletedAt;
+          if (lDel || rDel) {
+            result.push((lDel && rDel) ? (new Date(L.deletedAt)>=new Date(R.deletedAt)?L:R) : (lDel?L:R));
+          } else if (field === 'goals') {
+            const resolved = { ...R, actual: Math.max(L.actual||0, R.actual||0) };
+            result.push(resolved);
+            if (!diff.conflicts[field]) diff.conflicts[field]=[];
+            diff.conflicts[field].push({ local:L, remote:R, resolved, label:LABELS[field] });
+            diff.totalConflicts++;
+          } else {
+            result.push(R); // Remoto gana como tiebreaker
+            if (!diff.conflicts[field]) diff.conflicts[field]=[];
+            diff.conflicts[field].push({ local:L, remote:R, resolved:R, label:LABELS[field] });
+            diff.totalConflicts++;
+          }
+        }
+      }
+      merged[field] = result;
+    }
+    return { merged, diff };
+  },
+
+  /** Genera HTML del diff para el modal de merge */
+  buildDiffHtml(diff, localDeviceName, remoteDeviceName, remoteDate) {
+    const LABELS = { transactions:'transacciones', goals:'metas de ahorro', receivables:'deudas a cobrar',
+      payables:'deudas a pagar', prestamos:'préstamos', tarjetas:'tarjetas', pagosRecurrentes:'pagos recurrentes' };
+    let html = '';
+    const renderSection = (title, color, entries) => {
+      html += '<div style="margin-bottom:10px"><div style="font-weight:700;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">' + title + '</div>';
+      if (entries.length) {
+        entries.forEach(([field, items]) => {
+          html += '<div style="padding:4px 8px;background:' + color + ';border-radius:4px;margin-bottom:3px;font-size:12px">';
+          html += '➕ ' + items.length + ' ' + (LABELS[field]||field) + ' nueva' + (items.length>1?'s':'');
+          html += '</div>';
+        });
+      } else {
+        html += '<div style="font-size:12px;color:var(--text2);padding:4px 8px">Sin cambios nuevos</div>';
+      }
+      html += '</div>';
+    };
+    renderSection('📱 ESTE DISPOSITIVO (' + esc(localDeviceName||'Local') + ')', 'rgba(76,175,80,.12)', Object.entries(diff.localNew));
+    renderSection('☁️ NUBE (' + esc(remoteDeviceName||'otro dispositivo') + (remoteDate?', '+remoteDate:'') + ')', 'rgba(66,133,244,.12)', Object.entries(diff.remoteNew));
+    if (diff.totalConflicts > 0) {
+      html += '<div style="margin-bottom:10px"><div style="font-weight:700;font-size:11px;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">⚠️ CONFLICTOS RESUELTOS (' + diff.totalConflicts + ')</div>';
+      Object.entries(diff.conflicts).forEach(([field, items]) => {
+        html += '<div style="padding:4px 8px;background:rgba(245,200,0,.1);border-radius:4px;margin-bottom:3px;font-size:12px">';
+        html += '🔀 ' + items.length + ' ' + (LABELS[field]||field) + (field==='goals' ? ': se tomó el progreso más alto' : ': se usó la versión de la nube');
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    const totalNew = diff.totalLocalNew + diff.totalRemoteNew;
+    html += '<div style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.25);padding:10px;border-radius:8px;font-size:12px;line-height:1.7">';
+    html += '<strong style="color:var(--green)">✅ RESULTADO COMBINADO:</strong><br>';
+    if (totalNew > 0) html += '• ' + totalNew + ' elemento' + (totalNew>1?'s nuevos':' nuevo') + ' de ambos dispositivos incluido' + (totalNew>1?'s':'') + '<br>';
+    if (diff.totalConflicts > 0) html += '• ' + diff.totalConflicts + ' conflicto' + (diff.totalConflicts>1?'s resueltos':' resuelto') + ' automáticamente<br>';
+    if (totalNew === 0 && diff.totalConflicts === 0) html += '• Cambios menores en configuración o metadatos<br>';
+    html += '</div>';
+    return html;
+  },
+
+  /** AUTO-MERGE silencioso: descarga → merge → sube. No interrumpe al usuario. */
+  async _autoMergeAndUpload() {
+    if (this._isSyncing) return { ok: false, error: 'Sync en progreso' };
+    this._isSyncing = true;
+    try {
+      if (!this.user || !await this.init()) return { ok: false, error: 'Sin sesión' };
+      if (typeof _sessionDEK === 'undefined' || !_sessionDEK) return { ok: false, error: 'PIN no desbloqueado' };
+      const dekData = (typeof _loadDEKFromStorage === 'function') ? _loadDEKFromStorage() : null;
+      if (!dekData || !localStorage.getItem('finanzas_pin_salt')) return { ok: false, error: 'Faltan datos de cifrado' };
+
+      const remoteInfo = await this.getRemoteInfo();
+      const localV = this.getLocalSyncVersion();
+      let mergeStats = null;
+
+      if (remoteInfo && remoteInfo.version > localV) {
+        const dl = await this._downloadAndDecrypt();
+        if (dl.ok) {
+          const { merged, diff } = this.mergeStates(state, dl.data);
+          const hasChanges = diff.totalLocalNew>0 || diff.totalRemoteNew>0 || diff.totalConflicts>0;
+          if (hasChanges) {
+            // Aplicar merged sin disparar otro auto-sync
+            Object.keys(state).forEach(k => delete state[k]);
+            Object.assign(state, merged);
+            ['pagosRecurrentes','prestamos','goals','tarjetas','receivables','payables'].forEach(f => { if (!state[f]) state[f] = []; });
+            // Persistir localmente sin trigger
+            try {
+              const enc = await _encryptState(state, _sessionDEK);
+              localStorage.setItem(LS_KEY, enc);
+              saveStateToDB(state).catch(()=>{});
+            } catch(e) {}
+            // Refrescar UI con los nuevos datos
+            if (typeof renderAll === 'function') setTimeout(() => renderAll(), 150);
+            mergeStats = diff;
+            console.log('☁️ Auto-merge OK: +'+ diff.totalRemoteNew +' remotos, +'+ diff.totalLocalNew +' locales');
+          }
+        } else if (!dl.noRemote) {
+          console.warn('☁️ Auto-merge download falló:', dl.error);
+        }
+      }
+
+      const uploadResult = await this.uploadState();
+      if (uploadResult.ok && mergeStats) uploadResult.mergeStats = mergeStats;
+      return uploadResult;
+    } finally {
+      this._isSyncing = false;
     }
   }
 };
@@ -6559,32 +6915,103 @@ window.cerrarSesionCloud = cerrarSesionCloud;
 // FASE 2 UI: Subir / Bajar datos cifrados
 // ─────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────
+// FASE 4 UI: Subir con merge inteligente + modal de conflictos
+// ─────────────────────────────────────────────────────────────────────
+
+let _pendingMerge = null; // Estado del merge pendiente para confirmarEstrategiaMerge
+
 async function subirDatosCloud() {
   const btn = document.getElementById('btn-cloud-upload');
   if (!btn) return;
-  // Validación previa: tener PIN configurado y desbloqueado
   if (typeof _sessionDEK === 'undefined' || _sessionDEK === null) {
-    alert('⚠️ Para subir tus datos a la nube necesitás:\n\n1. Tener un PIN configurado (Configuración → Cambiar PIN)\n2. Haber desbloqueado la app con tu PIN en esta sesión\n\nSin PIN no hay cifrado, y sin cifrado no podemos subir nada (la nube nunca debe ver tus datos en plano).');
+    alert('⚠️ Para subir tus datos a la nube necesitás:\n\n1. Tener un PIN configurado\n2. Haber desbloqueado la app con tu PIN en esta sesión');
     return;
   }
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '⏳ Cifrando y subiendo...';
+  // Verificar si hay versión más nueva en la nube
+  const remoteInfo = await cloudSync.getRemoteInfo();
+  const localV = cloudSync.getLocalSyncVersion();
 
+  if (remoteInfo && remoteInfo.version > localV) {
+    // Descargar y calcular diff para mostrar en el modal
+    const dl = await cloudSync._downloadAndDecrypt();
+    if (dl.ok) {
+      const { merged, diff } = cloudSync.mergeStates(state, dl.data);
+      const hasChanges = diff.totalLocalNew > 0 || diff.totalRemoteNew > 0 || diff.totalConflicts > 0;
+      if (hasChanges) {
+        _pendingMerge = { merged, diff, remoteDeviceName: dl.deviceName||remoteInfo.device_name, remoteDate: new Date(remoteInfo.updated_at).toLocaleString('es-HN',{dateStyle:'short',timeStyle:'short'}) };
+        const diffEl = document.getElementById('cloud-merge-diff');
+        if (diffEl) diffEl.innerHTML = cloudSync.buildDiffHtml(diff, cloudSync.getDeviceName(), _pendingMerge.remoteDeviceName, _pendingMerge.remoteDate);
+        openModal('modal-cloud-merge');
+        return;
+      }
+    }
+    // Si diff vacío o download falló, subir normalmente
+  }
+  await _doDirectUpload(btn);
+}
+window.subirDatosCloud = subirDatosCloud;
+
+async function _doDirectUpload(btn) {
+  const origText = (btn && btn.textContent) || '⬆️ Subir ahora';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Cifrando y subiendo...'; }
   const result = await cloudSync.uploadState();
-  btn.disabled = false;
-  btn.textContent = originalText;
-
+  if (btn) { btn.disabled = false; btn.textContent = origText; }
   if (result.ok) {
-    const sizeKB = (result.sizeBytes / 1024).toFixed(1);
-    alert('✅ Subido exitosamente\n\n📦 Tamaño cifrado: ' + sizeKB + ' KB\n📌 Versión en la nube: #' + result.version + '\n\n🔒 Tus datos están cifrados con AES-256. El servidor solo ve un blob ilegible.');
-    // Refrescar UI para mostrar la nueva info de "última sincronización"
+    alert('✅ Subido exitosamente\n\n📦 ' + (result.sizeBytes/1024).toFixed(1) + ' KB · Versión #' + result.version + '\n🔒 Cifrado E2E con AES-256.');
     renderCloudSyncUI();
   } else {
     alert('❌ Error al subir:\n\n' + (result.error || 'Error desconocido'));
   }
 }
-window.subirDatosCloud = subirDatosCloud;
+window._doDirectUpload = _doDirectUpload;
+
+async function confirmarEstrategiaMerge(strategy) {
+  closeModal('modal-cloud-merge');
+  const btn = document.getElementById('btn-cloud-upload');
+
+  if (strategy === 'local') {
+    // Subir solo lo local sin hacer merge
+    await _doDirectUpload(btn);
+    _pendingMerge = null;
+    return;
+  }
+  if (strategy === 'merge' && _pendingMerge) {
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Combinando y subiendo...'; }
+    // Aplicar merged sin disparar otro auto-sync
+    const { merged } = _pendingMerge;
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, merged);
+    ['pagosRecurrentes','prestamos','goals','tarjetas','receivables','payables'].forEach(f => { if (!state[f]) state[f] = []; });
+    // Persistir localmente
+    try {
+      if (_sessionDEK) {
+        const enc = await _encryptState(state, _sessionDEK);
+        localStorage.setItem(LS_KEY, enc);
+        saveStateToDB(state).catch(()=>{});
+      }
+    } catch(e) {}
+    // Subir
+    const result = await cloudSync.uploadState();
+    if (btn) { btn.disabled = false; btn.textContent = '⬆️ Subir ahora'; }
+    _pendingMerge = null;
+    if (result.ok) {
+      if (typeof renderAll === 'function') renderAll();
+      alert('✅ Combinado y subido\n\n📦 ' + (result.sizeBytes/1024).toFixed(1) + ' KB · Versión #' + result.version);
+      renderCloudSyncUI();
+    } else {
+      alert('❌ Error al subir:\n\n' + (result.error || 'Error desconocido'));
+    }
+  }
+}
+window.confirmarEstrategiaMerge = confirmarEstrategiaMerge;
+
+// Handler del banner flotante "Hay datos nuevos en la nube"
+window._onCloudBannerDownload = function() {
+  document.getElementById('cloud-newer-banner')?.remove();
+  if (typeof switchView === 'function') switchView('config');
+  setTimeout(() => { if (typeof subirDatosCloud === 'function') subirDatosCloud(); }, 300);
+};
 
 function abrirModalBajarCloud() {
   // Verificar que hay datos en la nube antes de pedir PIN
