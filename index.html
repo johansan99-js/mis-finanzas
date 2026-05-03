@@ -6533,19 +6533,35 @@ const cloudSync = {
       this._updateIndicator('uploading');
       const result = await this._autoMergeAndUpload();
       if (result.ok) {
+        this._syncRetryCount = 0; // reset contador en éxito
         this.setLocalSyncVersion(result.version);
         const msg = result.mergeStats ? '✓ +' + result.mergeStats.totalRemoteNew + ' fusionados' : 'v' + result.version;
         this._updateIndicator('synced', msg);
         setTimeout(() => { if (document.getElementById('cloud-sync-indicator')?.className==='synced') this._updateIndicator('hidden'); }, 4000);
       } else {
-        this._updateIndicator('error', result.error?.substr(0,25) || 'Error');
-        console.warn('☁️ Auto-sync falló:', result.error);
+        // Exponential backoff: reintenta hasta 3 veces (1s, 2s, 4s)
+        this._syncRetryCount = (this._syncRetryCount || 0) + 1;
+        if (this._syncRetryCount <= 3) {
+          const delay = Math.min(1000 * Math.pow(2, this._syncRetryCount - 1), 8000); // 1s, 2s, 4s
+          console.warn(`☁️ Auto-sync falló (intento ${this._syncRetryCount}/3), reintentando en ${delay}ms:`, result.error);
+          this._updateIndicator('error', `Reintento ${this._syncRetryCount}/3…`);
+          this._autoSyncTimer = setTimeout(() => {
+            this._autoSyncTimer = null;
+            this._scheduleAutoSync();
+          }, delay);
+        } else {
+          // Agotados los reintentos: indicar error persistente
+          this._syncRetryCount = 0;
+          this._updateIndicator('error', result.error?.substr(0,20) || 'Error sync');
+          console.error('☁️ Auto-sync falló tras 3 reintentos:', result.error);
+        }
       }
     }, 3000);
   },
 
   _cancelAutoSync() {
     if (this._autoSyncTimer) { clearTimeout(this._autoSyncTimer); this._autoSyncTimer = null; }
+    this._syncRetryCount = 0;
     this._updateIndicator('hidden');
   },
 
@@ -6716,6 +6732,10 @@ const cloudSync = {
           const { merged, diff } = this.mergeStates(state, dl.data);
           const hasChanges = diff.totalLocalNew>0 || diff.totalRemoteNew>0 || diff.totalConflicts>0;
           if (hasChanges) {
+            // Backup de seguridad antes de aplicar el merge automático
+            _createPreMergeBackup();
+            // Mostrar overlay brevemente durante el merge
+            _showMergeOverlay('Sincronizando…');
             // Aplicar merged sin disparar otro auto-sync
             Object.keys(state).forEach(k => delete state[k]);
             Object.assign(state, merged);
@@ -6726,8 +6746,10 @@ const cloudSync = {
               localStorage.setItem(LS_KEY, enc);
               saveStateToDB(state).catch(()=>{});
             } catch(e) {}
+            _hideMergeOverlay();
             // Refrescar UI con los nuevos datos
             if (typeof renderAll === 'function') setTimeout(() => renderAll(), 150);
+            _mostrarBotonDeshacer();
             mergeStats = diff;
             console.log('☁️ Auto-merge OK: +'+ diff.totalRemoteNew +' remotos, +'+ diff.totalLocalNew +' locales');
           }
@@ -6821,6 +6843,12 @@ async function renderCloudSyncUI() {
           '</div>' +
         '</div>' +
       '</div>' +
+      // Nota para iOS: el auto-sync solo funciona con la app abierta
+      (/iPhone|iPad|iPod/.test(navigator.userAgent) ?
+        '<div style="background:rgba(245,200,0,.1);border:1px solid rgba(245,200,0,.3);padding:10px 12px;border-radius:8px;font-size:11px;margin-bottom:12px;line-height:1.5;color:var(--text)">' +
+          '🍎 <strong>iOS detectado:</strong> el auto-sync solo funciona con la app abierta. ' +
+          'Usá el botón <strong>"⬆️ Subir ahora"</strong> antes de cambiar de dispositivo.' +
+        '</div>' : '') +
 
       remoteStatusHtml +
 
@@ -6915,9 +6943,116 @@ window.cerrarSesionCloud = cerrarSesionCloud;
 // FASE 2 UI: Subir / Bajar datos cifrados
 // ─────────────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────
-// FASE 4 UI: Subir con merge inteligente + modal de conflictos
-// ─────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// SEGURIDAD: backup pre-merge + overlay de solo-lectura
+// ═══════════════════════════════════════════════════════════════════
+
+/** Guarda una snapshot del state actual en sessionStorage antes de
+    sobrescribirlo con datos de la nube. Válido por 5 minutos.
+    (sessionStorage se borra al cerrar la pestaña — perfect scope) */
+function _createPreMergeBackup() {
+  try {
+    const snapshot = JSON.stringify(state);
+    sessionStorage.setItem('mph_premerge_backup', snapshot);
+    sessionStorage.setItem('mph_premerge_backup_time', Date.now().toString());
+    console.log('☁️ Backup pre-merge creado (' + (snapshot.length/1024).toFixed(1) + ' KB)');
+    return true;
+  } catch(e) {
+    console.warn('Backup pre-merge falló:', e.message);
+    return false;
+  }
+}
+
+/** Restaura el backup pre-merge si existe y no expiró (5 min).
+    Retorna true si restauró, false si no había backup válido. */
+async function _restorePreMergeBackup() {
+  try {
+    const snapshot = sessionStorage.getItem('mph_premerge_backup');
+    const timeStr  = sessionStorage.getItem('mph_premerge_backup_time');
+    if (!snapshot || !timeStr) return false;
+    const age = Date.now() - parseInt(timeStr);
+    if (age > 5 * 60 * 1000) {
+      sessionStorage.removeItem('mph_premerge_backup');
+      sessionStorage.removeItem('mph_premerge_backup_time');
+      return false;
+    }
+    const parsed = JSON.parse(snapshot);
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, parsed);
+    if (_sessionDEK) {
+      const enc = await _encryptState(state, _sessionDEK);
+      localStorage.setItem(LS_KEY, enc);
+      saveStateToDB(state).catch(()=>{});
+    }
+    sessionStorage.removeItem('mph_premerge_backup');
+    sessionStorage.removeItem('mph_premerge_backup_time');
+    if (typeof renderAll === 'function') renderAll();
+    return true;
+  } catch(e) {
+    console.error('Restaurar backup pre-merge falló:', e);
+    return false;
+  }
+}
+
+/** Muestra overlay semitransparente durante el merge para prevenir
+    ediciones concurrentes mientras se resuelven conflictos */
+function _showMergeOverlay(msg) {
+  if (document.getElementById('merge-readonly-overlay')) return;
+  const el = document.createElement('div');
+  el.id = 'merge-readonly-overlay';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
+  el.innerHTML =
+    '<div style="background:var(--bg2);border-radius:16px;padding:24px 28px;text-align:center;max-width:280px;border:1px solid var(--border)">' +
+      '<div style="font-size:32px;margin-bottom:12px">☁️</div>' +
+      '<div style="font-weight:800;font-size:15px;margin-bottom:6px">' + (msg||'Combinando datos…') + '</div>' +
+      '<div style="font-size:12px;color:var(--text2);line-height:1.5">Espera un momento.<br>No cierres la app.</div>' +
+    '</div>';
+  document.body.appendChild(el);
+}
+
+function _hideMergeOverlay() {
+  document.getElementById('merge-readonly-overlay')?.remove();
+}
+
+/** Muestra el botón "↩️ Deshacer merge" por 5 minutos si hay backup disponible */
+function _mostrarBotonDeshacer() {
+  const timeStr = sessionStorage.getItem('mph_premerge_backup_time');
+  if (!timeStr) return;
+  const age = Date.now() - parseInt(timeStr);
+  if (age > 5 * 60 * 1000) return; // Ya expiró
+
+  const existing = document.getElementById('cloud-undo-merge-btn');
+  if (existing) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'cloud-undo-merge-btn';
+  btn.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+    'background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--amber);' +
+    'color:var(--amber);padding:10px 20px;border-radius:20px;font-size:12px;font-weight:700;' +
+    'cursor:pointer;z-index:500;box-shadow:0 4px 16px rgba(0,0,0,.4);white-space:nowrap';
+  btn.textContent = '↩️ Deshacer merge (5 min)';
+  btn.onclick = async function() {
+    if (!confirm('¿Deshacer el merge y volver a tus datos locales anteriores?\n\nLos datos de la nube que se combinaron se perderán.')) return;
+    btn.remove();
+    const ok = await _restorePreMergeBackup();
+    if (ok) {
+      alert('✅ Datos restaurados al estado anterior al merge.');
+    } else {
+      alert('⚠️ El backup expiró (válido 5 minutos). No se puede deshacer.');
+    }
+  };
+  document.body.appendChild(btn);
+
+  // Auto-ocultar cuando expire el backup
+  const remaining = 5 * 60 * 1000 - age;
+  setTimeout(() => btn.remove(), remaining);
+}
+
+window._createPreMergeBackup = _createPreMergeBackup;
+window._restorePreMergeBackup = _restorePreMergeBackup;
+window._showMergeOverlay = _showMergeOverlay;
+window._hideMergeOverlay = _hideMergeOverlay;
+window._mostrarBotonDeshacer = _mostrarBotonDeshacer;
 
 let _pendingMerge = null; // Estado del merge pendiente para confirmarEstrategiaMerge
 
@@ -6978,6 +7113,9 @@ async function confirmarEstrategiaMerge(strategy) {
   }
   if (strategy === 'merge' && _pendingMerge) {
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Combinando y subiendo...'; }
+    // Backup de seguridad antes de sobrescribir
+    _createPreMergeBackup();
+    _showMergeOverlay('Combinando datos…');
     // Aplicar merged sin disparar otro auto-sync
     const { merged } = _pendingMerge;
     Object.keys(state).forEach(k => delete state[k]);
@@ -6993,11 +7131,13 @@ async function confirmarEstrategiaMerge(strategy) {
     } catch(e) {}
     // Subir
     const result = await cloudSync.uploadState();
+    _hideMergeOverlay();
     if (btn) { btn.disabled = false; btn.textContent = '⬆️ Subir ahora'; }
     _pendingMerge = null;
     if (result.ok) {
       if (typeof renderAll === 'function') renderAll();
       alert('✅ Combinado y subido\n\n📦 ' + (result.sizeBytes/1024).toFixed(1) + ' KB · Versión #' + result.version);
+      _mostrarBotonDeshacer();
       renderCloudSyncUI();
     } else {
       alert('❌ Error al subir:\n\n' + (result.error || 'Error desconocido'));
@@ -7058,21 +7198,27 @@ async function confirmarBajarCloud() {
     status.textContent = '🔓 Descifrando con tu PIN...';
   }
 
+  // Backup de seguridad y overlay antes de sobrescribir
+  _createPreMergeBackup();
+  _showMergeOverlay('Restaurando datos…');
+
   const result = await cloudSync.downloadState({ pin });
 
   if (result.ok) {
+    _hideMergeOverlay();
     if (status) {
       status.style.color = 'var(--green)';
       status.textContent = '✅ Datos restaurados. Recargando app...';
     }
     setTimeout(() => {
       closeModal('modal-cloud-download');
-      // Forzar render completo con los nuevos datos
       if (typeof renderAll === 'function') renderAll();
       alert('✅ Datos sincronizados desde la nube.\n\nVersión #' + result.version + ' · Subido desde: ' + (result.deviceName || '?') + '\n\nTus datos locales fueron reemplazados por los de la nube.');
+      _mostrarBotonDeshacer();
       renderCloudSyncUI();
     }, 800);
   } else {
+    _hideMergeOverlay(); // Si falló, quitar el overlay
     if (status) {
       status.style.color = 'var(--red)';
       status.textContent = '❌ ' + (result.error || 'Error desconocido');
